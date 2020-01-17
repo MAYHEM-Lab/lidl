@@ -1,23 +1,25 @@
+#include <iostream>
 #include <proto/basic.hpp>
+#include <proto/types.hpp>
 #include <string_view>
 #include <unordered_map>
 
-namespace proto { 
-namespace {
-std::unordered_map<std::string_view, type*> basic_type_cache;
-}
+namespace proto {
+void add_basic_types(type_db& db) {
+    db.define(std::make_unique<integral_type>("i8", 8, false));
+    db.define(std::make_unique<integral_type>("i16", 16, false));
+    db.define(std::make_unique<integral_type>("i32", 32, false));
+    db.define(std::make_unique<integral_type>("i64", 64, false));
 
-void init_basic_types() {
-	auto int8_type = new integral_type;
-	int8_type->size_in_bits = 8;
-	basic_type_cache.emplace("i8", int8_type);
-}
+    db.define(std::make_unique<integral_type>("u8", 8, true));
+    db.define(std::make_unique<integral_type>("u16", 16, true));
+    db.define(std::make_unique<integral_type>("u32", 32, true));
+    db.define(std::make_unique<integral_type>("u64", 64, true));
 
-const type* basic_type(std::string_view name) {
-	auto it = basic_type_cache.find(name);
-	if (it == basic_type_cache.end()) {
-		return nullptr;
-	}
-	return it->second;
+    db.define(std::make_unique<half_type>());
+    db.define(std::make_unique<float_type>());
+    db.define(std::make_unique<double_type>());
+
+    db.define(std::make_unique<string_type>());
 }
-}
+} // namespace proto

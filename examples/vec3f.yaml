@@ -1,0 +1,19 @@
+vec3f:
+  type: structure
+  attributes:
+    raw: {}
+  members:
+    x:
+      type: f32
+    y:
+      type: f32
+    z:
+      type: f32
+
+vertex:
+  type: structure
+  members:
+    position:
+      type: vec3f
+    normal:
+      type: vec3f
