@@ -1,13 +1,13 @@
 #include "fmt/core.h"
 
 #include <fmt/format.h>
+#include <lidl/basic.hpp>
 #include <optional>
-#include <proto/basic.hpp>
 #include <sstream>
 #include <string_view>
 #include <unordered_map>
 
-namespace proto {
+namespace lidl {
 namespace {
 struct cpp_struct_codegen_helper {
     std::stringstream public_part;
@@ -116,4 +116,4 @@ void generate(const module& mod, std::ostream& str) {
         }
     }
 }
-} // namespace proto
+} // namespace lidl

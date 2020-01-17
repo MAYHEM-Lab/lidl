@@ -1,14 +1,14 @@
-#include "proto/basic.hpp"
+#include "lidl/basic.hpp"
 
 #include <fstream>
 #include <gsl/gsl_assert>
-#include <proto/types.hpp>
-#include <proto/yaml.hpp>
+#include <lidl/types.hpp>
+#include <lidl/yaml.hpp>
 #include <stdexcept>
 #include <string>
 #include <yaml-cpp/yaml.h>
 
-namespace proto::yaml {
+namespace lidl::yaml {
 namespace {
 std::shared_ptr<attribute> read_attribute(std::string_view name, const YAML::Node& node) {
     if (name == "raw") {
@@ -84,4 +84,4 @@ module load_module(std::string_view path) {
 
     return m;
 }
-} // namespace proto::yaml
+} // namespace lidl::yaml

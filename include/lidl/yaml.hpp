@@ -1,8 +1,8 @@
 #pragma once
 
-#include <proto/basic.hpp>
+#include <lidl/basic.hpp>
 #include <string_view>
 
-namespace proto::yaml {
+namespace lidl::yaml {
 module load_module(std::string_view path);
 }

@@ -2,13 +2,13 @@
 
 #include "basic.hpp"
 
+#include <lidl/basic.hpp>
 #include <memory>
-#include <proto/basic.hpp>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
-namespace proto {
+namespace lidl {
 namespace detail {
 struct future_type : type {
     explicit future_type(std::string name)
@@ -49,4 +49,4 @@ private:
 };
 
 void add_basic_types(type_db& db);
-} // namespace proto
+} // namespace lidl

@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace proto {
+namespace lidl {
 struct type {
 public:
     std::string_view name() const {
@@ -124,4 +124,4 @@ struct structure {
 struct module {
     std::map<std::string, structure> structs;
 };
-} // namespace proto
+} // namespace lidl

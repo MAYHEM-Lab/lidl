@@ -1,10 +1,10 @@
 #include <iostream>
-#include <proto/basic.hpp>
-#include <proto/types.hpp>
+#include <lidl/basic.hpp>
+#include <lidl/types.hpp>
 #include <string_view>
 #include <unordered_map>
 
-namespace proto {
+namespace lidl {
 void add_basic_types(type_db& db) {
     db.define(std::make_unique<integral_type>("i8", 8, false));
     db.define(std::make_unique<integral_type>("i16", 16, false));
@@ -22,4 +22,4 @@ void add_basic_types(type_db& db) {
 
     db.define(std::make_unique<string_type>());
 }
-} // namespace proto
+} // namespace lidl
