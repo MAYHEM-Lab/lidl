@@ -17,5 +17,4 @@ target_link_libraries(proto_cppgen PUBLIC proto_core)
 add_executable(protoc src/main.cpp)
 target_link_libraries(protoc PUBLIC proto_core proto_yaml proto_cppgen)
 
-add_subdirectory(fmt EXCLUDE_FROM_ALL)
-add_subdirectory(3rd_party)
+add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
