@@ -27,7 +27,7 @@ std::optional<std::string_view> known_type_conversion(std::string_view name) {
         {"u16", "uint16_t"},
         {"u32", "uint32_t"},
         {"u64", "uint64_t"},
-    };
+        {"string", "lidl::string"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
         return it->second;
@@ -51,10 +51,9 @@ std::string private_name_for(std::string_view name) {
 
 std::string
 generate_getter(std::string_view name, std::string_view type_name, bool is_const) {
-    constexpr auto format = R"__({}& {}() {{ return {}; }})__";
-    constexpr auto const_format = R"__(const {}& {}() const {{ return {}; }})__";
-    return fmt::format(
-        is_const ? const_format : format, type_name, name, private_name_for(name));
+    constexpr auto format = R"__({}& {}() {{ return m_raw.{}; }})__";
+    constexpr auto const_format = R"__(const {}& {}() const {{ return m_raw.{}; }})__";
+    return fmt::format(is_const ? const_format : format, type_name, name, name);
 }
 
 void generate_raw_struct_field(std::string_view name,
@@ -87,6 +86,11 @@ void generate_raw_struct(std::string_view name, const structure& s, std::ostream
 }
 
 void generate_struct(std::string_view name, const structure& s, std::ostream& str) {
+    std::stringstream raw_part;
+
+    auto raw_name = std::string(name) + "_raw";
+    generate_raw_struct(raw_name, s, raw_part);
+
     cpp_struct_codegen_helper struct_helper;
 
     for (auto& [name, member] : s.members) {
@@ -98,12 +102,11 @@ void generate_struct(std::string_view name, const structure& s, std::ostream& st
         {}
     private:
         {}
+        {} m_raw;
     }};)__";
 
-    str << fmt::format(format,
-                       name,
-                       struct_helper.public_part.str(),
-                       struct_helper.private_part.str())
+    str << fmt::format(
+               format, name, struct_helper.public_part.str(), raw_part.str(), raw_name)
         << '\n';
 }
 } // namespace
@@ -112,8 +115,10 @@ void generate(const module& mod, std::ostream& str) {
     for (auto& [name, s] : mod.structs) {
         if (s.is_raw()) {
             generate_raw_struct(name, s, str);
+            str << '\n';
         } else {
             generate_struct(name, s, str);
+            str << '\n';
         }
     }
 }

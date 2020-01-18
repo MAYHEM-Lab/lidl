@@ -1,0 +1,17 @@
+type:
+  type: structure
+  members:
+    name:
+      type: string
+
+member:
+  type: structure
+  members:
+    type:
+      type: string
+
+structure:
+  type: structure
+  members:
+    members:
+      type: string
