@@ -1,0 +1,54 @@
+#pragma once
+
+#include "ptr.hpp"
+#include "string.hpp"
+
+#include <algorithm>
+
+namespace lidl {
+struct message_builder {
+public:
+    message_builder(uint8_t* ptr, uint16_t size)
+        : base(ptr)
+        , cur_ptr(ptr)
+        , current(0) {
+    }
+
+    void increment(uint16_t diff) {
+        current += diff;
+        cur_ptr += diff;
+    }
+
+    uint16_t size() const {
+        return current;
+    }
+
+    uint8_t* base;
+    uint8_t* cur_ptr;
+    uint16_t current;
+};
+
+string create_string(message_builder& builder, std::string_view sv) {
+    auto off = builder.current;
+    std::copy(sv.begin(), sv.end(), reinterpret_cast<char*>(builder.cur_ptr));
+    builder.current += sv.size();
+    builder.cur_ptr += sv.size();
+    return string(ptr<char>(off), sv.size());
+}
+
+template<class T>
+T& append_raw(message_builder& builder, const T& t) {
+    auto off = builder.current;
+    auto ptr = new (builder.cur_ptr) T(t);
+    builder.increment(sizeof *ptr);
+    return *ptr;
+}
+
+template<class T, class... Ts>
+T& emplace_raw(message_builder& builder, Ts&&... args) {
+    auto off = builder.current;
+    auto ptr = new (builder.cur_ptr) T{std::forward<Ts>(args)...};
+    builder.increment(sizeof *ptr);
+    return *ptr;
+}
+} // namespace lidl

@@ -1,4 +1,4 @@
 .clangd
 compile_commands.json
-*build*
+*build*/**
 .vs
