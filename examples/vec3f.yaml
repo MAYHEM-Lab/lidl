@@ -1,7 +1,5 @@
 vec3f:
   type: structure
-  attributes:
-    raw: {}
   members:
     x:
       type: f32
@@ -17,3 +15,15 @@ vertex:
       type: vec3f
     normal:
       type: vec3f
+
+triangle:
+  type: structure
+  attributes:
+    raw: False
+  members:
+    vertices:
+      type:
+        name: array
+        parameters:
+          - vertex
+          - 3

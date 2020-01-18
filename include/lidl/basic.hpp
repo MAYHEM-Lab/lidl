@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <initializer_list>
+#include <lidl/identifier.hpp>
 #include <map>
 #include <memory>
 #include <set>
@@ -11,30 +14,39 @@
 namespace lidl {
 struct type {
 public:
-    std::string_view name() const {
+    virtual bool is_raw() const {
+        return false;
+    }
+
+    identifier name() const {
         return m_name;
     }
     virtual ~type() = default;
 
 protected:
-    explicit type(std::string name)
+    explicit type(identifier name)
         : m_name(std::move(name)) {
     }
 
 private:
-    std::string m_name;
+    identifier m_name;
 };
 
 struct basic_type : type {
-    explicit basic_type(std::string name, int bits)
+    explicit basic_type(identifier name, int bits)
         : type(name)
         , size_in_bits(bits) {
     }
+
+    virtual bool is_raw() const override {
+        return true;
+    }
+
     int32_t size_in_bits;
 };
 
 struct integral_type : basic_type {
-    explicit integral_type(std::string name, int bits, bool unsigned_)
+    explicit integral_type(identifier name, int bits, bool unsigned_)
         : basic_type(name, bits)
         , is_unsigned(unsigned_) {
     }
@@ -44,35 +56,34 @@ struct integral_type : basic_type {
 
 struct half_type : basic_type {
     explicit half_type()
-        : basic_type("f16", 16) {
+        : basic_type(identifier("f16"), 16) {
     }
 };
 
 struct float_type : basic_type {
     explicit float_type()
-        : basic_type("f32", 32) {
+        : basic_type(identifier("f32"), 32) {
     }
 };
 
 struct double_type : basic_type {
     explicit double_type()
-        : basic_type("f64", 64) {
+        : basic_type(identifier("f64"), 64) {
     }
 };
 
 struct string_type : type {
     explicit string_type()
-        : type("string") {
+        : type(identifier("string")) {
     }
-};
+}; // namespace lidl
 
 struct member {
     const type* type_;
-    std::map<std::string, std::string> attributes;
 };
 
 struct attribute {
-    ~attribute() = default;
+    virtual ~attribute() = default;
 
     explicit attribute(std::string name)
         : m_name(std::move(name)) {
@@ -88,7 +99,13 @@ private:
 
 struct attribute_holder {
 public:
-    std::shared_ptr<const attribute> get(std::string_view name) const {
+    template<class T>
+    std::shared_ptr<const T> get(std::string_view name) const {
+        auto untyped = get_untyped(name);
+        return std::dynamic_pointer_cast<const T>(untyped);
+    }
+
+    std::shared_ptr<const attribute> get_untyped(std::string_view name) const {
         auto it = m_attribs.find(name);
         if (it == m_attribs.end()) {
             return nullptr;
@@ -106,15 +123,27 @@ private:
 
 namespace detail {
 struct raw_attribute : attribute {
-    raw_attribute()
-        : attribute("raw") {
+    raw_attribute(bool b)
+        : attribute("raw")
+        , raw(b) {
     }
+    bool raw;
 };
 } // namespace detail
 
 struct structure {
     bool is_raw() const {
-        return attributes.get("raw") != nullptr;
+        auto detected = std::all_of(members.begin(), members.end(), [](auto& mem) {
+            return mem.second.type_->is_raw();
+        });
+        auto attrib = attributes.get<detail::raw_attribute>("raw");
+        if (attrib) {
+            if (attrib->raw && !detected) {
+                throw std::runtime_error("Forced raw struct cannot be satisfied!");
+            }
+            return attrib->raw;
+        }
+        return detected;
     }
 
     std::map<std::string, member> members;

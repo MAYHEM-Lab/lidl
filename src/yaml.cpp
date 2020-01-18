@@ -1,4 +1,5 @@
 #include "lidl/basic.hpp"
+#include "lidl/identifier.hpp"
 
 #include <fstream>
 #include <gsl/gsl_assert>
@@ -10,32 +11,84 @@
 
 namespace lidl::yaml {
 namespace {
+std::vector<identifier> parse_parameters(const YAML::Node& node) {
+    std::vector<identifier> res;
+    for (auto e : node) {
+        res.emplace_back(e.as<std::string>());
+    }
+    return res;
+}
+
+identifier get_identifier_for_def(std::string_view base, const YAML::Node& node) {
+    if (node["parameters"]) {
+        return identifier(std::string(base), parse_parameters(node["parameters"]));
+    }
+
+    return identifier(std::string(base));
+}
+
 std::shared_ptr<attribute> read_attribute(std::string_view name, const YAML::Node& node) {
     if (name == "raw") {
-        return std::make_shared<detail::raw_attribute>();
+        return std::make_shared<detail::raw_attribute>(node.as<bool>());
     }
+    return nullptr;
 }
 
-member read_member(const YAML::Node& node, const type_db& types) {
+member read_member(const YAML::Node& node, const module& module) {
     auto type_name = node["type"];
     Expects(type_name);
-    auto type = types.get(type_name.as<std::string>());
-    if (!type) {
-        // error
-        throw std::runtime_error("no such type: " + type_name.as<std::string>());
+    if (type_name.IsScalar()) {
+        auto type = module.symbols.get(type_name.as<std::string>());
+        if (!type) {
+            // error
+            throw std::runtime_error("no such type: " + type_name.as<std::string>());
+        }
+
+        member m;
+        m.type_ = type;
+        return m;
+    } else {
+        auto base_name = type_name["name"].as<std::string>();
+
+        std::vector<identifier> args;
+        if (type_name["parameters"]) {
+            args = parse_parameters(type_name["parameters"]);
+        }
+
+        auto type = module.symbols.get(base_name);
+        if (type) {
+            // not a generic
+            if (!args.empty()) {
+                throw std::runtime_error(base_name + " is not generic!");
+            }
+        } else {
+            type = module.generics.get(base_name);
+            if (!type) {
+                // error
+                throw std::runtime_error("no such type: " + type_name.as<std::string>());
+            }
+
+            if (type->name().arity() != args.size()) {
+                throw std::runtime_error(
+                    "mismatched number of args and params for generic");
+            }
+
+            type = new generic_instantiation(identifier(base_name, args), *type);
+        }
+
+        member m;
+        m.type_ = type;
+        return m;
     }
-    member m;
-    m.type_ = type;
-    return m;
 }
 
-structure read_structure(const YAML::Node& node, const type_db& types) {
+structure read_structure(const YAML::Node& node, const module& module) {
     structure s;
     auto members = node["members"];
     Expects(members);
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        auto mem = read_member(val, types);
+        auto mem = read_member(val, module);
         s.members.emplace(key.as<std::string>(), mem);
     }
     auto attribs = node["attributes"];
@@ -54,8 +107,8 @@ module load_module(std::string_view path) {
     auto node = YAML::Load(file);
 
     module m;
-    type_db& module_types = m.symbols;
-    add_basic_types(module_types);
+    add_basic_types(m.symbols);
+    add_basic_types(m.generics);
 
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
@@ -64,7 +117,9 @@ module load_module(std::string_view path) {
         Expects(val["type"]);
 
         if (val["type"].as<std::string>() == "structure") {
-            module_types.declare(key.as<std::string>());
+            m.symbols.declare(get_identifier_for_def(key.as<std::string>(), val));
+        } else if (val["type"].as<std::string>() == "generic<structure>") {
+            m.generics.declare(get_identifier_for_def(key.as<std::string>(), val));
         }
     }
 
@@ -73,12 +128,16 @@ module load_module(std::string_view path) {
         Expects(key);
         Expects(val);
         Expects(val["type"]);
-        auto name = key.as<std::string>();
+        auto identifier = get_identifier_for_def(key.as<std::string>(), val);
 
         if (val["type"].as<std::string>() == "structure") {
-            auto s = read_structure(val, module_types);
-            module_types.define(std::make_unique<user_defined_type>(name, s));
-            m.structs.emplace(name, s);
+            auto s = read_structure(val, m);
+            m.symbols.define(std::make_unique<user_defined_type>(identifier, s));
+            m.structs.emplace(identifier, s);
+        } else if (val["type"].as<std::string>() == "generic<structure>") {
+            auto s = read_structure(val, m);
+            m.symbols.define(std::make_unique<user_defined_type>(identifier, s));
+            m.structs.emplace(identifier, s);
         }
     }
 

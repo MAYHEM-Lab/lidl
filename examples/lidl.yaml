@@ -1,17 +1,31 @@
-type:
+identifier:
   type: structure
   members:
     name:
       type: string
+    parameters:
+      type:
+        name: vector
+        parameters:
+          - identifier
+
+type:
+  type: structure
+  members:
+    name:
+      type: identifier
 
 member:
   type: structure
   members:
     type:
-      type: string
+      type: type
 
 structure:
   type: structure
   members:
     members:
-      type: string
+      type: 
+        name: vector
+        parameters:
+          - member
