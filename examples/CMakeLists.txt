@@ -1,0 +1,2 @@
+add_executable(vec3f_example vec3f_example.cpp)
+target_link_libraries(vec3f_example PUBLIC lidl_rt)

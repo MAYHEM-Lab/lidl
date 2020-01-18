@@ -18,3 +18,6 @@ add_executable(lidlc src/main.cpp)
 target_link_libraries(lidlc PUBLIC lidl_core lidl_yaml lidl_cppgen)
 
 add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
+
+add_subdirectory(runtime/cpp)
+add_subdirectory(examples)

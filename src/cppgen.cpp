@@ -22,8 +22,11 @@ std::optional<identifier> known_type_conversion(const identifier& name) {
         {"u16", "uint16_t"},
         {"u32", "uint32_t"},
         {"u64", "uint64_t"},
-        {"string", "lidl::string"},
-        {"vector", "lidl::vector"}};
+        {"array", "::lidl::array"},
+        {"optional", "::lidl::optional"},
+        {"ptr", "::lidl::ptr"},
+        {"string", "::lidl::string"},
+        {"vector", "::lidl::vector"}};
 
     if (auto it = basic_types.find(name.name); it != basic_types.end()) {
         identifier newname = name;
@@ -121,6 +124,7 @@ void generate_struct(identifier name, const structure& s, std::ostream& str) {
 } // namespace
 
 void generate(const module& mod, std::ostream& str) {
+    str << "#pragma once\n\n#include <lidl/lidl.hpp>\n\n";
     for (auto& [name, s] : mod.structs) {
         if (s.is_raw()) {
             generate_raw_struct(name.name, s, str);

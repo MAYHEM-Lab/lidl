@@ -1,0 +1,16 @@
+frame:
+  type: generic<structure>
+  parameters:
+    - CapT
+    - ConsT
+  members:
+    capabilities:
+      type:
+        name: vector
+        parameters:
+          - CapT
+    constraints:
+      type:
+        name: vector
+        parameters:
+          - ConsT

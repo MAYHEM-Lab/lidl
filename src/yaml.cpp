@@ -12,6 +12,10 @@
 namespace lidl::yaml {
 namespace {
 std::vector<identifier> parse_parameters(const YAML::Node& node) {
+    if (!node) {
+        return {};
+    }
+
     std::vector<identifier> res;
     for (auto e : node) {
         res.emplace_back(e.as<std::string>());
@@ -34,14 +38,18 @@ std::shared_ptr<attribute> read_attribute(std::string_view name, const YAML::Nod
     return nullptr;
 }
 
-member read_member(const YAML::Node& node, const module& module) {
+member
+read_member(const YAML::Node& node, const module& module, const type_db& param_symbols) {
     auto type_name = node["type"];
     Expects(type_name);
     if (type_name.IsScalar()) {
-        auto type = module.symbols.get(type_name.as<std::string>());
+        auto type = param_symbols.get(type_name.as<std::string>());
         if (!type) {
-            // error
-            throw std::runtime_error("no such type: " + type_name.as<std::string>());
+            type = module.symbols.get(type_name.as<std::string>());
+            if (!type) {
+                // error
+                throw std::runtime_error("no such type: " + type_name.as<std::string>());
+            }
         }
 
         member m;
@@ -82,15 +90,29 @@ member read_member(const YAML::Node& node, const module& module) {
     }
 }
 
+struct generic_parameter : type {
+    generic_parameter(identifier id)
+        : type(std::move(id)) {
+    }
+};
+
 structure read_structure(const YAML::Node& node, const module& module) {
     structure s;
+
+    auto param_symbols = new type_db;
+
+    for (auto& param : parse_parameters(node["parameters"])) {
+        param_symbols->define(std::make_unique<generic_parameter>(param));
+    }
+
     auto members = node["members"];
     Expects(members);
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        auto mem = read_member(val, module);
+        auto mem = read_member(val, module, *param_symbols);
         s.members.emplace(key.as<std::string>(), mem);
     }
+
     auto attribs = node["attributes"];
     if (attribs) {
         for (auto e : attribs) {
@@ -133,11 +155,11 @@ module load_module(std::string_view path) {
         if (val["type"].as<std::string>() == "structure") {
             auto s = read_structure(val, m);
             m.symbols.define(std::make_unique<user_defined_type>(identifier, s));
-            m.structs.emplace(identifier, s);
+            m.structs.emplace_back(identifier, s);
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             auto s = read_structure(val, m);
             m.symbols.define(std::make_unique<user_defined_type>(identifier, s));
-            m.structs.emplace(identifier, s);
+            m.structs.emplace_back(identifier, s);
         }
     }
 

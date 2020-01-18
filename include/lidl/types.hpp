@@ -3,13 +3,33 @@
 #include "identifier.hpp"
 
 #include <iostream>
-#include <lidl/basic.hpp>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
 namespace lidl {
+struct type {
+public:
+    virtual bool is_raw() const {
+        return false;
+    }
+
+    identifier name() const {
+        return m_name;
+    }
+
+    virtual ~type() = default;
+
+protected:
+    explicit type(identifier name)
+        : m_name(std::move(name)) {
+    }
+
+private:
+    identifier m_name;
+};
+
 namespace detail {
 struct future_type : type {
     explicit future_type(identifier name)
@@ -18,18 +38,50 @@ struct future_type : type {
 };
 } // namespace detail
 
-class user_defined_type : public type {
-public:
-    user_defined_type(identifier name, const structure& s)
+struct basic_type : type {
+    explicit basic_type(identifier name, int bits)
         : type(name)
-        , str(s) {
+        , size_in_bits(bits) {
     }
 
     virtual bool is_raw() const override {
-        return str.is_raw();
+        return true;
     }
 
-    structure str;
+    int32_t size_in_bits;
+};
+
+struct integral_type : basic_type {
+    explicit integral_type(identifier name, int bits, bool unsigned_)
+        : basic_type(name, bits)
+        , is_unsigned(unsigned_) {
+    }
+
+    bool is_unsigned;
+};
+
+struct half_type : basic_type {
+    explicit half_type()
+        : basic_type(identifier("f16"), 16) {
+    }
+};
+
+struct float_type : basic_type {
+    explicit float_type()
+        : basic_type(identifier("f32"), 32) {
+    }
+};
+
+struct double_type : basic_type {
+    explicit double_type()
+        : basic_type(identifier("f64"), 64) {
+    }
+};
+
+struct string_type : type {
+    explicit string_type()
+        : type(identifier("string")) {
+    }
 };
 
 class generic_instantiation : public type {

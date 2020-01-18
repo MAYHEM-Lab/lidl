@@ -1,3 +1,15 @@
+vec3:
+  type: generic<structure>
+  parameters:
+    - T
+  members:
+    x:
+      type: T
+    y:
+      type: T
+    z:
+      type: T
+      
 vec3f:
   type: structure
   members:
@@ -31,8 +43,3 @@ triangle:
         parameters:
           - vertex
           - 3
-    texture:
-      type:
-        name: optional
-        parameters:
-          - texture2d
