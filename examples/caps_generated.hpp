@@ -26,3 +26,32 @@ private:
 
     frame_raw m_raw;
 };
+
+struct sha2_signature {
+    ::lidl::array<u8, 32> sign;
+};
+
+template<typename CapT, typename ConsT>
+class token {
+public:
+    const ::lidl::vector<frame<CapT, ConsT>>& frames() const {
+        return m_raw.frames;
+    }
+    ::lidl::vector<frame<CapT, ConsT>>& frames() {
+        return m_raw.frames;
+    }
+    const sha2_signature& signature() const {
+        return m_raw.signature;
+    }
+    sha2_signature& signature() {
+        return m_raw.signature;
+    }
+
+private:
+    struct token_raw {
+        ::lidl::vector<frame<CapT, ConsT>> frames;
+        sha2_signature signature;
+    };
+
+    token_raw m_raw;
+};

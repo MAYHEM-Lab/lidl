@@ -14,3 +14,27 @@ frame:
         name: vector
         parameters:
           - ConsT
+
+sha2_signature:
+  type: structure
+  members:
+    sign:
+      type:
+        name: array
+        parameters:
+          - u8
+          - 32
+
+token:
+  type: generic<structure>
+  parameters:
+    - CapT
+    - ConsT
+  members:
+    frames:
+      type:
+        name: vector
+        parameters:
+          - frame<CapT, ConsT>
+    signature:
+      type: sha2_signature
