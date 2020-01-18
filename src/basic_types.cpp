@@ -25,13 +25,13 @@ void add_basic_types(type_db& db) {
 
 struct vector_type : type {
     vector_type()
-        : type(identifier("ptr", std::vector<identifier>{identifier("T")})) {
+        : type(identifier("vector", std::vector<identifier>{identifier("T")})) {
     }
 };
 
 struct pointer_type : type {
     pointer_type()
-        : type(identifier("vector", std::vector<identifier>{identifier("T")})) {
+        : type(identifier("pointer", std::vector<identifier>{identifier("T")})) {
     }
 };
 
