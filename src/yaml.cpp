@@ -53,7 +53,8 @@ module load_module(std::string_view path) {
     std::ifstream file{std::string(path)};
     auto node = YAML::Load(file);
 
-    type_db module_types;
+    module m;
+    type_db& module_types = m.symbols;
     add_basic_types(module_types);
 
     for (auto e : node) {
@@ -67,7 +68,6 @@ module load_module(std::string_view path) {
         }
     }
 
-    module m;
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         Expects(key);

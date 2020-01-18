@@ -120,8 +120,4 @@ struct structure {
     std::map<std::string, member> members;
     attribute_holder attributes;
 };
-
-struct module {
-    std::map<std::string, structure> structs;
-};
 } // namespace lidl

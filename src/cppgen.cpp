@@ -2,6 +2,7 @@
 
 #include <fmt/format.h>
 #include <lidl/basic.hpp>
+#include <lidl/module.hpp>
 #include <optional>
 #include <sstream>
 #include <string_view>
