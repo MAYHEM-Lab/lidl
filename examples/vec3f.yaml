@@ -16,10 +16,14 @@ vertex:
     normal:
       type: vec3f
 
+texture2d:
+  type: structure
+  members:
+    path:
+      type: string
+
 triangle:
   type: structure
-  attributes:
-    raw: False
   members:
     vertices:
       type:
@@ -27,3 +31,8 @@ triangle:
         parameters:
           - vertex
           - 3
+    texture:
+      type:
+        name: optional
+        parameters:
+          - texture2d

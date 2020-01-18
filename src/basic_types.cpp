@@ -23,6 +23,16 @@ void add_basic_types(type_db& db) {
     db.define(std::make_unique<string_type>());
 }
 
+struct optional_type : type {
+    optional_type()
+        : type(identifier("optional", std::vector<identifier>{identifier("T")})) {
+    }
+
+    virtual bool is_raw() const override {
+        return true;
+    }
+};
+
 struct vector_type : type {
     vector_type()
         : type(identifier("vector", std::vector<identifier>{identifier("T")})) {
@@ -50,5 +60,6 @@ void add_basic_types(generics_table& db) {
     db.define(std::make_unique<pointer_type>());
     db.define(std::make_unique<vector_type>());
     db.define(std::make_unique<array_type>());
+    db.define(std::make_unique<optional_type>());
 }
 } // namespace lidl
