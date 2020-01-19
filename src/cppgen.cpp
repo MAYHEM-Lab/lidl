@@ -10,7 +10,7 @@
 
 namespace lidl {
 namespace {
-std::optional<identifier> known_type_conversion(const identifier& name) {
+std::optional<std::string> known_type_conversion(const std::string_view& name) {
     std::unordered_map<std::string_view, std::string_view> basic_types{
         {"f32", "float"},
         {"f64", "double"},
@@ -28,19 +28,50 @@ std::optional<identifier> known_type_conversion(const identifier& name) {
         {"string", "::lidl::string"},
         {"vector", "::lidl::vector"}};
 
-    if (auto it = basic_types.find(name.name); it != basic_types.end()) {
-        identifier newname = name;
-        newname.name = it->second;
-        return newname;
+    if (auto it = basic_types.find(name); it != basic_types.end()) {
+        return std::string(it->second);
     }
 
     return std::nullopt;
 }
 
-identifier get_identifier_for_type(const type& t) {
-    auto name = t.name();
-    if (auto basic_name = known_type_conversion(name); basic_name) {
-        name = *basic_name;
+std::string get_identifier_for_type(const module& mod, const type& t) {
+    auto sym = mod.syms.reverse_lookup(&t);
+
+    if (!sym) {
+        auto gen_it = mod.generated.find(&t);
+        if (gen_it == mod.generated.end()) {
+            throw std::runtime_error("wtf");
+        }
+        bool first = false;
+        std::string s;
+        for (auto& piece : gen_it->second) {
+            if (auto num = std::get_if<int64_t>(&piece); num) {
+                if (!first) {
+                    throw std::runtime_error("shouldn't happen");
+                }
+                s += std::to_string(*num) + ", ";
+            } else if (auto sym = std::get_if<const symbol*>(&piece); sym) {
+                auto name = std::string(mod.syms.name_of(*sym));
+                if (auto res = known_type_conversion(name); res) {
+                    name = *res;
+                }
+                if (!first) {
+                    s = name + "<";
+                    first = true;
+                    continue;
+                }
+                s += name + ", ";
+            }
+        }
+        s.pop_back();
+        s.back() = '>';
+        return s;
+    }
+
+    auto name = std::string(mod.syms.name_of(sym));
+    if (auto res = known_type_conversion(name); res) {
+        name = *res;
     }
     return name;
 }
@@ -50,29 +81,28 @@ std::string private_name_for(std::string_view name) {
     return "m_" + std::string(name);
 }
 
-std::string generate_getter(std::string_view name, identifier type, bool is_const) {
+std::string generate_getter(std::string_view name, std::string_view type_name, bool is_const) {
     constexpr auto format = R"__({}& {}() {{ return m_raw.{}; }})__";
     constexpr auto const_format = R"__(const {}& {}() const {{ return m_raw.{}; }})__";
-    return fmt::format(is_const ? const_format : format, to_string(type), name, name);
+    return fmt::format(is_const ? const_format : format, type_name, name, name);
 }
 
 void generate_raw_struct_field(std::string_view name,
-                               const type& type,
+                               std::string_view type_name,
                                std::ostream& str) {
-    auto ident = get_identifier_for_type(type);
-    str << fmt::format("{} {};\n", to_string(ident), name);
+    str << fmt::format("{} {};\n", type_name, name);
 }
 
-void generate_struct_field(std::string_view name, const type& type, std::ostream& str) {
-    str << generate_getter(name, get_identifier_for_type(type), true) << '\n';
-    str << generate_getter(name, get_identifier_for_type(type), false) << '\n';
+void generate_struct_field(std::string_view name, std::string_view type_name, std::ostream& str) {
+    str << generate_getter(name, type_name, true) << '\n';
+    str << generate_getter(name, type_name, false) << '\n';
 }
 
-void generate_raw_struct(std::string_view name, const structure& s, std::ostream& str) {
+void generate_raw_struct(const module& m, std::string_view name, const structure& s, std::ostream& str) {
     std::stringstream pub;
 
     for (auto& [name, member] : s.members) {
-        generate_raw_struct_field(name, *member.type_, pub);
+        generate_raw_struct_field(name, get_identifier_for_type(m, *member.type_), pub);
     }
 
     constexpr auto format = R"__(struct {} {{
@@ -82,30 +112,19 @@ void generate_raw_struct(std::string_view name, const structure& s, std::ostream
     str << fmt::format(format, name, pub.str()) << '\n';
 }
 
-void generate_struct(identifier name, const structure& s, std::ostream& str) {
+void generate_struct(const module& m, std::string_view name, const structure& s, std::ostream& str) {
     std::stringstream raw_part;
 
-    auto raw_name = std::string(name.name) + "_raw";
-    generate_raw_struct(raw_name, s, raw_part);
+    auto raw_name = std::string(name) + "_raw";
+    generate_raw_struct(m, raw_name, s, raw_part);
 
     std::stringstream struct_helper;
 
     for (auto& [name, member] : s.members) {
-        generate_struct_field(name, *member.type_, struct_helper);
+        generate_struct_field(name, get_identifier_for_type(m, *member.type_), struct_helper);
     }
 
-    std::string param_str;
-    for (auto& param : name.parameters) {
-        param_str += "typename " + param.name + ",";
-    }
-
-    if (!param_str.empty()) {
-        param_str = "template <" + param_str;
-        param_str.back() = '>';
-        param_str.push_back('\n');
-    }
-
-    constexpr auto format = R"__({}class {} {{
+    constexpr auto format = R"__(class {} {{
     public:
         {}
     private:
@@ -114,8 +133,7 @@ void generate_struct(identifier name, const structure& s, std::ostream& str) {
     }};)__";
 
     str << fmt::format(format,
-                       param_str,
-                       name.name,
+                       name,
                        struct_helper.str(),
                        raw_part.str(),
                        raw_name)
@@ -126,13 +144,17 @@ void generate_struct(identifier name, const structure& s, std::ostream& str) {
 void generate(const module& mod, std::ostream& str) {
     str << "#pragma once\n\n#include <lidl/lidl.hpp>\n\n";
     for (auto& [name, s] : mod.structs) {
-        if (s.is_raw()) {
-            generate_raw_struct(name.name, s, str);
+        if (s.is_raw(mod)) {
+            generate_raw_struct(mod, name, s, str);
             str << '\n';
         } else {
-            generate_struct(name, s, str);
+            generate_struct(mod, name, s, str);
             str << '\n';
         }
+    }
+
+    for (auto& [name, s] : mod.generic_structs) {
+        std::cerr << "Codegen for generic structs not supported!";
     }
 }
 } // namespace lidl

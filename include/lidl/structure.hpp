@@ -3,6 +3,7 @@
 #include <lidl/attributes.hpp>
 #include <lidl/types.hpp>
 #include <map>
+#include <algorithm>
 
 namespace lidl {
 struct member {
@@ -11,9 +12,9 @@ struct member {
 };
 
 struct structure {
-    bool is_raw() const {
-        auto detected = std::all_of(members.begin(), members.end(), [](auto& mem) {
-            return mem.second.type_->is_raw();
+    bool is_raw(const module& mod) const {
+        auto detected = std::all_of(members.begin(), members.end(), [&mod](auto& mem) {
+            return mem.second.type_->is_raw(mod);
         });
         auto attrib = attributes.get<detail::raw_attribute>("raw");
         if (attrib) {
@@ -31,13 +32,12 @@ struct structure {
 
 class user_defined_type : public type {
 public:
-    user_defined_type(identifier name, const structure& s)
-        : type(name)
-        , str(s) {
+    explicit user_defined_type(structure s)
+        : str(std::move(s)) {
     }
 
-    virtual bool is_raw() const override {
-        return str.is_raw();
+    virtual bool is_raw(const module& mod) const override {
+        return str.is_raw(mod);
     }
 
     structure str;

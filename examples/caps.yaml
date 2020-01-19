@@ -1,8 +1,10 @@
 frame:
   type: generic<structure>
   parameters:
-    - CapT
-    - ConsT
+    - name: CapT
+      type: type
+    - name: ConsT
+      type: type
   members:
     capabilities:
       type:
@@ -28,8 +30,10 @@ sha2_signature:
 token:
   type: generic<structure>
   parameters:
-    - CapT
-    - ConsT
+    - name: CapT
+      type: type
+    - name: ConsT
+      type: type
   members:
     frames:
       type:

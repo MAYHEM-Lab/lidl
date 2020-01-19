@@ -1,15 +1,10 @@
 #pragma once
 
-#include <algorithm>
-#include <initializer_list>
-#include <lidl/attributes.hpp>
-#include <lidl/identifier.hpp>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
+#include <variant>
 
-namespace lidl {} // namespace lidl
+namespace lidl {
+struct type;
+struct generic_type;
+
+using symbol = std::variant<std::monostate, const type*, const generic_type*>;
+} // namespace lidl

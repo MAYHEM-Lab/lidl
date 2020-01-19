@@ -1,7 +1,8 @@
 vec3:
   type: generic<structure>
   parameters:
-    - T
+    - name: T
+      type: type
   members:
     x:
       type: T
@@ -36,10 +37,18 @@ texture2d:
 
 triangle:
   type: structure
+  attributes:
+    raw: False
   members:
     vertices:
       type:
         name: array
         parameters:
           - vertex
+          - 3
+    textures:
+      type:
+        name: array
+        parameters:
+          - texture2d
           - 3
