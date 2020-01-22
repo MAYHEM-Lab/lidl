@@ -28,14 +28,6 @@ public:
     uint16_t current;
 };
 
-string create_string(message_builder& builder, std::string_view sv) {
-    auto off = builder.current;
-    std::copy(sv.begin(), sv.end(), reinterpret_cast<char*>(builder.cur_ptr));
-    builder.current += sv.size();
-    builder.cur_ptr += sv.size();
-    return string(ptr<char>(off), sv.size());
-}
-
 template<class T>
 T& append_raw(message_builder& builder, const T& t) {
     auto off = builder.current;
@@ -50,5 +42,12 @@ T& emplace_raw(message_builder& builder, Ts&&... args) {
     auto ptr = new (builder.cur_ptr) T{std::forward<Ts>(args)...};
     builder.increment(sizeof *ptr);
     return *ptr;
+}
+
+string& create_string(message_builder& builder, std::string_view sv) {
+    auto off = builder.current;
+    std::copy(sv.begin(), sv.end(), reinterpret_cast<char*>(builder.cur_ptr));
+    builder.increment(sv.size());
+    return emplace_raw<string>(builder, ptr<char>(builder.current - off), uint16_t(sv.size()));
 }
 } // namespace lidl

@@ -12,12 +12,18 @@ public:
         , m_size(size) {
     }
 
-    std::string_view string_view(const uint8_t* base) const {
-        return {&m_ptr.get(base), m_size};
+    string(const string&) = delete;
+    string(string&&) = delete;
+
+    std::string_view string_view() const {
+        return {&m_ptr.get(), m_size};
     }
 
 private:
     ptr<char> m_ptr;
     uint16_t m_size;
 };
+
+static_assert(sizeof(string) == 4);
+static_assert(alignof(string) == 2);
 } // namespace lidl

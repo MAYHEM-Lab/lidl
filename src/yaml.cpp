@@ -174,6 +174,10 @@ generic_structure read_generic_structure(const YAML::Node& node, const module& m
 } // namespace
 module load_module(std::string_view path) {
     std::ifstream file{std::string(path)};
+    if (!file.good()) {
+        throw std::runtime_error("File not found: " + std::string(path));
+    }
+
     auto node = YAML::Load(file);
 
     module m;
@@ -208,8 +212,7 @@ module load_module(std::string_view path) {
             auto s = read_generic_structure(val, m);
             m.syms.define(m.syms.lookup(key.as<std::string>()),
                           std::make_unique<user_defined_generic>(s));
-            m.generic_structs.emplace_back(key.as<std::string>(),
-                                           std::move(s));
+            m.generic_structs.emplace_back(key.as<std::string>(), std::move(s));
         }
     }
 

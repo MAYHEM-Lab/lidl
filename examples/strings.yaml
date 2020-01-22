@@ -1,0 +1,7 @@
+person:
+  type: structure
+  members:
+    name: 
+      type: string
+    surname:
+      type: string

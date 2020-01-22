@@ -4,7 +4,7 @@ target_compile_features(lidl_rt INTERFACE cxx_std_17)
 
 find_program(LIDLC_BIN
     NAMES lidlc
-    HINTS ${CMAKE_BINARY_DIR})
+    HINTS ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/Debug)
 
 if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
     message(STATUS "Found lidlc")
@@ -33,5 +33,9 @@ if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
         target_include_directories(${Name} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
         target_link_libraries(${Name} INTERFACE lidl_rt)
         add_dependencies(${Name} ${Name}_IMPL)
+    endfunction()
+else()
+    function(add_lidlc Name)
+        message(STATUS "lidlc not found!")
     endfunction()
 endif()

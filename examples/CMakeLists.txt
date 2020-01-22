@@ -1,3 +1,7 @@
 add_executable(vec3f_example vec3f_example.cpp)
 target_link_libraries(vec3f_example PUBLIC lidl_rt vec3f)
 add_lidlc(vec3f vec3f.yaml)
+
+add_executable(strings_example strings.cpp)
+target_link_libraries(strings_example PUBLIC lidl_rt strings)
+add_lidlc(strings strings.yaml)
