@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <lidl/attributes.hpp>
 #include <lidl/types.hpp>
 #include <map>
-#include <algorithm>
 
 namespace lidl {
 struct member {
@@ -11,11 +11,15 @@ struct member {
     attribute_holder attributes;
 };
 
-struct structure {
-    bool is_raw(const module& mod) const {
-        auto detected = std::all_of(members.begin(), members.end(), [&mod](auto& mem) {
-            return mem.second.type_->is_raw(mod);
-        });
+struct structure : public type {
+    std::map<std::string, member> members;
+    attribute_holder attributes;
+
+    virtual bool is_raw(const module& mod) const override {
+        auto detected =
+            std::all_of(members.begin(), members.end(), [&mod](auto& mem) {
+                return mem.second.type_->is_raw(mod);
+            });
         auto attrib = attributes.get<detail::raw_attribute>("raw");
         if (attrib) {
             if (attrib->raw && !detected) {
@@ -26,20 +30,13 @@ struct structure {
         return detected;
     }
 
-    std::map<std::string, member> members;
-    attribute_holder attributes;
-};
-
-class user_defined_type : public type {
-public:
-    explicit user_defined_type(structure s)
-        : str(std::move(s)) {
+    virtual raw_layout wire_layout(const module& mod) const {
+        aggregate_layout_computer computer;
+        for (auto& member : members) {
+            auto layout = member.second.type_->wire_layout(mod);
+            computer.add(layout);
+        }
+        return computer.get();
     }
-
-    virtual bool is_raw(const module& mod) const override {
-        return str.is_raw(mod);
-    }
-
-    structure str;
 };
 } // namespace lidl

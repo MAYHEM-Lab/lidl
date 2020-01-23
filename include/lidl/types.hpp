@@ -7,6 +7,8 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <lidl/layout.hpp>
+#include <optional>
 
 namespace lidl {
 class module;
@@ -16,12 +18,17 @@ public:
         return false;
     }
 
-    virtual int32_t wire_size_bytes(const module& mod) const = 0;
+    virtual raw_layout wire_layout(const module& mod) const = 0;
 
     virtual ~type() = default;
 };
 
 namespace detail {
-struct future_type : type {};
+struct future_type : type {
+    virtual raw_layout wire_layout(const module& mod) const override {
+        throw std::runtime_error(
+            "Wire layout shouldn't be called on a forward declaration!");
+    }
+};
 } // namespace detail
 } // namespace lidl

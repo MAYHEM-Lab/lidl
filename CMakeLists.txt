@@ -21,3 +21,11 @@ add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
 
 add_subdirectory(runtime/cpp)
 add_subdirectory(examples)
+
+enable_testing()
+add_library(test_main src/test_main.cpp)
+target_include_directories(test_main PUBLIC include)
+
+add_executable(layout_test src/layout_test.cpp)
+target_link_libraries(layout_test PUBLIC lidl_core test_main)
+add_test(layout_test layout_test)

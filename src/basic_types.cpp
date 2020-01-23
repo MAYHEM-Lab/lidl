@@ -18,8 +18,8 @@ struct basic_type : type {
         return true;
     }
 
-    virtual int32_t wire_size_bytes(const module&) const override {
-        return std::ceil(size_in_bits) / 8;
+    virtual raw_layout wire_layout(const module&) const override {
+        return raw_layout(std::ceil(size_in_bits / 8.f), std::ceil(size_in_bits / 8.f));
     }
 
     int32_t size_in_bits;
@@ -53,8 +53,9 @@ struct double_type : basic_type {
 };
 
 struct string_type : type {
-    virtual int32_t wire_size_bytes(const module&) const override {
-        return 4;
+    virtual raw_layout wire_layout(const module&) const override {
+        return raw_layout{/*.size=*/4,
+                          /*.alignment=*/2};
     }
 };
 } // namespace
@@ -67,11 +68,22 @@ struct optional_type : generic_type {
 
     bool is_raw(const module& mod,
                 const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[0]);
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
         if (auto regular = std::get_if<const type*>(arg); regular) {
             return (*regular)->is_raw(mod);
         }
         return false;
+    }
+
+    virtual raw_layout
+    wire_layout(const module& mod,
+                const struct generic_instantiation& instantiation) const {
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
+        if (auto regular = std::get_if<const type*>(arg); regular) {
+            auto layout = (*regular)->wire_layout(mod);
+            return raw_layout{layout.size() * 2, layout.alignment()};
+        }
+        throw std::runtime_error("Optional type is not regular");
     }
 };
 
@@ -79,11 +91,21 @@ struct vector_type : generic_type {
     vector_type()
         : generic_type(make_generic_declaration({{"T", "type"}})) {
     }
+
+    virtual raw_layout
+    wire_layout(const module& mod, const struct generic_instantiation&) const {
+        return raw_layout{4, 2};
+    }
 };
 
 struct pointer_type : generic_type {
     pointer_type()
         : generic_type(make_generic_declaration({{"T", "type"}})) {
+    }
+
+    virtual raw_layout
+    wire_layout(const module& mod, const struct generic_instantiation&) const {
+        return raw_layout{2, 2};
     }
 };
 
@@ -94,15 +116,29 @@ struct array_type : generic_type {
 
     bool is_raw(const module& mod,
                 const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[0]);
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
         if (auto regular = std::get_if<const type*>(arg); regular) {
             return (*regular)->is_raw(mod);
         }
         return false;
     }
+
+    virtual raw_layout
+    wire_layout(const module& mod,
+                const struct generic_instantiation& instantiation) const {
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
+        if (auto regular = std::get_if<const type*>(arg); regular) {
+            auto layout = (*regular)->wire_layout(mod);
+            auto len = std::get<int64_t>(instantiation.arguments()[2]);
+            return raw_layout(layout.size() * len, layout.alignment());
+        }
+        throw std::runtime_error("Array type is not regular!");
+    }
 };
 
 void add_basic_types(symbol_table& db) {
+    db.define("bool", std::make_unique<integral_type>(1, false));
+
     db.define("i8", std::make_unique<integral_type>(8, false));
     db.define("i16", std::make_unique<integral_type>(16, false));
     db.define("i32", std::make_unique<integral_type>(32, false));

@@ -206,7 +206,7 @@ module load_module(std::string_view path) {
         if (val["type"].as<std::string>() == "structure") {
             auto s = read_structure(val, m);
             m.syms.define(m.syms.lookup(key.as<std::string>()),
-                          std::make_unique<user_defined_type>(s));
+                          std::make_unique<structure>(s));
             m.structs.emplace_back(key.as<std::string>(), s);
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             auto s = read_generic_structure(val, m);

@@ -6,6 +6,7 @@
 #include <include/gsl/span>
 #include <string>
 #include <vector>
+#include <lidl/layout.hpp>
 
 namespace lidl {
 using generic_argument = std::variant<const symbol*, int64_t>;
@@ -60,12 +61,19 @@ struct generic_type {
         return false;
     }
 
+    virtual raw_layout wire_layout(const module& mod,
+                                   const struct generic_instantiation&) const = 0;
+
     virtual ~generic_type() = 0;
 
     std::shared_ptr<const generic_declaration> declaration;
 };
 
 struct generic_type_parameter : type {
+    virtual raw_layout wire_layout(const module& mod) const override {
+        throw std::runtime_error(
+            "Wire layout shouldn't be called on a generic type parameter!");
+    }
 };
 
 class module;
@@ -83,14 +91,17 @@ std::string make_name_for_instantiation(std::string_view name,
 
 class generic_instantiation : public type {
 public:
-    generic_instantiation(const generic_type& actual,
-                          std::vector<generic_argument> args)
+    generic_instantiation(const generic_type& actual, std::vector<generic_argument> args)
         : m_args(std::move(args))
         , m_actual(&actual) {
     }
 
     virtual bool is_raw(const module& mod) const override {
         return m_actual->is_raw(mod, *this);
+    }
+
+    virtual raw_layout wire_layout(const module& mod) const override {
+        return m_actual->wire_layout(mod, *this);
     }
 
     gsl::span<const generic_argument> arguments() const {
@@ -105,6 +116,12 @@ private:
 namespace detail {
 struct forward_decl : generic_type {
     using generic_type::generic_type;
+
+    virtual raw_layout wire_layout(const module& mod,
+                                   const struct generic_instantiation&) const override {
+        throw std::runtime_error(
+            "Wire layout shouldn't be called on a forward declaration!");
+    }
 };
 } // namespace detail
 
@@ -112,6 +129,11 @@ struct user_defined_generic : generic_type {
     explicit user_defined_generic(const generic_structure& str)
         : generic_type(str.declaration)
         , m_structure(&str) {
+    }
+    virtual raw_layout wire_layout(const module& mod,
+                                   const struct generic_instantiation&) const override {
+        throw std::runtime_error(
+            "Wire layout shouldn't be called on a generic!");
     }
     const generic_structure* m_structure;
 };
