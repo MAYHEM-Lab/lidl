@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <lidl/basic.hpp>
 #include <lidl/generics.hpp>
@@ -15,6 +16,10 @@ struct basic_type : type {
 
     virtual bool is_raw(const module&) const override {
         return true;
+    }
+
+    virtual int32_t wire_size_bytes(const module&) const override {
+        return std::ceil(size_in_bits) / 8;
     }
 
     int32_t size_in_bits;
@@ -47,7 +52,11 @@ struct double_type : basic_type {
     }
 };
 
-struct string_type : type {};
+struct string_type : type {
+    virtual int32_t wire_size_bytes(const module&) const override {
+        return 4;
+    }
+};
 } // namespace
 
 

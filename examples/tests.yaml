@@ -1,0 +1,9 @@
+not_raw:
+  type: structure
+  members:
+    arr_of_str:
+      type:
+        name: array
+        parameters:
+          - string
+          - 1
