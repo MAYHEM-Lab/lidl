@@ -5,6 +5,7 @@
 #include <lidl/structure.hpp>
 #include <lidl/types.hpp>
 #include <lidl/symbol_table.hpp>
+#include <lidl/service.hpp>
 #include <variant>
 #include <vector>
 
@@ -16,5 +17,6 @@ struct module {
 
     std::vector<std::pair<std::string, structure>> structs;
     std::vector<std::pair<std::string, generic_structure>> generic_structs;
+    std::vector<std::pair<std::string, service>> services;
 };
 } // namespace lidl

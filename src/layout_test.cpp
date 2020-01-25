@@ -34,5 +34,13 @@ TEST_CASE("weird layout") {
     computer.add({8, 8});
     REQUIRE_EQ(raw_layout{24, 8}, computer.get());
 }
+TEST_CASE("three members") {
+    aggregate_layout_computer computer;
+    computer.add({12, 4});
+    computer.add({2, 2});
+    REQUIRE_EQ(raw_layout{16, 4}, computer.get());
+    computer.add({2, 2});
+    REQUIRE_EQ(raw_layout{16, 4}, computer.get());
+}
 } // namespace
 } // namespace lidl

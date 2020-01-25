@@ -7,3 +7,21 @@ not_raw:
         parameters:
           - string
           - 1
+
+basic_vector:
+  type: structure
+  members:
+    vec:
+      type:
+        name: vector
+        parameters:
+          - f32
+
+complex_vector:
+  type: structure
+  members:
+    vec:
+      type:
+        name: vector
+        parameters:
+          - string

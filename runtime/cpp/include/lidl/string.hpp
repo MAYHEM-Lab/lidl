@@ -2,33 +2,45 @@
 
 #include "ptr.hpp"
 
-#include <string_view>
 #include <lidl/buffer.hpp>
+#include <lidl/builder.hpp>
+#include <string_view>
 
 namespace lidl {
 class string {
 public:
-    string(ptr<char> begin, uint16_t size)
-        : m_ptr(begin)
-        , m_size(size) {
+    string(message_builder&, uint8_t* data)
+        : m_ptr(data) {
     }
 
     string(const string&) = delete;
     string(string&&) = delete;
 
+    [[nodiscard]]
     std::string_view unsafe_string_view() const {
-        return {&m_ptr.unsafe_get(), m_size};
+        return {&m_ptr.unsafe().get(), m_ptr.get_offset()};
     }
 
+    [[nodiscard]]
     std::string_view string_view(const buffer& buf) const {
-        return {&buf[m_ptr], m_size};
+        return {&buf[m_ptr], m_ptr.get_offset()};
     }
 
 private:
-    ptr<char> m_ptr;
-    uint16_t m_size;
+    ptr<char> m_ptr{nullptr};
 };
 
-static_assert(sizeof(string) == 4);
+static_assert(sizeof(string) == 2);
 static_assert(alignof(string) == 2);
+
+inline string& create_string(message_builder& builder, int len) {
+    auto alloc = builder.allocate(len, 1);
+    return emplace_raw<string>(builder, builder, alloc);
+}
+
+inline string& create_string(message_builder& builder, std::string_view sv) {
+    auto alloc = builder.allocate(sv.size(), 1);
+    std::copy(sv.begin(), sv.end(), reinterpret_cast<char*>(alloc));
+    return emplace_raw<string>(builder, builder, alloc);
+}
 } // namespace lidl

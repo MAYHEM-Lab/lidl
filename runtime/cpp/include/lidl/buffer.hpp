@@ -1,7 +1,7 @@
 #pragma once
 
-#include <tos/span.hpp>
 #include <lidl/ptr.hpp>
+#include <tos/span.hpp>
 
 namespace lidl {
 struct buffer {
@@ -10,14 +10,14 @@ public:
         : m_buffer{buf} {
     }
 
-    template <class T>
+    template<class T>
     T& operator[](ptr<T>& p) {
         auto off = p.get_offset();
         auto ptr_base = reinterpret_cast<uint8_t*>(&p);
         if (ptr_base - off < m_buffer.begin()) {
             // bad access!
         }
-        return p.unsafe_get();
+        return p.unsafe().get();
     }
 
     template<class T>
@@ -27,7 +27,7 @@ public:
         if (ptr_base - off < m_buffer.begin()) {
             // bad access!
         }
-        return p.unsafe_get();
+        return p.unsafe().get();
     }
 
     template<class T>
@@ -37,7 +37,7 @@ public:
         if (ptr_base - off < m_buffer.begin()) {
             // bad access!
         }
-        return p.unsafe_get();
+        return p.unsafe().get();
     }
 
 private:

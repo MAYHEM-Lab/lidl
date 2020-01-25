@@ -3,13 +3,17 @@
 #include <array>
 #include <iostream>
 #include <lidl/builder.hpp>
+#include <lidl/string.hpp>
 
 int main() {
     std::array<uint8_t, 64> x;
     lidl::message_builder builder(x);
-    auto& str = lidl::create_string(builder, "hello world");
-    auto& str2 = lidl::create_string(builder, "yayy");
-    std::cout << str.string_view(builder.get_buffer()) << '\n';
-    std::cout << str2.string_view(builder.get_buffer()) << '\n';
+    auto& p = lidl::create<person>(builder, builder,
+        lidl::create_string(builder, "foo"),
+        lidl::create_string(builder, "bar"));
+
+    std::cout << p.name.unsafe()->unsafe_string_view() << '\n'
+              << p.surname.unsafe()->unsafe_string_view() << '\n';
+
     std::cout << "message took " << builder.size() << " bytes\n";
 }

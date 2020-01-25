@@ -4,6 +4,7 @@
 #include <fstream>
 #include <gsl/gsl_assert>
 #include <lidl/generics.hpp>
+#include <lidl/service.hpp>
 #include <lidl/types.hpp>
 #include <lidl/yaml.hpp>
 #include <stdexcept>
@@ -42,22 +43,25 @@ std::shared_ptr<attribute> read_attribute(std::string_view name, const YAML::Nod
     if (name == "raw") {
         return std::make_shared<detail::raw_attribute>(node.as<bool>());
     }
+    if (name == "nullable") {
+        return std::make_shared<detail::nullable_attribute>(node.as<bool>());
+    }
+    if (name == "default") {
+        return std::make_shared<detail::default_numeric_value_attribute>(node.as<double>());
+    }
     return nullptr;
 }
 
-member read_member(const YAML::Node& node,
-                   const module& module,
-                   const symbol_table* scope_syms) {
-    auto type_name = node["type"];
-    Expects(type_name);
-    if (type_name.IsScalar()) {
-        auto name = type_name.as<std::string>();
+const type* read_type(const YAML::Node& type_node, const module& module,
+                      const symbol_table* scope_syms) {
+    if (type_node.IsScalar()) {
+        auto name = type_node.as<std::string>();
         decltype(scope_syms->lookup(name)) lookup =
             !scope_syms ? nullptr : scope_syms->lookup(name);
         if (!lookup || std::get_if<std::monostate>(lookup)) {
             lookup = module.syms.lookup(name);
             if (std::get_if<std::monostate>(lookup)) {
-                throw std::runtime_error("no such type: " + type_name.as<std::string>());
+                return nullptr;
             }
         }
 
@@ -65,14 +69,12 @@ member read_member(const YAML::Node& node,
 
         if (!regular_type) {
             throw std::runtime_error("not a regular type: " +
-                                     type_name.as<std::string>());
+                                     type_node.as<std::string>());
         }
 
-        member m;
-        m.type_ = *regular_type;
-        return m;
+        return *regular_type;
     } else {
-        auto base_name = type_name["name"].as<std::string>();
+        auto base_name = type_node["name"].as<std::string>();
 
         auto lookup = module.syms.lookup(base_name);
         if (std::get_if<std::monostate>(lookup)) {
@@ -80,8 +82,8 @@ member read_member(const YAML::Node& node,
         }
 
         std::vector<std::string> args;
-        if (type_name["parameters"]) {
-            args = parse_arguments(type_name["parameters"]);
+        if (type_node["parameters"]) {
+            args = parse_arguments(type_node["parameters"]);
         }
 
         if (auto regular_type = std::get_if<const type*>(lookup); regular_type) {
@@ -89,10 +91,8 @@ member read_member(const YAML::Node& node,
                 throw std::runtime_error("expected a generic type, got a regular type!");
             }
 
-            member m;
-            m.type_ = *regular_type;
-            return m;
-        } else if (auto gen_type = std::get_if<const generic_type*>(lookup); gen_type) {
+            return *regular_type;
+        } else if (auto gen_type = std::get_if<const generic*>(lookup); gen_type) {
             if ((*gen_type)->declaration->arity() != args.size()) {
                 throw std::runtime_error(
                     "mismatched number of args and params for generic");
@@ -110,14 +110,33 @@ member read_member(const YAML::Node& node,
                 name.push_back(arg_lookup);
             }
 
-            member m;
-            m.type_ = new generic_instantiation(**gen_type, name);
-            symbol sym = m.type_;
+            auto res = new generic_instantiation(**gen_type, name);
+            symbol sym = res;
             module.generated.emplace(sym, name);
-            return m;
+            return res;
         }
     }
-    throw std::runtime_error("nope");
+    throw std::runtime_error("shouldn't reach here");
+}
+
+member read_member(const YAML::Node& node,
+                   const module& module,
+                   const symbol_table* scope_syms) {
+    member m;
+    auto attribs = node["attributes"];
+    if (attribs) {
+        for (auto e : attribs) {
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            auto attr = read_attribute(key.as<std::string>(), val);
+            m.attributes.add(attr);
+        }
+    }
+
+    auto type_name = node["type"];
+    Expects(type_name);
+    m.type_ = read_type(type_name, module, scope_syms);
+    Expects(m.type_);
+    return m;
 }
 
 structure read_structure(const YAML::Node& node, const module& module) {
@@ -128,7 +147,7 @@ structure read_structure(const YAML::Node& node, const module& module) {
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         auto mem = read_member(val, module, nullptr);
-        s.members.emplace(key.as<std::string>(), mem);
+        s.members.emplace_back(key.as<std::string>(), mem);
     }
 
     auto attribs = node["attributes"];
@@ -157,7 +176,7 @@ generic_structure read_generic_structure(const YAML::Node& node, const module& m
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         auto mem = read_member(val, module, param_symbols);
-        s.members.emplace(key.as<std::string>(), mem);
+        s.members.emplace_back(key.as<std::string>(), mem);
     }
 
     auto attribs = node["attributes"];
@@ -170,6 +189,37 @@ generic_structure read_generic_structure(const YAML::Node& node, const module& m
     }
 
     return res;
+}
+
+procedure parse_procedure(const YAML::Node& node, const module& mod) {
+    procedure result;
+    if (auto returns = node["returns"]; returns) {
+        result.return_types.push_back(read_type(returns[0], mod, nullptr));
+    }
+    if (auto params = node["parameters"]; params) {
+        for (auto param : params) {
+            auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(param);
+            if (!val) {
+                std::cerr << param << '\n';
+                throw std::runtime_error("wtf");
+            }
+            auto type = read_type(val, mod, nullptr);
+            if (!type) {
+                throw std::runtime_error("All parameters must have a type!");
+            }
+            result.parameters.emplace_back(name.as<std::string>(), type);
+        }
+    }
+    return result;
+}
+
+service parse_service(const YAML::Node& node, const module& mod) {
+    service serv;
+    for (auto procedure : node["procedures"]) {
+        auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(procedure);
+        serv.procedures.emplace_back(name.as<std::string>(), parse_procedure(val, mod));
+    }
+    return serv;
 }
 } // namespace
 module load_module(std::string_view path) {
@@ -213,6 +263,9 @@ module load_module(std::string_view path) {
             m.syms.define(m.syms.lookup(key.as<std::string>()),
                           std::make_unique<user_defined_generic>(s));
             m.generic_structs.emplace_back(key.as<std::string>(), std::move(s));
+        } else if (val["type"].as<std::string>() == "service") {
+            auto s = parse_service(val, m);
+            m.services.emplace_back(key.as<std::string>(), std::move(s));
         }
     }
 

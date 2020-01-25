@@ -4,9 +4,9 @@
 #include "types.hpp"
 
 #include <include/gsl/span>
+#include <lidl/layout.hpp>
 #include <string>
 #include <vector>
-#include <lidl/layout.hpp>
 
 namespace lidl {
 using generic_argument = std::variant<const symbol*, int64_t>;
@@ -52,8 +52,8 @@ std::shared_ptr<const generic_declaration>
     make_generic_declaration(std::vector<std::pair<std::string, std::string>>);
 
 class module;
-struct generic_type {
-    explicit generic_type(std::shared_ptr<const generic_declaration> decl)
+struct generic {
+    explicit generic(std::shared_ptr<const generic_declaration> decl)
         : declaration(std::move(decl)) {
     }
 
@@ -61,10 +61,12 @@ struct generic_type {
         return false;
     }
 
+    virtual bool is_reference(const module& mod, const struct generic_instantiation&) const = 0;
+
     virtual raw_layout wire_layout(const module& mod,
                                    const struct generic_instantiation&) const = 0;
 
-    virtual ~generic_type() = 0;
+    virtual ~generic() = 0;
 
     std::shared_ptr<const generic_declaration> declaration;
 };
@@ -74,6 +76,10 @@ struct generic_type_parameter : type {
         throw std::runtime_error(
             "Wire layout shouldn't be called on a generic type parameter!");
     }
+
+    virtual bool is_reference_type(const module&) const override {
+        return false;
+    }
 };
 
 class module;
@@ -81,23 +87,38 @@ struct generic_structure {
     std::shared_ptr<const generic_declaration> declaration;
     structure struct_;
 
-    structure instantiate(const module& m, const std::vector<std::string>&);
+    structure instantiate(const module& m, const std::vector<generic_argument>&);
 };
 
-namespace detail {
-std::string make_name_for_instantiation(std::string_view name,
-                                        const std::vector<std::string>& args);
-} // namespace detail
+struct user_defined_generic : generic {
+    explicit user_defined_generic(const generic_structure& str)
+        : generic(str.declaration)
+        , m_structure(&str) {
+    }
+    virtual raw_layout wire_layout(const module& mod,
+                                   const struct generic_instantiation&) const override {
+        throw std::runtime_error("Wire layout shouldn't be called on a generic!");
+    }
+    bool is_reference(const module& mod,
+                      const struct generic_instantiation& instantiation) const override {
+        throw std::runtime_error("Is reference shouldn't be called on a generic!");
+    }
+    const generic_structure* m_structure;
+};
 
 class generic_instantiation : public type {
 public:
-    generic_instantiation(const generic_type& actual, std::vector<generic_argument> args)
+    generic_instantiation(const generic& actual, std::vector<generic_argument> args)
         : m_args(std::move(args))
         , m_actual(&actual) {
     }
 
     virtual bool is_raw(const module& mod) const override {
         return m_actual->is_raw(mod, *this);
+    }
+
+    virtual bool is_reference_type(const module& mod) const override {
+        return m_actual->is_reference(mod, *this);
     }
 
     virtual raw_layout wire_layout(const module& mod) const override {
@@ -110,31 +131,31 @@ public:
 
 private:
     std::vector<generic_argument> m_args;
-    const generic_type* m_actual;
+    const generic* m_actual;
 };
 
 namespace detail {
-struct forward_decl : generic_type {
-    using generic_type::generic_type;
+struct forward_decl : generic {
+    using generic::generic;
 
     virtual raw_layout wire_layout(const module& mod,
                                    const struct generic_instantiation&) const override {
         throw std::runtime_error(
             "Wire layout shouldn't be called on a forward declaration!");
     }
+
+    bool is_reference(const module& mod,
+                      const struct generic_instantiation& instantiation) const override {
+        throw std::runtime_error(
+            "Is reference shouldn't be called on a forward declaration!");
+    }
+
+    bool is_raw(const module& mod,
+                const struct generic_instantiation& instantiation) const override {
+        throw std::runtime_error(
+            "Is raw shouldn't be called on a forward declaration!");
+    }
 };
 } // namespace detail
 
-struct user_defined_generic : generic_type {
-    explicit user_defined_generic(const generic_structure& str)
-        : generic_type(str.declaration)
-        , m_structure(&str) {
-    }
-    virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const override {
-        throw std::runtime_error(
-            "Wire layout shouldn't be called on a generic!");
-    }
-    const generic_structure* m_structure;
-};
 } // namespace lidl

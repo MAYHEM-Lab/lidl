@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <fmt/format.h>
+#include <numeric>
 
 namespace lidl {
 struct raw_layout {
@@ -12,6 +14,7 @@ public:
         if (m_alignment != 0) {
             while (m_size % m_alignment) {
                 m_size++;
+                m_padding++;
             }
         }
     }
@@ -24,26 +27,35 @@ public:
         return m_alignment;
     }
 
+    int16_t padding() const {
+        return m_padding;
+    }
+
     friend bool operator==(const raw_layout& left, const raw_layout& right) {
-        return left.size() == right.size() && left.alignment() && right.alignment();
+        return left.size() == right.size() && left.alignment() == right.alignment();//left.padding() == right.padding();
     }
 
 private:
+    int16_t m_padding = 0;
     int16_t m_size;
     int16_t m_alignment;
 };
 
+inline std::ostream& operator<<(std::ostream& os, const raw_layout& layout) {
+    return os << fmt::format(
+               "{{ size: {}, alignment: {} }}", layout.size(), layout.alignment());
+}
+
 struct aggregate_layout_computer {
 public:
     void add(const raw_layout& layout) {
-        auto bigger_alignment = std::max(m_current.alignment(), layout.alignment());
         int padding = 0;
-        while ((m_current.size() + padding) % layout.alignment()) {
+        while ((m_current.size() - m_current.padding() + padding) % layout.alignment()) {
             padding++;
         }
         m_current = raw_layout(
-            m_current.size() + layout.size() + padding, 
-            bigger_alignment);
+            m_current.size() + layout.size() - m_current.padding() + padding,
+            std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
     }
 
     raw_layout get() const {

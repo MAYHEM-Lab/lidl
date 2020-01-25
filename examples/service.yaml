@@ -1,0 +1,15 @@
+calculator:
+  type: service
+  procedures:
+    add:
+      returns:
+        - f64
+      parameters:
+        left: f64
+        right: f64
+    multiply:
+      returns:
+        - f64
+      parameters:
+        left: f64
+        right: f64

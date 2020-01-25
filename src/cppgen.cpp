@@ -24,7 +24,6 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"u64", "uint64_t"},
         {"array", "::lidl::array"},
         {"optional", "::lidl::optional"},
-        {"ptr", "::lidl::ptr"},
         {"string", "::lidl::string"},
         {"vector", "::lidl::vector"}};
 
@@ -35,7 +34,8 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
     return std::nullopt;
 }
 
-std::string get_identifier_for_type(const module& mod, const type& t) {
+std::string get_identifier_for_type(const module& mod, const type& t);
+std::string get_identifier_for_type_priv(const module& mod, const type& t) {
     auto sym = mod.syms.reverse_lookup(&t);
 
     if (!sym) {
@@ -52,10 +52,22 @@ std::string get_identifier_for_type(const module& mod, const type& t) {
                 }
                 s += std::to_string(*num) + ", ";
             } else if (auto sym = std::get_if<const symbol*>(&piece); sym) {
-                auto name = std::string(mod.syms.name_of(*sym));
-                if (auto res = known_type_conversion(name); res) {
-                    name = *res;
+                auto regular = std::get_if<const type*>(*sym);
+                std::string name;
+                if (!regular && first) {
+                    throw std::runtime_error("Can't have a template name as arg");
                 }
+
+                if (regular) {
+                    name = get_identifier_for_type(mod, **regular);
+                }
+                else {
+                    name = std::string(mod.syms.name_of(*sym));
+                    if (auto res = known_type_conversion(name); res) {
+                        name = *res;
+                    }
+                }
+
                 if (!first) {
                     s = name + "<";
                     first = true;
@@ -74,6 +86,16 @@ std::string get_identifier_for_type(const module& mod, const type& t) {
         name = *res;
     }
     return name;
+}
+
+std::string get_identifier_for_type(const module& mod, const type& t) {
+    auto base = get_identifier_for_type_priv(mod, t);
+    if (!t.is_reference_type(mod)) {
+        return base;
+    }
+    else {
+        return fmt::format("::lidl::ptr<{}>", base);
+    }
 }
 
 std::string private_name_for(std::string_view name) {
@@ -101,6 +123,38 @@ void generate_struct_field(std::string_view name,
     str << generate_getter(name, type_name, false) << '\n';
 }
 
+void generate_constructor(bool has_ref, const module& m,
+                          std::string_view name,
+                          const structure& s,
+                          std::ostream& str) {
+    std::vector<std::string> arg_names;
+    if (has_ref) {
+        arg_names.push_back("::lidl::message_builder& builder");
+    }
+
+    std::vector<std::string> initializer_list;
+
+    for (auto& [name, member] : s.members) {
+        auto identifier = get_identifier_for_type_priv(m, *member.type_);
+
+        if (member.type_->is_reference_type(m)) {
+            if (!member.is_nullable()) {
+                arg_names.push_back(fmt::format("const {}& p_{}", identifier, name));
+                initializer_list.push_back(fmt::format("{}(p_{})", name, name));
+            } else {
+                arg_names.push_back(fmt::format("const {}* p_{}", identifier, name));
+                initializer_list.push_back(fmt::format("{}(p_{} ? decltype({}){{*p_{}}} : decltype({}){{nullptr}})", name, name, name, name, name));
+            }
+        }
+        else {
+            arg_names.push_back(fmt::format("const {}& p_{}", identifier, name));
+            initializer_list.push_back(fmt::format("{}(p_{})", name, name));
+        }
+    }
+
+    str << fmt::format("{}({}) : {} {{}}", name, fmt::join(arg_names, ", "), fmt::join(initializer_list, ", "));
+}
+
 void generate_raw_struct(const module& m,
                          std::string_view name,
                          const structure& s,
@@ -108,17 +162,22 @@ void generate_raw_struct(const module& m,
     std::stringstream pub;
 
     for (auto& [name, member] : s.members) {
-        generate_raw_struct_field(name, get_identifier_for_type(m, *member.type_), pub);
+        generate_raw_struct_field(
+            name, get_identifier_for_type(m, *member.type_), pub);
     }
+
+    std::stringstream ctor;
+    generate_constructor(s.is_reference_type(m), m, name, s, ctor);
 
     constexpr auto format = R"__(struct {} {{
         {}
+        {}
     }};)__";
 
-    str << fmt::format(format, name, pub.str()) << '\n';
+    str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
 }
 
-void generate_struct(const module& m,
+/*void generate_struct(const module& m,
                      std::string_view name,
                      const structure& s,
                      std::ostream& str) {
@@ -137,14 +196,18 @@ void generate_struct(const module& m,
     constexpr auto format = R"__(class {} {{
     public:
         {}
+        {}
     private:
         {}
         {} m_raw;
     }};)__";
 
-    str << fmt::format(format, name, struct_helper.str(), raw_part.str(), raw_name)
+    std::stringstream ctor;
+    generate_constructor(m, name, s, ctor);
+
+    str << fmt::format(format, name, ctor.str(), struct_helper.str(), raw_part.str(), raw_name)
         << '\n';
-}
+}*/
 
 void generate_static_asserts(const module& mod,
                              std::string_view name,
@@ -159,22 +222,29 @@ void generate_static_asserts(const module& mod,
     str << fmt::format(align_format, name, t.wire_layout(mod).alignment(), name) << '\n';
 }
 
-void generate_makers(const module& mod,
-                     std::string_view name,
-                     const structure& s,
-                     std::ostream& str);
+void generate_creator(const module& mod,
+                      std::string_view name,
+                      const structure& s,
+                      std::ostream& str) {
+    for (auto& [name, member] : s.members) {
+        if (!member.type_->is_reference_type(mod)) {
+        } else {
+        }
+    }
+}
 } // namespace
 
 void generate(const module& mod, std::ostream& str) {
     str << "#pragma once\n\n#include <lidl/lidl.hpp>\n\n";
     for (auto& [name, s] : mod.structs) {
-        if (s.is_raw(mod)) {
-            generate_raw_struct(mod, name, s, str);
-            str << '\n';
+        generate_raw_struct(mod, name, s, str);
+        str << '\n';
+        /*if (s.is_raw(mod)) {
         } else {
-            generate_struct(mod, name, s, str);
+            throw std::runtime_error("everything is raw");
+            //generate_struct(mod, name, s, str);
             str << '\n';
-        }
+        }*/
         generate_static_asserts(mod, name, s, str);
     }
 

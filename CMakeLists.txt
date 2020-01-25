@@ -3,7 +3,7 @@ project(lidl)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(lidl_core src/basic_types.cpp include/lidl/basic.hpp include/lidl/types.hpp include/lidl/generics.hpp src/generics.cpp src/module.cpp include/lidl/symbol_table.hpp src/symbol_table.cpp)
+add_library(lidl_core src/basic_types.cpp include/lidl/basic.hpp include/lidl/types.hpp include/lidl/generics.hpp src/generics.cpp src/module.cpp include/lidl/symbol_table.hpp src/symbol_table.cpp include/lidl/service.hpp src/service.cpp)
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL)

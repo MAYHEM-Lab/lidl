@@ -37,8 +37,6 @@ texture2d:
 
 triangle:
   type: structure
-  attributes:
-    raw: False
   members:
     vertices:
       type:

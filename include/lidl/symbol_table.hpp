@@ -41,7 +41,7 @@ public:
         define(sym, std::move(t));
     }
 
-    void define(const std::string& name, std::unique_ptr<const generic_type> t) {
+    void define(const std::string& name, std::unique_ptr<const generic> t) {
         auto sym = allocate_name(name);
         define(sym, std::move(t));
     }
@@ -51,7 +51,7 @@ public:
         *find(sym) = m_types[find(sym)].get();
     }
 
-    void define(const symbol* sym, std::unique_ptr<const generic_type> t) {
+    void define(const symbol* sym, std::unique_ptr<const generic> t) {
         m_generics[sym] = std::move(t);
         *find(sym) = m_generics[find(sym)].get();
     }
@@ -65,7 +65,7 @@ public:
         return res->first;
     }
 
-    const symbol* reverse_lookup(const generic_type* t) const {
+    const symbol* reverse_lookup(const generic* t) const {
         auto res = std::find_if(m_generics.begin(), m_generics.end(), [&](auto& x) {
             return x.second.get() == t;
         });
@@ -104,7 +104,7 @@ private:
 
     std::unordered_map<const symbol*, std::unique_ptr<const type>> m_types;
 
-    std::unordered_map<const symbol*, std::unique_ptr<const generic_type>> m_generics;
+    std::unordered_map<const symbol*, std::unique_ptr<const generic>> m_generics;
     std::unordered_map<const symbol*, std::shared_ptr<const generic_declaration>>
         m_generic_decls;
 

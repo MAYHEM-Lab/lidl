@@ -54,5 +54,18 @@ struct raw_attribute : attribute {
     }
     bool raw;
 };
+
+struct default_numeric_value_attribute : attribute {
+    default_numeric_value_attribute(double f) : attribute("default"), val(f) {}
+    double val;
+};
+
+struct nullable_attribute : attribute {
+    nullable_attribute(bool n)
+        : attribute("nullable")
+        , nullable(n) {
+    }
+    bool nullable;
+};
 } // namespace detail
 } // namespace lidl
