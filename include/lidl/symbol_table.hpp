@@ -107,9 +107,6 @@ private:
     std::unordered_map<const symbol*, std::unique_ptr<const generic>> m_generics;
     std::unordered_map<const symbol*, std::shared_ptr<const generic_declaration>>
         m_generic_decls;
-
-    // type_db symbols;
-    // generics_table generics;
 };
 
 void add_basic_types(symbol_table&);

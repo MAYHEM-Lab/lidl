@@ -64,6 +64,9 @@ private:
         T* operator->() {
             return &get();
         }
+        const T* operator->() const {
+            return &get();
+        }
     } m_unsafe;
 };
 

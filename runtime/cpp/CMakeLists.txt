@@ -6,9 +6,17 @@ find_program(LIDLC_BIN
     NAMES lidlc
     HINTS ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/Debug)
 
+find_program(CLANG_FORMAT_BIN
+    NAMES clang-format-8)
+
 if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
     message(STATUS "Found lidlc")
+endif()
+if (NOT ${CLANG_FORMAT_BIN} MATCHES "NOTFOUND")
+    message(STATUS "Found clang-format")
+endif()
 
+if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
     function(add_lidlc Name)
         set(LIDLC_OUTPUTS)
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -26,6 +34,15 @@ if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
                     DEPENDS ${FILE} ${LIDLC_BIN}
                     COMMENT "Building C++ header for ${FILE}"
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+            if (NOT ${CLANG_FORMAT_BIN} MATCHES "NOTFOUND")
+                #[[add_custom_command(OUTPUT ${LIDLC_OUTPUT}
+                        COMMAND ${CLANG_FORMAT_BIN}
+                        ARGS -i ${LIDLC_OUTPUT}
+                        DEPENDS ${LIDLC_OUTPUT} ${CLANG_FORMAT_BIN}
+                        COMMENT "Formatting C++ header for ${FILE}"
+                        WOLIDLC_BINRKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})]]
+            endif()
         endforeach()
         add_custom_target(${Name}_IMPL DEPENDS ${LIDLC_OUTPUTS})
 
