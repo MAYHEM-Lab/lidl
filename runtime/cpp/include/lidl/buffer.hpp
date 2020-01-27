@@ -40,7 +40,15 @@ public:
         return p.unsafe().get();
     }
 
+    template <class T>
+    friend T& get_root(buffer buf);
 private:
     tos::span<uint8_t> m_buffer;
 };
+
+template <class T>
+T& get_root(buffer buf) {
+    auto loc = buf.m_buffer.end() - sizeof(ptr<T>);
+    return buf[*reinterpret_cast<ptr<T>*>(loc)];
+}
 } // namespace lidl

@@ -39,11 +39,15 @@ auto inspect_service() {
 }
 
 template<class...>
-struct member_fn_traits;
+struct procedure_traits;
 template<class Type, class RetType, class... ArgTypes>
-struct member_fn_traits<RetType (Type::*)(ArgTypes...)> {
+struct procedure_traits<lidl::status<RetType> (Type::*)(ArgTypes...)> {
     using return_type = RetType;
-    using argument_types = std::tuple<ArgTypes...>;
+    using param_types = std::tuple<ArgTypes...>;
+
+    static constexpr bool takes_response_builder() {
+        return std::is_same_v<return_type, void>;
+    }
 };
 
 struct call_info_base {
@@ -62,27 +66,56 @@ struct call_info : call_info_base {
     ::lidl::ptr<::lidl::procedure_params_t<Fn>> params;
 };
 
+struct response_info_base {};
+
 template<auto Fn>
-auto& serialize_call(const lidl::procedure_descriptor<Fn>& desc,
-                     const typename member_fn_traits<decltype(Fn)>::argument_types& args,
-                     lidl::message_builder& builder) {
+struct response_info : response_info_base {
+    response_info() = default;
+    response_info(const typename procedure_traits<decltype(Fn)>::return_type& res)
+        : res(res) {
+    }
+    ::lidl::ptr<typename procedure_traits<decltype(Fn)>::return_type> res{nullptr};
+};
+
+template<auto Fn>
+void serialize_call(const typename procedure_traits<decltype(Fn)>::param_types& args,
+                    lidl::message_builder& builder) {
+    auto desc = std::get<lidl::procedure_descriptor<Fn>>(
+        lidl::service_descriptor<calculator>().procedures);
     auto& name = lidl::create_string(builder, desc.name);
     auto& args_placed = lidl::append_raw(
         builder, std::make_from_tuple<lidl::procedure_params_t<Fn>>(args));
-    return lidl::emplace_raw<call_info<Fn>>(builder, name, args_placed);
+    auto& info = lidl::emplace_raw<call_info<Fn>>(builder, name, args_placed);
+    lidl::emplace_raw<lidl::ptr<call_info_base>>(builder, info);
 }
 
-template<class T, auto... x, size_t... Is>
-auto make_lookup_impl(const std::tuple<lidl::procedure_descriptor<x>...>& procs,
+template<class T, auto... Fn, size_t... Is>
+auto make_lookup_impl(const std::tuple<lidl::procedure_descriptor<Fn>...>& procs,
                       std::index_sequence<Is...>) {
-    std::unordered_map<std::string_view, std::function<void(T&, const call_info_base&)>>
+    std::unordered_map<std::string_view,
+                       std::function<const response_info_base&(
+                           T&, const call_info_base&, lidl::message_builder& response)>>
         handlers;
     ((handlers[std::get<Is>(procs).name] =
-          [](T& t, const call_info_base& info) {
-              auto& params = static_cast<const call_info<x>&>(info).params.unsafe().get();
-              auto& [a0, a1] = params;
-              std::cout << *(t.*(x))(a0, a1);
-          }),
+          [](T& t,
+             const call_info_base& info,
+             lidl::message_builder& response) -> const response_info_base& {
+         auto& params = static_cast<const call_info<Fn>&>(info).params.unsafe().get();
+         auto& [a0, a1] = params;
+         if constexpr (procedure_traits<decltype(Fn)>::takes_response_builder()) {
+             auto res = (t.*(Fn))(a0, a1, response);
+             if (!res) {
+                 return lidl::emplace_raw<response_info<Fn>>(response);
+             }
+             return lidl::emplace_raw<response_info<Fn>>(response, *res);
+         }
+         auto res = (t.*(Fn))(a0, a1);
+         if (!res) {
+             return lidl::emplace_raw<response_info<Fn>>(response);
+         }
+         auto& ress = lidl::append_raw(response, *res);
+         return lidl::emplace_raw<response_info<Fn>>(response, ress);
+     }),
      ...);
     return handlers;
 }
@@ -93,31 +126,43 @@ auto make_lookup(const std::tuple<lidl::procedure_descriptor<x>...>& procs) {
 }
 
 template<class Service>
-auto deserialize_call(Service& impl,
-                      const lidl::buffer& call,
-                      const call_info_base& msg) {
+void deserialize_call_and_execute(Service& impl,
+                                  const lidl::buffer& call,
+                                  lidl::message_builder& response) {
+    auto& root = lidl::get_root<call_info_base>(call);
     constexpr lidl::service_descriptor<Service> desc;
     const auto handlers = make_lookup<Service>(desc.procedures);
-    auto name = msg.name.unsafe()->unsafe_string_view();
+    auto name = root.name.unsafe()->unsafe_string_view();
     std::cout << name << '\n';
 
     if (auto it = handlers.find(name); it != handlers.end()) {
-        it->second(impl, msg);
+        auto& res = it->second(impl, root, response);
+        lidl::finish(response, res);
     } else {
-        throw std::runtime_error("Non-existent procedure: " +
-                                 std::string(name));
+        throw std::runtime_error("Non-existent procedure: " + std::string(name));
     }
 }
 
-int main() {
-    std::array<uint8_t, 64> buf;
+std::vector<uint8_t> get_request() {
+    std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
 
-    auto& serialized_res = serialize_call<&calculator::multiply>(
-        std::get<1>(lidl::service_descriptor<calculator>().procedures),
-        std::tuple{10., 5.},
-        builder);
+    serialize_call<&calculator::multiply>(std::tuple{10., 5.}, builder);
+    buf.resize(builder.size());
+    return buf;
+}
 
+int main() {
     calculator_impl c;
-    deserialize_call<calculator>(c, builder.get_buffer(), serialized_res);
+
+    auto req = get_request();
+
+    std::array<uint8_t, 64> resp;
+    lidl::message_builder resp_builder(resp);
+    deserialize_call_and_execute<calculator>(c, lidl::buffer(req), resp_builder);
+
+    auto& response =
+        lidl::get_root<response_info<&calculator::multiply>>(resp_builder.get_buffer());
+
+    std::cout << response.res.unsafe().get() << '\n';
 }
