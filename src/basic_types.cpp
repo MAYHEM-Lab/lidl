@@ -145,6 +145,9 @@ struct array_type : generic {
     virtual raw_layout
     wire_layout(const module& mod,
                 const struct generic_instantiation& instantiation) const override {
+        if (is_reference(mod, instantiation)) {
+            return {2, 2};
+        }
         auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
         if (auto regular = std::get_if<const type*>(arg); regular) {
             auto layout = (*regular)->wire_layout(mod);
