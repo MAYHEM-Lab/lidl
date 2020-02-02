@@ -3,7 +3,7 @@ project(lidl)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(lidl_core src/basic_types.cpp include/lidl/basic.hpp include/lidl/types.hpp include/lidl/generics.hpp src/generics.cpp src/module.cpp include/lidl/symbol_table.hpp src/symbol_table.cpp include/lidl/service.hpp src/service.cpp include/lidl/errors.hpp src/reference_type_pass.cpp)
+add_library(lidl_core src/basic_types.cpp include/lidl/basic.hpp include/lidl/types.hpp include/lidl/generics.hpp src/generics.cpp src/module.cpp include/lidl/symbol_table.hpp src/symbol_table.cpp include/lidl/service.hpp src/service.cpp include/lidl/errors.hpp src/reference_type_pass.cpp src/scope.cpp)
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
@@ -32,3 +32,7 @@ target_include_directories(test_main PUBLIC include)
 add_executable(layout_test src/layout_test.cpp)
 target_link_libraries(layout_test PUBLIC lidl_core test_main)
 add_test(layout_test layout_test)
+
+add_executable(scope_test src/scope_test.cpp)
+target_link_libraries(scope_test PUBLIC lidl_core test_main)
+add_test(scope_test scope_test)

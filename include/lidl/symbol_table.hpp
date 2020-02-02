@@ -4,22 +4,73 @@
 #include "types.hpp"
 
 #include <deque>
+#include <string>
+#include <unordered_map>
 #include <variant>
+
 
 namespace lidl {
 struct type_handle {
 private:
-    type_handle(int id) : m_id(id) {}
+    type_handle(int id)
+        : m_id(id) {
+    }
     int m_id;
     friend class symbol_table;
 };
 
 struct generic_handle {
 private:
-    generic_handle(int id) : m_id(id) {}
+    generic_handle(int id)
+        : m_id(id) {
+    }
     int m_id;
     friend class symbol_table;
 };
+
+class symbol_handle {
+    explicit symbol_handle(int id)
+        : m_id(id) {
+    }
+    int m_id;
+    friend class symbol_table;
+    friend class scope;
+};
+
+class scope {
+public:
+    struct forward_decl {};
+    using elem = std::variant<const type*, const generic*, forward_decl>;
+
+    symbol_handle declare(std::string_view name);
+
+    void define(symbol_handle sym, const type* def);
+    void redefine(symbol_handle sym, const type* def);
+
+    void alias(std::string_view name, symbol_handle);
+
+    elem lookup(symbol_handle handle) const {
+        return m_syms.at(handle.m_id - 1);
+    }
+
+    scope& add_child_scope(std::string_view desc) const {
+        m_children.emplace_back(desc, scope());
+        return m_children.back().second;
+    }
+
+private:
+    elem& mutable_lookup(symbol_handle handle) {
+        return m_syms.at(handle.m_id - 1);
+    }
+
+    std::vector<elem> m_syms;
+
+    std::unordered_map<std::string, symbol_handle> m_names;
+
+    mutable std::list<std::pair<std::string_view, scope>> m_children;
+};
+
+bool is_defined(const scope& s, symbol_handle handle);
 
 class symbol_table {
 public:
@@ -29,7 +80,7 @@ public:
     const generic* lookup(const generic_handle& handle);
 
     generic_handle declare_generic(const std::string& name,
-                         std::shared_ptr<const generic_declaration> def) {
+                                   std::shared_ptr<const generic_declaration> def) {
         auto sym = allocate_name(name);
         if (!sym) {
             // name already exists!
