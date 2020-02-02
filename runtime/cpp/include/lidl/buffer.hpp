@@ -42,6 +42,10 @@ public:
 
     template <class T>
     friend T& get_root(buffer buf);
+
+    tos::span<const uint8_t> get_buffer() const {
+        return m_buffer;
+    }
 private:
     tos::span<uint8_t> m_buffer;
 };

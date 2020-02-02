@@ -10,6 +10,9 @@ add_executable(tests_example tests_example.cpp)
 target_link_libraries(tests_example PUBLIC lidl_rt tests)
 add_lidlc(tests tests.yaml)
 
+add_executable(lidl_example lidl_example.cpp)
+target_link_libraries(lidl_example PUBLIC lidl_rt lidl_gen)
+add_lidlc(lidl_gen lidl.yaml)
 
 add_executable(service_example service.cpp)
 target_link_libraries(service_example PUBLIC lidl_rt service)

@@ -11,12 +11,12 @@
 
 namespace lidl {
 struct module {
-    symbol_table syms;
+    symbol_table symbols;
 
     mutable std::unordered_map<symbol, std::vector<generic_argument>> generated;
 
-    std::vector<std::pair<std::string, structure>> structs;
-    std::vector<std::pair<std::string, generic_structure>> generic_structs;
-    std::vector<std::pair<std::string, service>> services;
+    std::deque<structure> structs;
+    std::deque<std::pair<std::string, generic_structure>> generic_structs;
+    std::deque<std::pair<std::string, service>> services;
 };
 } // namespace lidl

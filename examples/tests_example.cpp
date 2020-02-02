@@ -9,15 +9,14 @@
 int main() {
     std::array<uint8_t, 64> x;
     lidl::message_builder builder(x);
-    auto& p = lidl::create<basic_vector>(builder, builder,
-        lidl::create_vector<float>(builder, 5));
+    auto& p = lidl::create<string_and_vector>(builder, builder,
+        lidl::create_string(builder, "hello"),
+        lidl::create_vector<uint16_t>(builder, 3));
+    p.numbers.unsafe()->span()[0] = 42;
+    p.numbers.unsafe()->span()[1] = 84;
+    p.numbers.unsafe()->span()[2] = 168;
 
-    std::iota(p.vec.unsafe()->span().begin(), p.vec.unsafe()->span().end(), 1);
-    std::cout << "Size: " << p.vec.unsafe()->span().size() << '\n';
-
-    for (float f : p.vec.unsafe()->span()) {
-        std::cout << f << '\n';
-    }
-
-    std::cout << "message took " << builder.size() << " bytes\n";
+    std::cout.write(reinterpret_cast<const char*>(builder.get_buffer().get_buffer().data()),
+        builder.get_buffer().get_buffer().size());
+    std::cerr << "message took " << builder.size() << " bytes\n";
 }

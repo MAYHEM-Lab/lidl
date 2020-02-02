@@ -57,14 +57,15 @@ struct generic {
         : declaration(std::move(decl)) {
     }
 
-    virtual bool is_raw(const module& mod, const struct generic_instantiation&) const {
-        return false;
-    }
-
-    virtual bool is_reference(const module& mod, const struct generic_instantiation&) const = 0;
+    virtual bool is_reference(const module& mod,
+                              const struct generic_instantiation&) const = 0;
 
     virtual raw_layout wire_layout(const module& mod,
                                    const struct generic_instantiation&) const = 0;
+
+    virtual std::pair<YAML::Node, size_t> bin2yaml(const module&,
+                                                   const struct generic_instantiation&,
+                                                   gsl::span<const uint8_t>) const = 0;
 
     virtual ~generic() = 0;
 
@@ -78,7 +79,8 @@ struct generic_type_parameter : type {
     }
 
     virtual bool is_reference_type(const module&) const override {
-        return false;
+        throw std::runtime_error(
+            "Is reference type shouldn't be called on a generic type parameter!");
     }
 };
 
@@ -103,6 +105,12 @@ struct user_defined_generic : generic {
                       const struct generic_instantiation& instantiation) const override {
         throw std::runtime_error("Is reference shouldn't be called on a generic!");
     }
+    std::pair<YAML::Node, size_t>
+    bin2yaml(const module& module,
+             const struct generic_instantiation& instantiation,
+             gsl::span<const uint8_t> span) const override {
+        throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
+    }
     const generic_structure* m_structure;
 };
 
@@ -113,10 +121,6 @@ public:
         , m_actual(&actual) {
     }
 
-    virtual bool is_raw(const module& mod) const override {
-        return m_actual->is_raw(mod, *this);
-    }
-
     virtual bool is_reference_type(const module& mod) const override {
         return m_actual->is_reference(mod, *this);
     }
@@ -125,8 +129,21 @@ public:
         return m_actual->wire_layout(mod, *this);
     }
 
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           gsl::span<const uint8_t> span) const override {
+        return m_actual->bin2yaml(module, *this, span);
+    }
+
     gsl::span<const generic_argument> arguments() const {
         return m_args;
+    }
+
+    gsl::span<generic_argument> arguments() {
+        return m_args;
+    }
+
+    const generic& generic_type() const {
+        return *m_actual;
     }
 
 private:
@@ -150,12 +167,30 @@ struct forward_decl : generic {
             "Is reference shouldn't be called on a forward declaration!");
     }
 
-    bool is_raw(const module& mod,
-                const struct generic_instantiation& instantiation) const override {
+    std::pair<YAML::Node, size_t>
+    bin2yaml(const module& module,
+             const struct generic_instantiation& instantiation,
+             gsl::span<const uint8_t> span) const override {
         throw std::runtime_error(
-            "Is raw shouldn't be called on a forward declaration!");
+            "bin2yaml shouldn't be called on a forward declaration!");
     }
 };
 } // namespace detail
 
+struct pointer_type : generic {
+    pointer_type();
+
+    bool is_reference(const module& mod,
+                      const struct generic_instantiation& instantiation) const override {
+        return true;
+    }
+
+    virtual raw_layout wire_layout(const module& mod,
+                                   const struct generic_instantiation&) const override;
+
+    std::pair<YAML::Node, size_t>
+    bin2yaml(const module& module,
+             const struct generic_instantiation& instantiation,
+             gsl::span<const uint8_t> span) const override;
+};
 } // namespace lidl

@@ -1,8 +1,10 @@
 #include <fstream>
+#include <functional>
 #include <gsl/span>
 #include <iostream>
 #include <lidl/basic.hpp>
 #include <lidl/yaml.hpp>
+#include <lyra/lyra.hpp>
 #include <string_view>
 
 namespace lidl {
@@ -25,26 +27,96 @@ void service_pass(module& mod) {
     for (auto& [name, service] : mod.services) {
         for (auto& [proc_name, proc] : service.procedures) {
             auto args_struct = service_params_struct(mod, name, proc_name, proc);
-            mod.structs.emplace_back(fmt::format("{}_params_t", proc_name), args_struct);
+            mod.structs.emplace_back(args_struct);
         }
     }
 }
 
 void generate(const module& mod, std::ostream& str);
-void run(gsl::span<std::string> args) {
-    auto ym = yaml::load_module(
-        args.size() > 1 ? args[1] : "C:\\Users\\mfati\\lidl\\examples\\vec3f.yaml");
-    service_pass(ym);
-    if (args.size() <= 2) {
-        generate(ym, std::cout);
-    } else {
-        std::ofstream out_file(args[2]);
-        generate(ym, out_file);
+std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
+    backends {
+    {"cpp", generate}
+};
+
+struct lidlc_args {
+    std::istream* input_stream;
+    std::ostream* output_stream;
+    std::string backend;
+};
+
+void reference_type_pass(module& m);
+void run(const lidlc_args& args) {
+    auto backend = backends.find(args.backend);
+    if (backend == backends.end()) {
+        std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
+        return;
+    }
+    try {
+        auto ym = yaml::load_module(*args.input_stream);
+        service_pass(ym);
+        reference_type_pass(ym);
+        backend->second(ym, *args.output_stream);
+    } catch (std::exception& e) {
+        std::cerr << fmt::format("Error: {}\n", e.what());
     }
 }
 } // namespace lidl
 
 int main(int argc, char** argv) {
-    std::vector<std::string> args(argv, argv + argc);
+    bool help;
+    bool read_from_stdin;
+    std::string input_path;
+    std::string out_path;
+    std::string backend;
+    auto cli =
+        lyra::cli_parser() |
+        lyra::opt(input_path, "input")["-f"]["--input-file"]("Input file to read from.")
+            .optional() |
+        lyra::opt(read_from_stdin)["-i"]["--stdin"](
+            "Read the input from the standard input.")
+            .optional() |
+        lyra::opt(out_path,
+                  "output file")["-o"]["--output-file"]("Output file to write to.")
+            .optional() |
+        lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.").required() |
+        lyra::help(help);
+    auto res = cli.parse({argc, argv});
+
+    if (!res) {
+        std::cerr << res.errorMessage() << '\n';
+        return -1;
+    }
+
+    if (help) {
+        std::cout << cli << '\n';
+        return 0;
+    }
+
+    if (input_path.empty() && !read_from_stdin) {
+        std::cerr
+            << "Either provide a filename to read from or run with -i to read from stdin";
+        return -1;
+    }
+
+    lidl::lidlc_args args;
+    args.input_stream = &std::cin;
+    args.output_stream = &std::cout;
+
+    if (!input_path.empty()) {
+        args.input_stream = new std::ifstream{input_path};
+        if (!args.input_stream->good()) {
+            throw std::runtime_error("File not found: " + input_path);
+        }
+    }
+    if (!out_path.empty()) {
+        args.output_stream = new std::ofstream{out_path};
+        if (!args.input_stream->good()) {
+            throw std::runtime_error("File not found: " + input_path);
+        }
+    }
+    args.backend = std::move(backend);
+
     lidl::run(args);
+
+    args.output_stream->flush();
 }

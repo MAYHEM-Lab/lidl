@@ -25,3 +25,14 @@ complex_vector:
         name: vector
         parameters:
           - string
+
+string_and_vector:
+  type: structure
+  members:
+    name:
+      type: string
+    numbers:
+      type:
+        name: vector
+        parameters:
+          - u16

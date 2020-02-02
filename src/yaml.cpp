@@ -6,6 +6,7 @@
 #include <lidl/generics.hpp>
 #include <lidl/service.hpp>
 #include <lidl/types.hpp>
+#include <lidl/errors.hpp>
 #include <lidl/yaml.hpp>
 #include <stdexcept>
 #include <string>
@@ -21,7 +22,7 @@ std::shared_ptr<const generic_declaration> parse_parameters(const YAML::Node& no
         auto type = e["type"].as<std::string>();
         auto param_type = get_generic_parameter_for_type(type);
         if (!param_type) {
-            throw std::runtime_error("No such generic param type: " + type);
+            throw no_generic_type(type);
         }
         params.emplace_back(name, std::move(param_type));
     }
@@ -49,6 +50,9 @@ std::shared_ptr<attribute> read_attribute(std::string_view name, const YAML::Nod
     if (name == "default") {
         return std::make_shared<detail::default_numeric_value_attribute>(node.as<double>());
     }
+    else {
+        throw unknown_attribute_error(name);
+    }
     return nullptr;
 }
 
@@ -59,7 +63,7 @@ const type* read_type(const YAML::Node& type_node, const module& module,
         decltype(scope_syms->lookup(name)) lookup =
             !scope_syms ? nullptr : scope_syms->lookup(name);
         if (!lookup || std::get_if<std::monostate>(lookup)) {
-            lookup = module.syms.lookup(name);
+            lookup = module.symbols.lookup(name);
             if (std::get_if<std::monostate>(lookup)) {
                 return nullptr;
             }
@@ -76,7 +80,7 @@ const type* read_type(const YAML::Node& type_node, const module& module,
     } else {
         auto base_name = type_node["name"].as<std::string>();
 
-        auto lookup = module.syms.lookup(base_name);
+        auto lookup = module.symbols.lookup(base_name);
         if (std::get_if<std::monostate>(lookup)) {
             throw std::runtime_error("no such type: " + base_name);
         }
@@ -102,7 +106,7 @@ const type* read_type(const YAML::Node& type_node, const module& module,
             name.push_back(lookup);
 
             for (auto& arg : args) {
-                auto arg_lookup = module.syms.lookup(arg);
+                auto arg_lookup = module.symbols.lookup(arg);
                 if (!arg_lookup) {
                     name.push_back(std::stoll(arg));
                     continue;
@@ -167,7 +171,7 @@ generic_structure read_generic_structure(const YAML::Node& node, const module& m
     auto param_symbols = new symbol_table;
 
     for (auto& [name, param] : *res.declaration) {
-        param_symbols->define(name, std::make_unique<generic_type_parameter>());
+        param_symbols->define(name, new generic_type_parameter());
     }
 
     auto& s = res.struct_;
@@ -222,16 +226,11 @@ service parse_service(const YAML::Node& node, const module& mod) {
     return serv;
 }
 } // namespace
-module load_module(std::string_view path) {
-    std::ifstream file{std::string(path)};
-    if (!file.good()) {
-        throw std::runtime_error("File not found: " + std::string(path));
-    }
-
+module load_module(std::istream& file) {
     auto node = YAML::Load(file);
 
     module m;
-    add_basic_types(m.syms);
+    add_basic_types(m.symbols);
 
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
@@ -240,10 +239,10 @@ module load_module(std::string_view path) {
         Expects(val["type"]);
 
         if (val["type"].as<std::string>() == "structure") {
-            m.syms.declare_regular(key.as<std::string>());
+            m.symbols.declare_regular(key.as<std::string>());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             auto decl = parse_parameters(val["paramters"]);
-            m.syms.declare_generic(key.as<std::string>(), std::move(decl));
+            m.symbols.declare_generic(key.as<std::string>(), std::move(decl));
         }
     }
 
@@ -255,12 +254,12 @@ module load_module(std::string_view path) {
 
         if (val["type"].as<std::string>() == "structure") {
             auto s = read_structure(val, m);
-            m.syms.define(m.syms.lookup(key.as<std::string>()),
-                          std::make_unique<structure>(s));
-            m.structs.emplace_back(key.as<std::string>(), s);
+            m.structs.emplace_back(s);
+            m.symbols.define(m.symbols.lookup(key.as<std::string>()),
+                          &m.structs.back());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             auto s = read_generic_structure(val, m);
-            m.syms.define(m.syms.lookup(key.as<std::string>()),
+            m.symbols.define(m.symbols.lookup(key.as<std::string>()),
                           std::make_unique<user_defined_generic>(s));
             m.generic_structs.emplace_back(key.as<std::string>(), std::move(s));
         } else if (val["type"].as<std::string>() == "service") {

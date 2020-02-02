@@ -22,6 +22,9 @@ public:
     }
 
     uint8_t* allocate(size_t size, size_t align) {
+        while ((this->size() % align) != 0) {
+            m_cur_ptr++;
+        }
         auto ptr = m_cur_ptr;
         m_cur_ptr += size;
         return ptr;

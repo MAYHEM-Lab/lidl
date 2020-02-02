@@ -7,11 +7,28 @@
 #include <variant>
 
 namespace lidl {
+struct type_handle {
+private:
+    type_handle(int id) : m_id(id) {}
+    int m_id;
+    friend class symbol_table;
+};
+
+struct generic_handle {
+private:
+    generic_handle(int id) : m_id(id) {}
+    int m_id;
+    friend class symbol_table;
+};
+
 class symbol_table {
 public:
     const symbol* lookup(std::string_view symbol_name) const;
 
-    void declare_generic(const std::string& name,
+    const type* lookup(const type_handle& handle);
+    const generic* lookup(const generic_handle& handle);
+
+    generic_handle declare_generic(const std::string& name,
                          std::shared_ptr<const generic_declaration> def) {
         auto sym = allocate_name(name);
         if (!sym) {
@@ -23,32 +40,36 @@ public:
         auto [newit, newres] =
             m_generics.emplace(sym, std::make_unique<detail::forward_decl>(it->second));
         *sym = newit->second.get();
+        auto [id, idres] = m_gens.emplace(m_next_gen_id++, newit->second.get());
+        return generic_handle{id->first};
     }
 
-    void declare_regular(const std::string& name) {
+    type_handle declare_regular(const std::string& name) {
         auto sym = allocate_name(name);
         if (!sym) {
             // name already exists!
             throw std::runtime_error("duplicate declaration: " + name);
         }
 
-        auto [it, res] = m_types.emplace(sym, std::make_unique<detail::future_type>());
-        *sym = it->second.get();
+        auto [it, res] = m_types.emplace(sym, &future);
+        *sym = it->second;
+        auto [id, idres] = m_typeids.emplace(m_next_type_id++, it->second);
+        return type_handle{id->first};
     }
 
-    void define(const std::string& name, std::unique_ptr<const type> t) {
+    auto define(const std::string& name, const type* t) {
         auto sym = allocate_name(name);
-        define(sym, std::move(t));
+        return define(sym, t);
     }
 
-    void define(const std::string& name, std::unique_ptr<const generic> t) {
+    auto define(const std::string& name, std::unique_ptr<const generic> t) {
         auto sym = allocate_name(name);
-        define(sym, std::move(t));
+        return define(sym, std::move(t));
     }
 
-    void define(const symbol* sym, std::unique_ptr<const type> t) {
-        m_types[sym] = std::move(t);
-        *find(sym) = m_types[find(sym)].get();
+    void define(const symbol* sym, const type* t) {
+        m_types[sym] = t;
+        *find(sym) = m_types[find(sym)];
     }
 
     void define(const symbol* sym, std::unique_ptr<const generic> t) {
@@ -58,7 +79,7 @@ public:
 
     const symbol* reverse_lookup(const type* t) const {
         auto res = std::find_if(
-            m_types.begin(), m_types.end(), [&](auto& x) { return x.second.get() == t; });
+            m_types.begin(), m_types.end(), [&](auto& x) { return x.second == t; });
         if (res == m_types.end()) {
             return nullptr;
         }
@@ -102,11 +123,17 @@ private:
         return new_it->second;
     }
 
-    std::unordered_map<const symbol*, std::unique_ptr<const type>> m_types;
+    detail::future_type future;
+    std::unordered_map<const symbol*, const type*> m_types;
 
     std::unordered_map<const symbol*, std::unique_ptr<const generic>> m_generics;
     std::unordered_map<const symbol*, std::shared_ptr<const generic_declaration>>
         m_generic_decls;
+
+    int m_next_gen_id = 1;
+    int m_next_type_id = 1;
+    std::unordered_map<int, const generic*> m_gens;
+    std::unordered_map<int, const type*> m_typeids;
 };
 
 void add_basic_types(symbol_table&);

@@ -15,7 +15,11 @@ struct basic_type : value_type {
     }
 
     virtual raw_layout wire_layout(const module&) const override {
-        return raw_layout(std::ceil(size_in_bits / 8.f), std::ceil(size_in_bits / 8.f));
+        return raw_layout(size_in_bytes(), size_in_bytes());
+    }
+
+    size_t size_in_bytes() const {
+        return std::ceil(size_in_bits / 8.f);
     }
 
     int32_t size_in_bits;
@@ -25,6 +29,21 @@ struct integral_type : basic_type {
     explicit integral_type(int bits, bool unsigned_)
         : basic_type(bits)
         , is_unsigned(unsigned_) {
+    }
+
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
+                                           gsl::span<const uint8_t> span) const override {
+        auto layout = wire_layout(mod);
+        auto s = span.subspan(span.size() - layout.size(), layout.size());
+        if (is_unsigned) {
+            uint64_t x{0};
+            memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
+            return {YAML::Node(x), s.size()};
+        } else {
+            int64_t x{0};
+            memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
+            return {YAML::Node(x), s.size()};
+        }
     }
 
     bool is_unsigned;
@@ -40,30 +59,53 @@ struct float_type : basic_type {
     explicit float_type()
         : basic_type(32) {
     }
+
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
+                                           gsl::span<const uint8_t> span) const override {
+        auto layout = wire_layout(mod);
+        auto s = span.subspan(span.size() - layout.size(), layout.size());
+        float x{0};
+        memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
+        return {YAML::Node(x), s.size()};
+    }
 };
 
 struct double_type : basic_type {
     explicit double_type()
         : basic_type(64) {
     }
+
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
+                                           gsl::span<const uint8_t> span) const override {
+        auto layout = wire_layout(mod);
+        auto s = span.subspan(span.size() - layout.size(), layout.size());
+        double x{0};
+        memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
+        return {YAML::Node(x), s.size()};
+    }
 };
 
-struct string_type : reference_type {};
+struct string_type : reference_type {
+    std::pair<YAML::Node, size_t> bin2yaml(const module&,
+                                           gsl::span<const uint8_t> span) const override {
+        auto ptr_span = span.subspan(span.size() - 2, 2);
+        uint16_t off{0};
+        memcpy(&off, ptr_span.data(), ptr_span.size());
+        std::string s(off, 0);
+        auto str_span = span.subspan(span.size() - 2 - off, off);
+        memcpy(s.data(), str_span.data(), str_span.size());
+        while (s.back() == 0) {
+            s.pop_back();
+        }
+        return {YAML::Node(s), off + 2};
+    }
+};
 } // namespace
 
 
 struct optional_type : generic {
     optional_type()
         : generic(make_generic_declaration({{"T", "type"}})) {
-    }
-
-    bool is_raw(const module& mod,
-                const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            return (*regular)->is_raw(mod);
-        }
-        return false;
     }
 
     bool is_reference(const module& mod,
@@ -93,7 +135,7 @@ struct vector_type : generic {
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const {
+                                   const struct generic_instantiation&) const override {
         return raw_layout{2, 2};
     }
 
@@ -101,23 +143,61 @@ struct vector_type : generic {
                       const struct generic_instantiation& instantiation) const override {
         return true;
     }
+
+    std::pair<YAML::Node, size_t>
+    bin2yaml(const module& module,
+             const struct generic_instantiation& instantiation,
+             gsl::span<const uint8_t> span) const override {
+        auto ptr_span = span.subspan(span.size() - 2, 2);
+        uint16_t off{0};
+        memcpy(&off, ptr_span.data(), ptr_span.size());
+
+        YAML::Node arr;
+        if (off == 0) {
+            return {arr, 2};
+        }
+
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
+        if (auto pointee = std::get_if<const type*>(arg); pointee) {
+            auto layout = (*pointee)->wire_layout(module);
+            auto len = off / layout.size();
+
+            for (int i = 0; i < len; ++i) {
+                auto obj_span = span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
+                auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+                arr.push_back(std::move(yaml));
+            }
+
+            return {std::move(arr), layout.size() * len};
+        }
+
+        throw std::runtime_error("pointee must be a regular type");
+    }
 };
 
-struct pointer_type : generic {
-    pointer_type()
-        : generic(make_generic_declaration({{"T", "type"}})) {
+pointer_type::pointer_type()
+    : generic(make_generic_declaration({{"T", "type"}})) {
+}
+raw_layout pointer_type::wire_layout(const module& mod,
+                                     const struct generic_instantiation&) const {
+    return raw_layout{2, 2};
+}
+std::pair<YAML::Node, size_t>
+pointer_type::bin2yaml(const module& module,
+                       const struct generic_instantiation& instantiation,
+                       gsl::span<const uint8_t> span) const {
+    auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
+    if (auto pointee = std::get_if<const type*>(arg); pointee) {
+        auto ptr_span = span.subspan(span.size() - 2, 2);
+        uint16_t off{0};
+        memcpy(&off, ptr_span.data(), ptr_span.size());
+        auto obj_span = span.subspan(
+            0, span.size() - 2 - off + (*pointee)->wire_layout(module).size());
+        auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+        return {std::move(yaml), consumed + 2};
     }
-
-    bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
-        return true;
-    }
-
-    virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const {
-        return raw_layout{2, 2};
-    }
-};
+    throw std::runtime_error("pointee must be a regular type");
+}
 
 struct array_type : generic {
     array_type()
@@ -129,15 +209,6 @@ struct array_type : generic {
         auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
         if (auto regular = std::get_if<const type*>(arg); regular) {
             return (*regular)->is_reference_type(mod);
-        }
-        return false;
-    }
-
-    bool is_raw(const module& mod,
-                const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            return (*regular)->is_raw(mod);
         }
         return false;
     }
@@ -156,30 +227,56 @@ struct array_type : generic {
         }
         throw std::runtime_error("Array type is not regular!");
     }
+
+    std::pair<YAML::Node, size_t>
+    bin2yaml(const module& module,
+             const struct generic_instantiation& instantiation,
+             gsl::span<const uint8_t> span) const override {
+        if (is_reference(module, instantiation)) {
+            throw std::runtime_error("not implemented");
+        }
+
+        YAML::Node arr;
+        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
+        if (auto pointee = std::get_if<const type*>(arg); pointee) {
+            auto layout = (*pointee)->wire_layout(module);
+            auto len = std::get<int64_t>(instantiation.arguments()[2]);
+
+            for (int i = 0; i < len; ++i) {
+                auto obj_span = span.subspan(0, span.size() - (len - i - 1) * layout.size());
+                auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+                arr.push_back(std::move(yaml));
+            }
+
+            return {std::move(arr), layout.size() * len};
+        }
+
+        throw std::runtime_error("pointee must be a regular type");
+    }
 };
 
 void add_basic_types(symbol_table& db) {
-    db.define("bool", std::make_unique<integral_type>(1, false));
+    db.define("bool", new integral_type(1, false));
 
-    db.define("i8", std::make_unique<integral_type>(8, false));
-    db.define("i16", std::make_unique<integral_type>(16, false));
-    db.define("i32", std::make_unique<integral_type>(32, false));
-    db.define("i64", std::make_unique<integral_type>(64, false));
+    db.define("i8", new integral_type(8, false));
+    db.define("i16", new integral_type(16, false));
+    db.define("i32", new integral_type(32, false));
+    db.define("i64", new integral_type(64, false));
 
-    db.define("u8", std::make_unique<integral_type>(8, true));
-    db.define("u16", std::make_unique<integral_type>(16, true));
-    db.define("u32", std::make_unique<integral_type>(32, true));
-    db.define("u64", std::make_unique<integral_type>(64, true));
+    db.define("u8", new integral_type(8, true));
+    db.define("u16", new integral_type(16, true));
+    db.define("u32", new integral_type(32, true));
+    db.define("u64", new integral_type(64, true));
 
-    db.define("f16", std::make_unique<half_type>());
-    db.define("f32", std::make_unique<float_type>());
-    db.define("f64", std::make_unique<double_type>());
+    db.define("f16", new half_type());
+    db.define("f32", new float_type());
+    db.define("f64", new double_type());
 
-    db.define("string", std::make_unique<string_type>());
+    db.define("string", new string_type());
 
     db.define("ptr", std::make_unique<pointer_type>());
     db.define("vector", std::make_unique<vector_type>());
     db.define("array", std::make_unique<array_type>());
-    db.define("optional", std::make_unique<optional_type>());
+    // db.define("optional", std::make_unique<optional_type>());
 }
 } // namespace lidl

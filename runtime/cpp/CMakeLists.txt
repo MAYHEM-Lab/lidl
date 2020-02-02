@@ -30,7 +30,7 @@ if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
 
             add_custom_command(OUTPUT ${LIDLC_OUTPUT}
                     COMMAND ${LIDLC_BIN}
-                    ARGS ${FILE} ${LIDLC_OUTPUT}
+                    ARGS -gcpp -f ${FILE} -o ${LIDLC_OUTPUT}
                     DEPENDS ${FILE} ${LIDLC_BIN}
                     COMMENT "Building C++ header for ${FILE}"
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

@@ -25,7 +25,8 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"array", "::lidl::array"},
         {"optional", "::lidl::optional"},
         {"string", "::lidl::string"},
-        {"vector", "::lidl::vector"}};
+        {"vector", "::lidl::vector"},
+        {"ptr", "::lidl::ptr"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
         return std::string(it->second);
@@ -36,7 +37,7 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
 
 std::string get_identifier_for_type(const module& mod, const type& t);
 std::string get_identifier_for_type_priv(const module& mod, const type& t) {
-    auto sym = mod.syms.reverse_lookup(&t);
+    auto sym = mod.symbols.reverse_lookup(&t);
 
     if (!sym) {
         auto gen_it = mod.generated.find(&t);
@@ -53,15 +54,15 @@ std::string get_identifier_for_type_priv(const module& mod, const type& t) {
                 s += std::to_string(*num) + ", ";
             } else if (auto sym = std::get_if<const symbol*>(&piece); sym) {
                 auto regular = std::get_if<const type*>(*sym);
-                std::string name;
                 if (!regular && first) {
                     throw std::runtime_error("Can't have a template name as arg");
                 }
 
+                std::string name;
                 if (regular) {
                     name = get_identifier_for_type(mod, **regular);
                 } else {
-                    name = std::string(mod.syms.name_of(*sym));
+                    name = std::string(mod.symbols.name_of(*sym));
                     if (auto res = known_type_conversion(name); res) {
                         name = *res;
                     }
@@ -80,7 +81,7 @@ std::string get_identifier_for_type_priv(const module& mod, const type& t) {
         return s;
     }
 
-    auto name = std::string(mod.syms.name_of(sym));
+    auto name = std::string(mod.symbols.name_of(sym));
     if (auto res = known_type_conversion(name); res) {
         name = *res;
     }
@@ -88,17 +89,25 @@ std::string get_identifier_for_type_priv(const module& mod, const type& t) {
 }
 
 std::string get_identifier_for_type(const module& mod, const type& t) {
-    auto base = get_identifier_for_type_priv(mod, t);
-    if (!t.is_reference_type(mod)) {
-        return base;
-    } else {
-        return fmt::format("::lidl::ptr<{}>", base);
-    }
+    return get_identifier_for_type_priv(mod, t);
 }
 
-std::string private_name_for(std::string_view name) {
-    using namespace std::string_literals;
-    return "m_" + std::string(name);
+bool is_anonymous(const module& mod, const type& t) {
+    auto sym = mod.symbols.reverse_lookup(&t);
+
+    if (!sym) {
+        auto gen_it = mod.generated.find(&t);
+        if (gen_it == mod.generated.end()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void generate_raw_struct_field(std::string_view name,
+                               std::string_view type_name,
+                               std::ostream& str) {
+    str << fmt::format("{} {};\n", type_name, name);
 }
 
 std::string
@@ -106,12 +115,6 @@ generate_getter(std::string_view name, std::string_view type_name, bool is_const
     constexpr auto format = R"__({}& {}() {{ return m_raw.{}; }})__";
     constexpr auto const_format = R"__(const {}& {}() const {{ return m_raw.{}; }})__";
     return fmt::format(is_const ? const_format : format, type_name, name, name);
-}
-
-void generate_raw_struct_field(std::string_view name,
-                               std::string_view type_name,
-                               std::ostream& str) {
-    str << fmt::format("{} {};\n", type_name, name);
 }
 
 void generate_struct_field(std::string_view name,
@@ -137,6 +140,11 @@ void generate_constructor(bool has_ref,
         auto identifier = get_identifier_for_type_priv(m, *member.type_);
 
         if (member.type_->is_reference_type(m)) {
+            // must be a pointer instantiation
+            auto& instantiation = dynamic_cast<const generic_instantiation&>(*member.type_);
+            auto base = std::get<const type*>(*std::get<const symbol*>(instantiation.arguments()[1]));
+            identifier = get_identifier_for_type_priv(m, *base);
+
             if (!member.is_nullable()) {
                 arg_names.push_back(fmt::format("const {}& p_{}", identifier, name));
                 initializer_list.push_back(fmt::format("{}(p_{})", name, name));
@@ -270,8 +278,7 @@ void generate_service_descriptor(const module& mod,
                                           name,
                                           std::get<std::string>(proc));
                    });
-    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
-                       name);
+    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n", name);
     str << fmt::format("std::tuple<{}> procedures{{{}}};\n",
                        fmt::join(tuple_types, ", "),
                        fmt::join(names, ", "));
@@ -308,7 +315,11 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
-    for (auto& [name, s] : mod.structs) {
+    for (auto& s : mod.structs) {
+        if (is_anonymous(mod, s)) {
+            continue;
+        }
+        auto name = get_identifier_for_type_priv(mod, s);
         if (!s.attributes.get_untyped("procedure_params")) {
             generate_raw_struct(mod, name, s, str);
             str << '\n';
@@ -317,9 +328,9 @@ void generate(const module& mod, std::ostream& str) {
         }
     }
 
-    for (auto& [name, s] : mod.generic_structs) {
+    /*for (auto& [name, s] : mod.generic_structs) {
         std::cerr << "Codegen for generic structs not supported!";
-    }
+    }*/
 
     for (auto& [name, service] : mod.services) {
         generate_service(mod, name, service, str);
@@ -333,12 +344,16 @@ void generate(const module& mod, std::ostream& str) {
         str << "}\n";
     }
 
-    for (auto& [name, s] : mod.structs) {
+    for (auto& s : mod.structs) {
+        if (!is_anonymous(mod, s)) {
+            continue;
+        }
+
         if (s.attributes.get_untyped("procedure_params")) {
             str << "namespace lidl {\n";
             generate_specialization(mod, "procedure_params_t", s, str);
-            //str << '\n';
-            //generate_static_asserts(mod, name, s, str);
+            // str << '\n';
+            // generate_static_asserts(mod, name, s, str);
             str << '\n';
             str << "}\n";
         }
