@@ -13,3 +13,8 @@ calculator:
       parameters:
         left: f64
         right: f64
+    echo:
+      returns:
+        - string
+      parameters:
+        str: string

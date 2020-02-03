@@ -151,35 +151,44 @@ void generate_static_asserts(const module& mod,
     str << fmt::format(align_format, name, t.wire_layout(mod).alignment(), name) << '\n';
 }
 
-#if defined(LIDL_RPC)
 void generate_procedure(const module& mod,
-                        std::string_view name,
+                        std::string_view proc_name,
                         const procedure& proc,
                         std::ostream& str) {
     constexpr auto decl_format = "virtual ::lidl::status<{}> {}({}) = 0;";
 
     std::vector<std::string> params;
-    for (auto& [name, param] : proc.parameters) {
-        auto identifier = get_identifier_for_type_priv(mod, *param);
-        params.emplace_back(fmt::format("const {}& {}", identifier, name));
+    for (auto& [param_name, param] : proc.parameters) {
+        if (get_type(param)->is_reference_type(mod)) {
+            if (param.args.empty()) {
+                throw std::runtime_error(
+                    fmt::format("Not a pointer: {}", get_identifier(mod, param)));
+            }
+            auto identifier = get_identifier(mod, std::get<name>(param.args.at(0)));
+            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
+        } else {
+            auto identifier = get_identifier(mod, param);
+            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
+        }
     }
 
     std::string ret_type_name;
-    auto ret_type = get_type(proc.return_types[0]);
+    auto ret_type = get_type(proc.return_types.at(0));
     if (!ret_type->is_reference_type(mod)) {
         // can use a regular return value
-        ret_type_name = get_identifier(mod, proc.return_types[0]);
+        ret_type_name = get_identifier(mod, proc.return_types.at(0));
     } else {
-        ret_type_name =
-            fmt::format("const {}&", get_identifier_for_type_priv(mod, *ret_type));
+        ret_type_name = fmt::format(
+            "const {}&",
+            get_identifier(mod, std::get<name>(proc.return_types.at(0).args.at(0))));
         params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
     }
 
-    str << fmt::format(decl_format, ret_type_name, name, fmt::join(params, ", "));
+    str << fmt::format(decl_format, ret_type_name, proc_name, fmt::join(params, ", "));
 }
 
 void generate_service_descriptor(const module& mod,
-                                 std::string_view name,
+                                 std::string_view service_name,
                                  const service& service,
                                  std::ostream& str) {
     std::vector<std::string> names(service.procedures.size());
@@ -195,14 +204,15 @@ void generate_service_descriptor(const module& mod,
                    tuple_types.begin(),
                    [&](auto& proc) {
                        return fmt::format("::lidl::procedure_descriptor<&{}::{}>",
-                                          name,
+                                          service_name,
                                           std::get<std::string>(proc));
                    });
-    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n", name);
+    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
+                       service_name);
     str << fmt::format("std::tuple<{}> procedures{{{}}};\n",
                        fmt::join(tuple_types, ", "),
                        fmt::join(names, ", "));
-    str << fmt::format("std::string_view name = \"{}\";\n", name);
+    str << fmt::format("std::string_view name = \"{}\";\n", service_name);
     str << "};";
 }
 
@@ -219,7 +229,6 @@ void generate_service(const module& mod,
     str << "};";
     str << '\n';
 }
-#endif
 
 void declare_struct(const module& mod,
                     std::string_view name,
@@ -256,7 +265,6 @@ void generate(const module& mod, std::ostream& str) {
         std::cerr << "Codegen for generic structs not supported!";
     }*/
 
-#if defined(LIDL_RPC)
     for (auto& [name, service] : mod.services) {
         generate_service(mod, name, service, str);
         str << '\n';
@@ -268,7 +276,6 @@ void generate(const module& mod, std::ostream& str) {
         str << '\n';
         str << "}\n";
     }
-#endif
 
     for (auto& s : mod.structs) {
         if (!is_anonymous(mod, s)) {

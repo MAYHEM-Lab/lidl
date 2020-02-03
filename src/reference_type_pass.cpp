@@ -47,5 +47,15 @@ void reference_type_pass(module& m) {
             reference_type_pass(m, member.type_);
         }
     }
+    for (auto& s : m.services) {
+        for (auto& [_, proc] : s.second.procedures) {
+            for (auto& ret_type : proc.return_types) {
+                reference_type_pass(m, ret_type);
+            }
+            for (auto& [__, param_type] : proc.parameters) {
+                reference_type_pass(m, param_type);
+            }
+        }
+    }
 }
 } // namespace lidl
