@@ -3,14 +3,15 @@
 #include "structure.hpp"
 #include "types.hpp"
 
-#include <include/gsl/span>
+#include <gsl/span>
+#include <lidl/basic.hpp>
 #include <lidl/layout.hpp>
+#include <lidl/scope.hpp>
 #include <string>
 #include <vector>
 
-namespace lidl {
-using generic_argument = std::variant<const symbol*, int64_t>;
 
+namespace lidl {
 struct generic_parameter {
     virtual ~generic_parameter() = default;
 };
@@ -23,6 +24,10 @@ public:
         std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>>&& params)
         : m_params{std::move(params)} {
     }
+
+    generic_declaration(const generic_declaration&) = delete;
+    generic_declaration(generic_declaration&&) noexcept = default;
+    generic_declaration& operator=(generic_declaration&&) noexcept = default;
 
     [[nodiscard]] int32_t arity() const {
         return m_params.size();
@@ -48,14 +53,17 @@ private:
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> m_params;
 };
 
-std::shared_ptr<const generic_declaration>
+generic_declaration
     make_generic_declaration(std::vector<std::pair<std::string, std::string>>);
 
 class module;
 struct generic {
-    explicit generic(std::shared_ptr<const generic_declaration> decl)
+    explicit generic(generic_declaration decl)
         : declaration(std::move(decl)) {
     }
+
+    generic(generic&&) noexcept = default;
+    generic& operator=(generic&&) noexcept = default;
 
     virtual bool is_reference(const module& mod,
                               const struct generic_instantiation&) const = 0;
@@ -69,7 +77,7 @@ struct generic {
 
     virtual ~generic() = 0;
 
-    std::shared_ptr<const generic_declaration> declaration;
+    generic_declaration declaration;
 };
 
 struct generic_type_parameter : type {
@@ -84,19 +92,12 @@ struct generic_type_parameter : type {
     }
 };
 
-class module;
-struct generic_structure {
-    std::shared_ptr<const generic_declaration> declaration;
-    structure struct_;
-
-    structure instantiate(const module& m, const std::vector<generic_argument>&);
-};
-
-struct user_defined_generic : generic {
-    explicit user_defined_generic(const generic_structure& str)
-        : generic(str.declaration)
-        , m_structure(&str) {
+struct generic_structure : generic {
+    explicit generic_structure(generic_declaration decl, structure s)
+        : generic(std::move(decl))
+        , struct_(std::move(s)) {
     }
+
     virtual raw_layout wire_layout(const module& mod,
                                    const struct generic_instantiation&) const override {
         throw std::runtime_error("Wire layout shouldn't be called on a generic!");
@@ -111,7 +112,8 @@ struct user_defined_generic : generic {
              gsl::span<const uint8_t> span) const override {
         throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
     }
-    const generic_structure* m_structure;
+
+    structure struct_;
 };
 
 class generic_instantiation : public type {

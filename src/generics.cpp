@@ -5,8 +5,9 @@
 #include <fmt/format.h>
 #include <lidl/generics.hpp>
 #include <lidl/module.hpp>
-#include <stdexcept>
 #include <map>
+#include <stdexcept>
+
 
 namespace lidl {
 namespace {
@@ -18,13 +19,13 @@ struct value_parameter : generic_parameter {
 };
 } // namespace
 
-std::shared_ptr<const generic_declaration>
+generic_declaration
 make_generic_declaration(std::vector<std::pair<std::string, std::string>> arg) {
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> res;
     for (auto& [name, type] : arg) {
         res.emplace_back(name, get_generic_parameter_for_type(type));
     }
-    return std::make_shared<generic_declaration>(std::move(res));
+    return generic_declaration(std::move(res));
 }
 
 generic::~generic() = default;
@@ -39,7 +40,7 @@ std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_vi
     return nullptr;
 }
 
-structure generic_structure::instantiate(const module& mod,
+/*structure generic_structure::instantiate(const module& mod,
                                          const std::vector<generic_argument>& args) {
     if (args.size() != declaration->arity()) {
         throw std::runtime_error(fmt::format(
@@ -70,5 +71,5 @@ structure generic_structure::instantiate(const module& mod,
     }
 
     return s;
-}
+}*/
 } // namespace lidl

@@ -25,25 +25,30 @@ private:
 struct attribute_holder {
 public:
     template<class T>
-    std::shared_ptr<const T> get(std::string_view name) const {
+    const T* get(std::string_view name) const {
         auto untyped = get_untyped(name);
-        return std::dynamic_pointer_cast<const T>(untyped);
+        return dynamic_cast<const T*>(untyped);
     }
 
-    std::shared_ptr<const attribute> get_untyped(std::string_view name) const {
+    const attribute* get_untyped(std::string_view name) const {
         auto it = m_attribs.find(name);
         if (it == m_attribs.end()) {
             return nullptr;
         }
-        return it->second;
+        return it->second.get();
     }
 
-    void add(std::shared_ptr<const attribute> attrib) {
+    void add(std::unique_ptr<const attribute> attrib) {
         m_attribs.emplace(attrib->name(), std::move(attrib));
     }
 
+    attribute_holder() = default;
+    attribute_holder(const attribute_holder&) = delete;
+    attribute_holder(attribute_holder&&) noexcept = default;
+    attribute_holder& operator=(attribute_holder&&) noexcept = default;
+
 private:
-    std::unordered_map<std::string_view, std::shared_ptr<const attribute>> m_attribs;
+    std::unordered_map<std::string_view, std::unique_ptr<const attribute>> m_attribs;
 };
 
 namespace detail {
@@ -56,7 +61,10 @@ struct raw_attribute : attribute {
 };
 
 struct default_numeric_value_attribute : attribute {
-    default_numeric_value_attribute(double f) : attribute("default"), val(f) {}
+    default_numeric_value_attribute(double f)
+        : attribute("default")
+        , val(f) {
+    }
     double val;
 };
 

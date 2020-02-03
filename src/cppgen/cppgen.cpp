@@ -1,3 +1,6 @@
+#include "cppgen.hpp"
+
+#include <algorithm>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <lidl/basic.hpp>
@@ -5,103 +8,15 @@
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 
-namespace lidl {
+
+namespace lidl::cpp {
 namespace {
-std::optional<std::string> known_type_conversion(const std::string_view& name) {
-    std::unordered_map<std::string_view, std::string_view> basic_types{
-        {"f32", "float"},
-        {"f64", "double"},
-        {"i8", "int8_t"},
-        {"i16", "int16_t"},
-        {"i32", "int32_t"},
-        {"i64", "int64_t"},
-        {"u8", "uint8_t"},
-        {"u16", "uint16_t"},
-        {"u32", "uint32_t"},
-        {"u64", "uint64_t"},
-        {"array", "::lidl::array"},
-        {"optional", "::lidl::optional"},
-        {"string", "::lidl::string"},
-        {"vector", "::lidl::vector"},
-        {"ptr", "::lidl::ptr"}};
-
-    if (auto it = basic_types.find(name); it != basic_types.end()) {
-        return std::string(it->second);
-    }
-
-    return std::nullopt;
-}
-
-std::string get_identifier_for_type(const module& mod, const type& t);
-std::string get_identifier_for_type_priv(const module& mod, const type& t) {
-    auto sym = mod.symbols.reverse_lookup(&t);
-
-    if (!sym) {
-        auto gen_it = mod.generated.find(&t);
-        if (gen_it == mod.generated.end()) {
-            throw std::runtime_error("wtf");
-        }
-        bool first = false;
-        std::string s;
-        for (auto& piece : gen_it->second) {
-            if (auto num = std::get_if<int64_t>(&piece); num) {
-                if (!first) {
-                    throw std::runtime_error("shouldn't happen");
-                }
-                s += std::to_string(*num) + ", ";
-            } else if (auto sym = std::get_if<const symbol*>(&piece); sym) {
-                auto regular = std::get_if<const type*>(*sym);
-                if (!regular && first) {
-                    throw std::runtime_error("Can't have a template name as arg");
-                }
-
-                std::string name;
-                if (regular) {
-                    name = get_identifier_for_type(mod, **regular);
-                } else {
-                    name = std::string(mod.symbols.name_of(*sym));
-                    if (auto res = known_type_conversion(name); res) {
-                        name = *res;
-                    }
-                }
-
-                if (!first) {
-                    s = name + "<";
-                    first = true;
-                    continue;
-                }
-                s += name + ", ";
-            }
-        }
-        s.pop_back();
-        s.back() = '>';
-        return s;
-    }
-
-    auto name = std::string(mod.symbols.name_of(sym));
-    if (auto res = known_type_conversion(name); res) {
-        name = *res;
-    }
-    return name;
-}
-
-std::string get_identifier_for_type(const module& mod, const type& t) {
-    return get_identifier_for_type_priv(mod, t);
-}
-
 bool is_anonymous(const module& mod, const type& t) {
-    auto sym = mod.symbols.reverse_lookup(&t);
-
-    if (!sym) {
-        auto gen_it = mod.generated.find(&t);
-        if (gen_it == mod.generated.end()) {
-            return true;
-        }
-    }
-    return false;
+    return !mod.symbols->definition_lookup(&t);
 }
 
 void generate_raw_struct_field(std::string_view name,
@@ -126,7 +41,7 @@ void generate_struct_field(std::string_view name,
 
 void generate_constructor(bool has_ref,
                           const module& m,
-                          std::string_view name,
+                          std::string_view type_name,
                           const structure& s,
                           std::ostream& str) {
     std::vector<std::string> arg_names;
@@ -136,36 +51,39 @@ void generate_constructor(bool has_ref,
 
     std::vector<std::string> initializer_list;
 
-    for (auto& [name, member] : s.members) {
-        auto identifier = get_identifier_for_type_priv(m, *member.type_);
+    for (auto& [member_name, member] : s.members) {
+        auto member_type = get_type(member.type_);
 
-        if (member.type_->is_reference_type(m)) {
+        if (member_type->is_reference_type(m)) {
             // must be a pointer instantiation
-            auto& instantiation = dynamic_cast<const generic_instantiation&>(*member.type_);
-            auto base = std::get<const type*>(*std::get<const symbol*>(instantiation.arguments()[1]));
-            identifier = get_identifier_for_type_priv(m, *base);
+            auto& base = std::get<name>(member.type_.args[0]);
+            auto identifier = get_identifier(m, base);
 
             if (!member.is_nullable()) {
-                arg_names.push_back(fmt::format("const {}& p_{}", identifier, name));
-                initializer_list.push_back(fmt::format("{}(p_{})", name, name));
-            } else {
-                arg_names.push_back(fmt::format("const {}* p_{}", identifier, name));
-                initializer_list.push_back(fmt::format(
-                    "{}(p_{} ? decltype({}){{*p_{}}} : decltype({}){{nullptr}})",
-                    name,
-                    name,
-                    name,
-                    name,
-                    name));
+                arg_names.push_back(
+                    fmt::format("const {}& p_{}", identifier, member_name));
+                initializer_list.push_back(
+                    fmt::format("{}(p_{})", member_name, member_name));
+                continue;
             }
-        } else {
-            arg_names.push_back(fmt::format("const {}& p_{}", identifier, name));
-            initializer_list.push_back(fmt::format("{}(p_{})", name, name));
+            arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
+            initializer_list.push_back(
+                fmt::format("{}(p_{} ? decltype({}){{*p_{}}} : decltype({}){{nullptr}})",
+                            member_name,
+                            member_name,
+                            member_name,
+                            member_name,
+                            member_name));
+            continue;
         }
+
+        auto identifier = get_identifier(m, member.type_);
+        arg_names.push_back(fmt::format("const {}& p_{}", identifier, member_name));
+        initializer_list.push_back(fmt::format("{}(p_{})", member_name, member_name));
     }
 
     str << fmt::format("{}({}) : {} {{}}",
-                       name,
+                       type_name,
                        fmt::join(arg_names, ", "),
                        fmt::join(initializer_list, ", "));
 }
@@ -179,7 +97,7 @@ void generate_specialization(const module& m,
     std::stringstream pub;
 
     for (auto& [name, member] : s.members) {
-        generate_raw_struct_field(name, get_identifier_for_type(m, *member.type_), pub);
+        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
     }
 
     std::stringstream ctor;
@@ -206,7 +124,7 @@ void generate_raw_struct(const module& m,
     std::stringstream pub;
 
     for (auto& [name, member] : s.members) {
-        generate_raw_struct_field(name, get_identifier_for_type(m, *member.type_), pub);
+        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
     }
 
     std::stringstream ctor;
@@ -233,6 +151,7 @@ void generate_static_asserts(const module& mod,
     str << fmt::format(align_format, name, t.wire_layout(mod).alignment(), name) << '\n';
 }
 
+#if defined(LIDL_RPC)
 void generate_procedure(const module& mod,
                         std::string_view name,
                         const procedure& proc,
@@ -246,12 +165,13 @@ void generate_procedure(const module& mod,
     }
 
     std::string ret_type_name;
-    if (!proc.return_types[0]->is_reference_type(mod)) {
+    auto ret_type = get_type(proc.return_types[0]);
+    if (!ret_type->is_reference_type(mod)) {
         // can use a regular return value
-        ret_type_name = get_identifier_for_type(mod, *proc.return_types[0]);
+        ret_type_name = get_identifier(mod, proc.return_types[0]);
     } else {
-        ret_type_name = fmt::format(
-            "const {}&", get_identifier_for_type_priv(mod, *proc.return_types[0]));
+        ret_type_name =
+            fmt::format("const {}&", get_identifier_for_type_priv(mod, *ret_type));
         params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
     }
 
@@ -299,6 +219,7 @@ void generate_service(const module& mod,
     str << "};";
     str << '\n';
 }
+#endif
 
 void declare_struct(const module& mod,
                     std::string_view name,
@@ -307,8 +228,10 @@ void declare_struct(const module& mod,
     str << fmt::format("struct {};", name);
 }
 } // namespace
-
+} // namespace lidl::cpp
+namespace lidl {
 void generate(const module& mod, std::ostream& str) {
+    using namespace cpp;
     str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
     if (!mod.services.empty()) {
         str << "#include<lidl/service.hpp>\n";
@@ -319,7 +242,8 @@ void generate(const module& mod, std::ostream& str) {
         if (is_anonymous(mod, s)) {
             continue;
         }
-        auto name = get_identifier_for_type_priv(mod, s);
+
+        auto name = nameof(*mod.symbols->definition_lookup(&s));
         if (!s.attributes.get_untyped("procedure_params")) {
             generate_raw_struct(mod, name, s, str);
             str << '\n';
@@ -332,6 +256,7 @@ void generate(const module& mod, std::ostream& str) {
         std::cerr << "Codegen for generic structs not supported!";
     }*/
 
+#if defined(LIDL_RPC)
     for (auto& [name, service] : mod.services) {
         generate_service(mod, name, service, str);
         str << '\n';
@@ -343,6 +268,7 @@ void generate(const module& mod, std::ostream& str) {
         str << '\n';
         str << "}\n";
     }
+#endif
 
     for (auto& s : mod.structs) {
         if (!is_anonymous(mod, s)) {

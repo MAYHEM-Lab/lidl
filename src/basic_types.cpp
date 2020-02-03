@@ -102,33 +102,6 @@ struct string_type : reference_type {
 };
 } // namespace
 
-
-struct optional_type : generic {
-    optional_type()
-        : generic(make_generic_declaration({{"T", "type"}})) {
-    }
-
-    bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            return (*regular)->is_reference_type(mod);
-        }
-        return false;
-    }
-
-    virtual raw_layout
-    wire_layout(const module& mod,
-                const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            auto layout = (*regular)->wire_layout(mod);
-            return raw_layout(layout.size() * 2, layout.alignment());
-        }
-        throw std::runtime_error("Optional type is not regular");
-    }
-};
-
 struct vector_type : generic {
     vector_type()
         : generic(make_generic_declaration({{"T", "type"}})) {
@@ -157,14 +130,15 @@ struct vector_type : generic {
             return {arr, 2};
         }
 
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto pointee = std::get_if<const type*>(arg); pointee) {
-            auto layout = (*pointee)->wire_layout(module);
+        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto pointee = get_type(arg); pointee) {
+            auto layout = pointee->wire_layout(module);
             auto len = off / layout.size();
 
             for (int i = 0; i < len; ++i) {
-                auto obj_span = span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
-                auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+                auto obj_span =
+                    span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
+                auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
                 arr.push_back(std::move(yaml));
             }
 
@@ -178,22 +152,24 @@ struct vector_type : generic {
 pointer_type::pointer_type()
     : generic(make_generic_declaration({{"T", "type"}})) {
 }
+
 raw_layout pointer_type::wire_layout(const module& mod,
                                      const struct generic_instantiation&) const {
     return raw_layout{2, 2};
 }
+
 std::pair<YAML::Node, size_t>
 pointer_type::bin2yaml(const module& module,
                        const struct generic_instantiation& instantiation,
                        gsl::span<const uint8_t> span) const {
-    auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-    if (auto pointee = std::get_if<const type*>(arg); pointee) {
+    auto& arg = std::get<name>(instantiation.arguments()[0]);
+    if (auto pointee = get_type(arg); pointee) {
         auto ptr_span = span.subspan(span.size() - 2, 2);
         uint16_t off{0};
         memcpy(&off, ptr_span.data(), ptr_span.size());
-        auto obj_span = span.subspan(
-            0, span.size() - 2 - off + (*pointee)->wire_layout(module).size());
-        auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+        auto obj_span =
+            span.subspan(0, span.size() - 2 - off + pointee->wire_layout(module).size());
+        auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
         return {std::move(yaml), consumed + 2};
     }
     throw std::runtime_error("pointee must be a regular type");
@@ -206,9 +182,9 @@ struct array_type : generic {
 
     bool is_reference(const module& mod,
                       const struct generic_instantiation& instantiation) const override {
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            return (*regular)->is_reference_type(mod);
+        auto arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto regular = get_type(arg); regular) {
+            return regular->is_reference_type(mod);
         }
         return false;
     }
@@ -219,10 +195,10 @@ struct array_type : generic {
         if (is_reference(mod, instantiation)) {
             return {2, 2};
         }
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto regular = std::get_if<const type*>(arg); regular) {
-            auto layout = (*regular)->wire_layout(mod);
-            auto len = std::get<int64_t>(instantiation.arguments()[2]);
+        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto regular = get_type(arg); regular) {
+            auto layout = regular->wire_layout(mod);
+            auto len = std::get<int64_t>(instantiation.arguments()[1]);
             return raw_layout(layout.size() * len, layout.alignment());
         }
         throw std::runtime_error("Array type is not regular!");
@@ -237,14 +213,15 @@ struct array_type : generic {
         }
 
         YAML::Node arr;
-        auto arg = std::get<const symbol*>(instantiation.arguments()[1]);
-        if (auto pointee = std::get_if<const type*>(arg); pointee) {
-            auto layout = (*pointee)->wire_layout(module);
-            auto len = std::get<int64_t>(instantiation.arguments()[2]);
+        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto pointee = get_type(arg); pointee) {
+            auto layout = pointee->wire_layout(module);
+            auto len = std::get<int64_t>(instantiation.arguments()[1]);
 
             for (int i = 0; i < len; ++i) {
-                auto obj_span = span.subspan(0, span.size() - (len - i - 1) * layout.size());
-                auto [yaml, consumed] = (*pointee)->bin2yaml(module, obj_span);
+                auto obj_span =
+                    span.subspan(0, span.size() - (len - i - 1) * layout.size());
+                auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
                 arr.push_back(std::move(yaml));
             }
 
@@ -255,28 +232,37 @@ struct array_type : generic {
     }
 };
 
-void add_basic_types(symbol_table& db) {
-    db.define("bool", new integral_type(1, false));
+void add_basic_types(module& m) {
+    auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
+        m.basic_types.emplace_back(std::move(t));
+        define(*m.symbols, name, m.basic_types.back().get());
+    };
 
-    db.define("i8", new integral_type(8, false));
-    db.define("i16", new integral_type(16, false));
-    db.define("i32", new integral_type(32, false));
-    db.define("i64", new integral_type(64, false));
+    auto add_generic = [&](std::string_view name, std::unique_ptr<generic> t) {
+        m.basic_generics.emplace_back(std::move(t));
+        define(*m.symbols, name, m.basic_generics.back().get());
+    };
 
-    db.define("u8", new integral_type(8, true));
-    db.define("u16", new integral_type(16, true));
-    db.define("u32", new integral_type(32, true));
-    db.define("u64", new integral_type(64, true));
+    add_type("bool", std::make_unique<integral_type>(1, false));
 
-    db.define("f16", new half_type());
-    db.define("f32", new float_type());
-    db.define("f64", new double_type());
+    add_type("i8", std::make_unique<integral_type>(8, false));
+    add_type("i16", std::make_unique<integral_type>(16, false));
+    add_type("i32", std::make_unique<integral_type>(32, false));
+    add_type("i64", std::make_unique<integral_type>(64, false));
 
-    db.define("string", new string_type());
+    add_type("u8", std::make_unique<integral_type>(8, true));
+    add_type("u16", std::make_unique<integral_type>(16, true));
+    add_type("u32", std::make_unique<integral_type>(32, true));
+    add_type("u64", std::make_unique<integral_type>(64, true));
 
-    db.define("ptr", std::make_unique<pointer_type>());
-    db.define("vector", std::make_unique<vector_type>());
-    db.define("array", std::make_unique<array_type>());
-    // db.define("optional", std::make_unique<optional_type>());
+    add_type("f16", std::make_unique<half_type>());
+    add_type("f32", std::make_unique<float_type>());
+    add_type("f64", std::make_unique<double_type>());
+
+    add_type("string", std::make_unique<string_type>());
+
+    add_generic("ptr", std::make_unique<pointer_type>());
+    add_generic("vector", std::make_unique<vector_type>());
+    add_generic("array", std::make_unique<array_type>());
 }
 } // namespace lidl

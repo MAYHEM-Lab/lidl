@@ -3,9 +3,10 @@
 #include <gsl/span>
 #include <iostream>
 #include <lidl/basic.hpp>
-#include <lidl/yaml.hpp>
 #include <lyra/lyra.hpp>
 #include <string_view>
+#include <yaml.hpp>
+
 
 namespace lidl {
 structure service_params_struct(const module& mod,
@@ -16,9 +17,9 @@ structure service_params_struct(const module& mod,
     for (auto& [name, param] : proc.parameters) {
         member m;
         m.type_ = param;
-        s.members.emplace_back(name, m);
+        s.members.emplace_back(name, std::move(m));
     }
-    s.attributes.add(std::make_shared<procedure_params_attribute>(
+    s.attributes.add(std::make_unique<procedure_params_attribute>(
         std::string(serv), std::string(name), proc));
     return s;
 }
@@ -26,17 +27,14 @@ structure service_params_struct(const module& mod,
 void service_pass(module& mod) {
     for (auto& [name, service] : mod.services) {
         for (auto& [proc_name, proc] : service.procedures) {
-            auto args_struct = service_params_struct(mod, name, proc_name, proc);
-            mod.structs.emplace_back(args_struct);
+            mod.structs.emplace_back(service_params_struct(mod, name, proc_name, proc));
         }
     }
 }
 
 void generate(const module& mod, std::ostream& str);
 std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
-    backends {
-    {"cpp", generate}
-};
+    backends{{"cpp", generate}};
 
 struct lidlc_args {
     std::istream* input_stream;
@@ -63,8 +61,8 @@ void run(const lidlc_args& args) {
 } // namespace lidl
 
 int main(int argc, char** argv) {
-    bool help;
-    bool read_from_stdin;
+    bool help = false;
+    bool read_from_stdin = false;
     std::string input_path;
     std::string out_path;
     std::string backend;

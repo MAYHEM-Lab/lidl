@@ -10,8 +10,8 @@
 
 namespace lidl {
 struct procedure {
-    std::deque<const type*> return_types;
-    std::deque<std::pair<std::string, const type*>> parameters;
+    std::deque<name> return_types;
+    std::deque<std::pair<std::string, name>> parameters;
 };
 
 struct service {
