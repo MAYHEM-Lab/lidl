@@ -83,6 +83,9 @@ std::optional<symbol_handle> recursive_name_lookup(const scope& s,
     if (auto sym = s.name_lookup(name); sym) {
         return sym;
     }
-    return recursive_name_lookup(*s.parent(), name);
+    if (s.parent()) {
+        return recursive_name_lookup(*s.parent(), name);
+    }
+    return std::nullopt;
 }
 } // namespace lidl
