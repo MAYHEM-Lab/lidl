@@ -39,37 +39,4 @@ std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_vi
     }
     return nullptr;
 }
-
-/*structure generic_structure::instantiate(const module& mod,
-                                         const std::vector<generic_argument>& args) {
-    if (args.size() != declaration->arity()) {
-        throw std::runtime_error(fmt::format(
-            "Mismatched arity expected {}, got {}", declaration->arity(), args.size()));
-    }
-
-    structure s;
-
-    std::map<std::string, generic_argument> param_arg;
-
-    auto decl_it = declaration->begin();
-    auto arg_it = args.begin();
-    while (arg_it != args.end()) {
-        // TODO: validate args here
-        param_arg.emplace(decl_it++->first, *arg_it++);
-    }
-
-    s.attributes = struct_.attributes;
-
-    for (auto& [name, def] : struct_.members) {
-        auto gen_type = dynamic_cast<const generic_type_parameter*>(def.type_);
-        if (!gen_type) {
-            s.members.emplace_back(name, def);
-            continue;
-        }
-        member mem;
-        // mem.type_ = mod.syms.lookup(param_arg[gen_type->name().name]);
-    }
-
-    return s;
-}*/
 } // namespace lidl
