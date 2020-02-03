@@ -33,8 +33,8 @@ struct structure : public value_type {
 
     structure() = default;
     structure(const structure&) = delete;
-    structure(structure&&) noexcept = default;
-    structure& operator=(structure&&) noexcept = default;
+    structure(structure&&) = default;
+    structure& operator=(structure&&) = default;
 
     bool is_reference_type(const module& mod) const override {
         return std::any_of(members.begin(), members.end(), [&](auto& mem) {
