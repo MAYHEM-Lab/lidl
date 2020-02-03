@@ -16,6 +16,7 @@
 #include <yaml-cpp/yaml.h>
 
 
+
 namespace lidl::yaml {
 namespace {
 generic_declaration parse_parameters(const YAML::Node& node) {
@@ -136,7 +137,7 @@ generic_structure read_generic_structure(const YAML::Node& node, const scope& sc
 
     auto params = parse_parameters(node["parameters"]);
     for (auto& [name, param] : params) {
-        define(*gen_scope, name, new generic_type_parameter);
+        gen_scope->declare(name);
     }
 
     auto str = read_structure(node, *gen_scope);
