@@ -2,7 +2,6 @@
 
 #include "lidl/attributes.hpp"
 #include "lidl/basic.hpp"
-#include "lidl/identifier.hpp"
 #include "lidl/scope.hpp"
 
 #include <fstream>

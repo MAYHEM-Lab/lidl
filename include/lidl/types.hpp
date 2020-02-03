@@ -1,7 +1,6 @@
 #pragma once
 
-#include "identifier.hpp"
-
+#include <gsl/span>
 #include <iostream>
 #include <lidl/layout.hpp>
 #include <memory>
@@ -10,7 +9,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
-#include <gsl/span>
 
 namespace lidl {
 class module;
@@ -20,7 +18,8 @@ public:
 
     virtual bool is_reference_type(const module& mod) const = 0;
 
-    virtual std::pair<YAML::Node, size_t> bin2yaml(const module&, gsl::span<const uint8_t>) const {
+    virtual std::pair<YAML::Node, size_t> bin2yaml(const module&,
+                                                   gsl::span<const uint8_t>) const {
         throw std::runtime_error("Not implemented");
     }
 

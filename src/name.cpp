@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <lidl/generics.hpp>
-#include <lidl/identifier.hpp>
 
 
 namespace lidl {

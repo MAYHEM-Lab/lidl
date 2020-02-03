@@ -1,7 +1,6 @@
 #pragma once
 
 #include <lidl/generics.hpp>
-#include <lidl/identifier.hpp>
 #include <lidl/scope.hpp>
 #include <lidl/service.hpp>
 #include <lidl/structure.hpp>
