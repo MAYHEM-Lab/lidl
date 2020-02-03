@@ -2,6 +2,7 @@
 
 #include <fmt/format.h>
 #include <stdexcept>
+#include <string_view>
 
 namespace lidl {
 class error : std::runtime_error {
