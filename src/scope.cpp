@@ -2,6 +2,8 @@
 
 #include <cassert>
 #include <lidl/scope.hpp>
+#include <stdexcept>
+
 
 
 namespace lidl {
@@ -69,6 +71,14 @@ symbol get_symbol(const symbol_handle& handle) {
 }
 
 symbol_handle define(scope& s, std::string_view name, symbol def) {
+    if (auto existing = s.name_lookup(name); existing) {
+        if (is_defined(*existing)) {
+            throw std::runtime_error("Can't redefine an existing name!");
+        }
+        s.define(*existing, def);
+        return *existing;
+    }
+
     auto decl = s.declare(name);
     s.define(decl, def);
     return decl;
