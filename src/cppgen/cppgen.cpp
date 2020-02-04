@@ -45,9 +45,9 @@ void generate_constructor(bool has_ref,
                           const structure& s,
                           std::ostream& str) {
     std::vector<std::string> arg_names;
-    if (has_ref) {
+    /*if (has_ref) {
         arg_names.push_back("::lidl::message_builder& builder");
-    }
+    }*/
 
     std::vector<std::string> initializer_list;
 

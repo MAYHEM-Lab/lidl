@@ -10,7 +10,7 @@
 
 namespace lidl {
 namespace {
-name pointerify(symbol_handle ptr_sym, const name& n) {
+name pointerify(const symbol_handle& ptr_sym, const name& n) {
     name ptr_to_name;
     ptr_to_name.base = ptr_sym;
     ptr_to_name.args = std::vector<generic_argument>{n};
