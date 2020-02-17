@@ -118,13 +118,13 @@ member read_member(const YAML::Node& node, const scope& s) {
 
 structure read_structure(const YAML::Node& node, const scope& scop) {
     structure s;
-    s.scope = scop.add_child_scope();
+    s.scope_ = scop.add_child_scope();
 
     auto members = node["members"];
     Expects(members);
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        s.members.emplace_back(key.as<std::string>(), read_member(val, *s.scope.lock()));
+        s.members.emplace_back(key.as<std::string>(), read_member(val, *s.scope_.lock()));
     }
 
     s.attributes = read_attributes(node["attributes"]);

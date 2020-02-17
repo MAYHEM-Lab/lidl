@@ -3,6 +3,7 @@
 //
 #include <iostream>
 #include <lidl_generated.hpp>
+#include <array>
 
 int main() {
     std::array<uint8_t, 64> x;

@@ -1,22 +1,25 @@
+//
+// Created by fatih on 2/16/20.
+//
+
 #pragma once
 
 #include <algorithm>
 #include <deque>
 #include <lidl/attributes.hpp>
 #include <lidl/basic.hpp>
-#include <lidl/types.hpp>
 #include <lidl/member.hpp>
+#include <lidl/types.hpp>
 
 namespace lidl {
-struct structure : public value_type {
+struct union_type : public value_type {
     std::deque<std::tuple<std::string, member>> members;
     attribute_holder attributes;
-    std::weak_ptr<scope> scope_;
 
-    structure() = default;
-    structure(const structure&) = delete;
-    structure(structure&&) = default;
-    structure& operator=(structure&&) = default;
+    union_type() = default;
+    union_type(const union_type&) = delete;
+    union_type(union_type&&) = default;
+    union_type& operator=(union_type&&) = default;
 
     bool is_reference_type(const module& mod) const override {
         return std::any_of(members.begin(), members.end(), [&](auto& mem) {
@@ -26,15 +29,17 @@ struct structure : public value_type {
     }
 
     virtual raw_layout wire_layout(const module& mod) const override {
-        aggregate_layout_computer computer;
-        for (auto& [name, member] : members) {
-            if (get_type(member.type_)->is_reference_type(mod)) {
-                computer.add({2, 2});
-            } else {
-                computer.add(get_type(member.type_)->wire_layout(mod));
-            }
-        }
-        return computer.get();
+        return std::accumulate(
+            members.begin(),
+            members.end(),
+            raw_layout{0, 0},
+            [&](const raw_layout& cur, auto& mem) {
+                auto member_layout =
+                    get_type(std::get<member>(mem).type_)->wire_layout(mod);
+                auto max_align = std::max(cur.alignment(), member_layout.alignment());
+                auto max_size = std::max(cur.size(), member_layout.size());
+                return raw_layout{max_size, max_align};
+            });
     }
 
     std::pair<YAML::Node, size_t> bin2yaml(const module& module,
@@ -52,4 +57,5 @@ struct structure : public value_type {
         return {node, wire_layout(module).size()};
     }
 };
+
 } // namespace lidl

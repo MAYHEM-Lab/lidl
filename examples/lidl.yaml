@@ -9,7 +9,7 @@ identifier:
         parameters:
           - identifier
 
-type:
+type_:
   type: structure
   members:
     name:

@@ -66,17 +66,6 @@ struct call_info : call_info_base {
     ::lidl::ptr<::lidl::procedure_params_t<Fn>> params;
 };
 
-struct response_info_base {};
-
-template<auto Fn>
-struct response_info : response_info_base {
-    response_info() = default;
-    response_info(const typename procedure_traits<decltype(Fn)>::return_type& res)
-        : res(res) {
-    }
-    ::lidl::ptr<typename procedure_traits<decltype(Fn)>::return_type> res{nullptr};
-};
-
 template<auto Fn>
 void serialize_call(const typename procedure_traits<decltype(Fn)>::param_types& args,
                     lidl::message_builder& builder) {
@@ -88,6 +77,17 @@ void serialize_call(const typename procedure_traits<decltype(Fn)>::param_types& 
     auto& info = lidl::emplace_raw<call_info<Fn>>(builder, name, args_placed);
     lidl::emplace_raw<lidl::ptr<call_info_base>>(builder, info);
 }
+
+struct response_info_base {};
+
+template<auto Fn>
+struct response_info : response_info_base {
+    response_info() = default;
+    response_info(const typename procedure_traits<decltype(Fn)>::return_type& res)
+        : res(res) {
+    }
+    ::lidl::ptr<typename procedure_traits<decltype(Fn)>::return_type> res{nullptr};
+};
 
 template<class T, auto... Fn, size_t... Is>
 auto make_lookup_impl(const std::tuple<lidl::procedure_descriptor<Fn>...>& procs,
