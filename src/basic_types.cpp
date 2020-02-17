@@ -165,7 +165,7 @@ pointer_type::bin2yaml(const module& module,
     auto& arg = std::get<name>(instantiation.arguments()[0]);
     if (auto pointee = get_type(arg); pointee) {
         auto ptr_span = span.subspan(span.size() - 2, 2);
-        uint16_t off{0};
+        int16_t off{0};
         memcpy(&off, ptr_span.data(), ptr_span.size());
         auto obj_span =
             span.subspan(0, span.size() - 2 - off + pointee->wire_layout(module).size());

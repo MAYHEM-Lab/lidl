@@ -18,12 +18,12 @@ public:
 
     [[nodiscard]]
     std::string_view unsafe_string_view() const {
-        return {&m_ptr.unsafe().get(), m_ptr.get_offset()};
+        return {&m_ptr.unsafe().get(), static_cast<size_t>(m_ptr.get_offset())};
     }
 
     [[nodiscard]]
     std::string_view string_view(const buffer& buf) const {
-        return {&buf[m_ptr], m_ptr.get_offset()};
+        return {&buf[m_ptr], static_cast<size_t>(m_ptr.get_offset())};
     }
 
 private:
