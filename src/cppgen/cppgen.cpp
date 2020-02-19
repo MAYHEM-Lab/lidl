@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 
+
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, const type& t) {
@@ -141,26 +142,6 @@ void generate_raw_struct(const module& m,
     str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
 }
 
-void generate_union(const module& m,
-                    std::string_view name,
-                    const union_type& u,
-                    std::ostream& str) {
-    std::stringstream pub;
-    for (auto& [name, member] : u.members) {
-        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
-    }
-
-    std::stringstream ctor;
-    // generate_constructor(s.is_reference_type(m), m, name, s, ctor);
-
-    constexpr auto format = R"__(struct {} {{ union {{
-        {}
-        {}
-    }}; }};)__";
-
-    str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
-}
-
 void generate_enum(const module& m,
                    std::string_view name,
                    const enumeration& e,
@@ -175,6 +156,41 @@ void generate_enum(const module& m,
     }};)__";
 
     str << fmt::format(format, name, get_identifier(m, e.underlying_type), pub.str())
+        << '\n';
+}
+
+void generate_union(const module& m,
+                    std::string_view name,
+                    const union_type& u,
+                    std::ostream& str) {
+    std::stringstream pub;
+    for (auto& [name, member] : u.members) {
+        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
+    }
+
+    std::stringstream ctor;
+    // generate_constructor(s.is_reference_type(m), m, name, s, ctor);
+
+    constexpr auto format = R"__(class {} {{
+    public:
+        int index() const noexcept {{
+            return static_cast<int>(discriminator);
+        }}
+
+    private:
+        {}
+        {} discriminator;
+        union {{
+            {}
+            {}
+        }} members; 
+    }};)__";
+
+    std::stringstream enum_part;
+    auto& e = u.attributes.get<union_enum_attribute>("union_enum")->union_enum;
+    generate_enum(m, "types", *e, enum_part);
+
+    str << fmt::format(format, name, enum_part.str(), "types", ctor.str(), pub.str())
         << '\n';
 }
 

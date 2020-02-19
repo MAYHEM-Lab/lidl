@@ -25,7 +25,8 @@ add_library(lidl_core
     src/union.cpp
     src/enumeration.cpp
     include/lidl/union.hpp
-    include/lidl/enumeration.hpp)
+    include/lidl/enumeration.hpp
+    src/union_enum_pass.cpp)
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)

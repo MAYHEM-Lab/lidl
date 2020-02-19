@@ -42,6 +42,7 @@ struct lidlc_args {
     std::string backend;
 };
 
+void union_enum_pass(module& m);
 void reference_type_pass(module& m);
 void run(const lidlc_args& args) {
     auto backend = backends.find(args.backend);
@@ -53,6 +54,7 @@ void run(const lidlc_args& args) {
         auto ym = yaml::load_module(*args.input_stream);
         service_pass(ym);
         reference_type_pass(ym);
+        union_enum_pass(ym);
         backend->second(ym, *args.output_stream);
     } catch (std::exception& e) {
         std::cerr << fmt::format("Error: {}\n", e.what());
