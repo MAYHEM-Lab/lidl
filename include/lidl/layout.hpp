@@ -19,14 +19,17 @@ public:
         }
     }
 
+    [[nodiscard]]
     int16_t size() const {
         return m_size;
     }
 
+    [[nodiscard]]
     int16_t alignment() const {
         return m_alignment;
     }
 
+    [[nodiscard]]
     int16_t padding() const {
         return m_padding;
     }
@@ -54,6 +57,7 @@ public:
             std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
     }
 
+    [[nodiscard]]
     raw_layout get() const {
         return m_current;
     }
@@ -74,6 +78,7 @@ public:
             std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
     }
 
+    [[nodiscard]]
     raw_layout get() const {
         return m_current;
     }
