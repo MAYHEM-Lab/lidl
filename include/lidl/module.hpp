@@ -11,7 +11,6 @@
 #include <variant>
 #include <vector>
 
-
 namespace lidl {
 struct module {
     std::shared_ptr<scope> symbols = std::make_shared<scope>();

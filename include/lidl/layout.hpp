@@ -46,6 +46,22 @@ inline std::ostream& operator<<(std::ostream& os, const raw_layout& layout) {
                "{{ size: {}, alignment: {} }}", layout.size(), layout.alignment());
 }
 
+struct union_layout_computer {
+public:
+    void add(const raw_layout& layout) {
+        m_current = raw_layout(
+            std::max(m_current.size(), layout.size()),
+            std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
+    }
+
+    raw_layout get() const {
+        return m_current;
+    }
+
+private:
+    raw_layout m_current{0, 0};
+};
+
 struct aggregate_layout_computer {
 public:
     void add(const raw_layout& layout) {

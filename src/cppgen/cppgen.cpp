@@ -191,11 +191,15 @@ void generate_struct_body(const module& m,
     str << fmt::format(format, ctor.str(), pub.str(), priv.str()) << '\n';
 }
 
-void generate_specialization(const module& m,
+std::string specialization_name(std::string_view tmpl, gsl::span<std::string> args) {
+    return fmt::format("{}<{}>", tmpl, fmt::join(args, ", "));
+}
+
+std::string generate_specialization(const module& m,
                              std::string_view templ_name,
                              const structure& s,
                              std::ostream& str) {
-    constexpr auto format = R"__(template <> struct {}<&{}::{}> {{
+    constexpr auto format = R"__(template <> struct {} {{
         {}
     }};)__";
 
@@ -203,12 +207,13 @@ void generate_specialization(const module& m,
     generate_struct_body(m, templ_name, s, body);
     auto attr = s.attributes.get<procedure_params_attribute>("procedure_params");
 
+    std::array<std::string, 1> arg {fmt::format("&{}::{}", attr->serv_name, attr->proc_name)};
+    auto nm = specialization_name(templ_name, arg);
     str << fmt::format(format,
-                       templ_name,
-                       attr->serv_name,
-                       attr->proc_name,
+                       nm,
                        body.str())
         << '\n';
+    return nm;
 }
 
 void generate_struct(const module& m,
@@ -412,6 +417,8 @@ void generate(const module& mod, std::ostream& str) {
     for (auto& u : mod.unions) {
         auto name = nameof(*mod.symbols->definition_lookup(&u));
         generate_union(mod, name, u, str);
+        generate_static_asserts(mod, name, u, str);
+        str << '\n';
     }
 
     /*for (auto& [name, s] : mod.generic_structs) {
@@ -437,9 +444,9 @@ void generate(const module& mod, std::ostream& str) {
 
         if (s.attributes.get_untyped("procedure_params")) {
             str << "namespace lidl {\n";
-            generate_specialization(mod, "procedure_params_t", s, str);
-            // str << '\n';
-            // generate_static_asserts(mod, name, s, str);
+            auto name = generate_specialization(mod, "procedure_params_t", s, str);
+            str << '\n';
+            generate_static_asserts(mod, name, s, str);
             str << '\n';
             str << "}\n";
         }
