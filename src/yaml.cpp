@@ -6,10 +6,12 @@
 
 #include <fstream>
 #include <gsl/gsl_assert>
+#include <lidl/enumeration.hpp>
 #include <lidl/errors.hpp>
 #include <lidl/generics.hpp>
 #include <lidl/service.hpp>
 #include <lidl/types.hpp>
+#include <lidl/union.hpp>
 #include <stdexcept>
 #include <string>
 #include <yaml-cpp/yaml.h>
@@ -108,6 +110,11 @@ attribute_holder read_attributes(const YAML::Node& attrib_node) {
 
 member read_member(const YAML::Node& node, const scope& s) {
     member m;
+    if (node.IsScalar()) {
+        m.type_ = read_type(node, s);
+        return m;
+    }
+
     m.attributes = read_attributes(node["attributes"]);
 
     auto type_name = node["type"];
@@ -129,6 +136,21 @@ structure read_structure(const YAML::Node& node, const scope& scop) {
 
     s.attributes = read_attributes(node["attributes"]);
     return s;
+}
+
+union_type read_union(const YAML::Node& node, const scope& scop) {
+    union_type u;
+    auto child_scope = scop.add_child_scope();
+
+    auto members = node["variants"];
+    Expects(members);
+    for (auto e : members) {
+        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+        u.members.emplace_back(key.as<std::string>(), read_member(val, *child_scope));
+    }
+
+    u.attributes = read_attributes(node["attributes"]);
+    return u;
 }
 
 generic_structure read_generic_structure(const YAML::Node& node, const scope& scop) {
@@ -171,6 +193,16 @@ service parse_service(const YAML::Node& node, const module& mod) {
     }
     return serv;
 }
+
+enumeration read_enum(const YAML::Node& node, const scope& scop) {
+    enumeration e;
+    e.underlying_type = name{recursive_name_lookup(scop, "i8").value()};
+    for (auto member : node["members"]) {
+        e.members.emplace(member.as<std::string>(),
+                          enum_member{static_cast<int>(e.members.size())});
+    }
+    return e;
+}
 } // namespace
 module load_module(std::istream& file) {
     auto node = YAML::Load(file);
@@ -186,6 +218,10 @@ module load_module(std::istream& file) {
 
         if (val["type"].as<std::string>() == "structure") {
             m.symbols->declare(key.as<std::string>());
+        } else if (val["type"].as<std::string>() == "union") {
+            m.symbols->declare(key.as<std::string>());
+        } else if (val["type"].as<std::string>() == "enumeration") {
+            m.symbols->declare(key.as<std::string>());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             m.symbols->declare(key.as<std::string>());
         }
@@ -200,6 +236,12 @@ module load_module(std::istream& file) {
         if (val["type"].as<std::string>() == "structure") {
             m.structs.emplace_back(read_structure(val, *m.symbols));
             define(*m.symbols, key.as<std::string>(), &m.structs.back());
+        } else if (val["type"].as<std::string>() == "union") {
+            m.unions.emplace_back(read_union(val, *m.symbols));
+            define(*m.symbols, key.as<std::string>(), &m.unions.back());
+        } else if (val["type"].as<std::string>() == "enumeration") {
+            m.enums.emplace_back(read_enum(val, *m.symbols));
+            define(*m.symbols, key.as<std::string>(), &m.enums.back());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             m.generic_structs.emplace_back(read_generic_structure(val, *m.symbols));
             define(*m.symbols, key.as<std::string>(), &m.generic_structs.back());

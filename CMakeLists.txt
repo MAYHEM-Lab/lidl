@@ -19,7 +19,13 @@ add_library(lidl_core
     src/scope.cpp 
     src/name.cpp 
     src/attributes.cpp
-    src/structure.cpp include/lidl/union.hpp include/lidl/member.hpp)
+    src/structure.cpp 
+    include/lidl/union.hpp 
+    include/lidl/member.hpp
+    src/union.cpp
+    src/enumeration.cpp
+    include/lidl/union.hpp
+    include/lidl/enumeration.hpp)
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)

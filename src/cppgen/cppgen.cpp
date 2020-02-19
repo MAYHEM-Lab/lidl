@@ -1,5 +1,8 @@
 #include "cppgen.hpp"
 
+#include "lidl/enumeration.hpp"
+#include "lidl/union.hpp"
+
 #include <algorithm>
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -138,6 +141,43 @@ void generate_raw_struct(const module& m,
     str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
 }
 
+void generate_union(const module& m,
+                    std::string_view name,
+                    const union_type& u,
+                    std::ostream& str) {
+    std::stringstream pub;
+    for (auto& [name, member] : u.members) {
+        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
+    }
+
+    std::stringstream ctor;
+    // generate_constructor(s.is_reference_type(m), m, name, s, ctor);
+
+    constexpr auto format = R"__(struct {} {{ union {{
+        {}
+        {}
+    }}; }};)__";
+
+    str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
+}
+
+void generate_enum(const module& m,
+                   std::string_view name,
+                   const enumeration& e,
+                   std::ostream& str) {
+    std::stringstream pub;
+    for (auto& [name, member] : e.members) {
+        pub << fmt::format("{} = {},\n", name, member.value);
+    }
+
+    constexpr auto format = R"__(enum class {} : {} {{
+        {}
+    }};)__";
+
+    str << fmt::format(format, name, get_identifier(m, e.underlying_type), pub.str())
+        << '\n';
+}
+
 void generate_static_asserts(const module& mod,
                              std::string_view name,
                              const type& t,
@@ -247,6 +287,15 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
+    for (auto& e : mod.enums) {
+        if (is_anonymous(mod, e)) {
+            continue;
+        }
+
+        auto name = nameof(*mod.symbols->definition_lookup(&e));
+        generate_enum(mod, name, e, str);
+    }
+
     for (auto& s : mod.structs) {
         if (is_anonymous(mod, s)) {
             continue;
@@ -259,6 +308,11 @@ void generate(const module& mod, std::ostream& str) {
             generate_static_asserts(mod, name, s, str);
             str << '\n';
         }
+    }
+
+    for (auto& u : mod.unions) {
+        auto name = nameof(*mod.symbols->definition_lookup(&u));
+        generate_union(mod, name, u, str);
     }
 
     /*for (auto& [name, s] : mod.generic_structs) {

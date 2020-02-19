@@ -1,10 +1,13 @@
 #pragma once
 
+
+#include <lidl/enumeration.hpp>
 #include <lidl/generics.hpp>
 #include <lidl/scope.hpp>
 #include <lidl/service.hpp>
 #include <lidl/structure.hpp>
 #include <lidl/types.hpp>
+#include <lidl/union.hpp>
 #include <variant>
 #include <vector>
 
@@ -17,6 +20,8 @@ struct module {
     std::deque<std::unique_ptr<generic>> basic_generics;
 
     std::deque<structure> structs;
+    std::deque<union_type> unions;
+    std::deque<enumeration> enums;
     std::deque<generic_structure> generic_structs;
     std::deque<std::pair<std::string, service>> services;
 };
