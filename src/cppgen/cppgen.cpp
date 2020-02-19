@@ -16,7 +16,6 @@
 #include <unordered_map>
 
 
-
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, const type& t) {
@@ -29,29 +28,81 @@ void generate_raw_struct_field(std::string_view name,
     str << fmt::format("{} {};\n", type_name, name);
 }
 
-std::string
-generate_getter(std::string_view name, std::string_view type_name, bool is_const) {
-    constexpr auto format = R"__({}& {}() {{ return m_raw.{}; }})__";
-    constexpr auto const_format = R"__(const {}& {}() const {{ return m_raw.{}; }})__";
-    return fmt::format(is_const ? const_format : format, type_name, name, name);
+std::string generate_getter(const module& mod,
+                            std::string_view member_name,
+                            const member& mem,
+                            bool is_const) {
+    auto member_type = get_type(mem.type_);
+    if (!member_type->is_reference_type(mod)) {
+        auto type_name = get_identifier(mod, mem.type_);
+        constexpr auto format = R"__({}& {}() {{ return raw.{}; }})__";
+        constexpr auto const_format = R"__(const {}& {}() const {{ return raw.{}; }})__";
+        return fmt::format(
+            is_const ? const_format : format, type_name, member_name, member_name);
+    } else {
+        // need to dereference before return
+        auto& base = std::get<name>(mem.type_.args[0]);
+        auto identifier = get_identifier(mod, base);
+        if (!mem.is_nullable()) {
+            constexpr auto format = R"__({}& {}() {{ return raw.{}.unsafe().get(); }})__";
+            constexpr auto const_format =
+                R"__(const {}& {}() const {{ return raw.{}.unsafe().get(); }})__";
+            return fmt::format(
+                is_const ? const_format : format, identifier, member_name, member_name);
+        }
+    }
+    return "";
 }
 
-void generate_struct_field(std::string_view name,
-                           std::string_view type_name,
+void generate_struct_field(const module& mod,
+                           std::string_view name,
+                           const member& mem,
                            std::ostream& str) {
-    str << generate_getter(name, type_name, true) << '\n';
-    str << generate_getter(name, type_name, false) << '\n';
+    str << generate_getter(mod, name, mem, true) << '\n';
+    str << generate_getter(mod, name, mem, false) << '\n';
 }
 
-void generate_constructor(bool has_ref,
-                          const module& m,
+void generate_constructor(const module& m,
                           std::string_view type_name,
                           const structure& s,
                           std::ostream& str) {
     std::vector<std::string> arg_names;
-    /*if (has_ref) {
-        arg_names.push_back("::lidl::message_builder& builder");
-    }*/
+
+    std::vector<std::string> initializer_list;
+
+    for (auto& [member_name, member] : s.members) {
+        auto member_type = get_type(member.type_);
+        initializer_list.push_back(fmt::format("p_{}", member_name));
+
+        if (member_type->is_reference_type(m)) {
+            // must be a pointer instantiation
+            auto& base = std::get<name>(member.type_.args[0]);
+            auto identifier = get_identifier(m, base);
+
+            if (!member.is_nullable()) {
+                arg_names.push_back(
+                    fmt::format("const {}& p_{}", identifier, member_name));
+                continue;
+            }
+            arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
+            continue;
+        }
+
+        auto identifier = get_identifier(m, member.type_);
+        arg_names.push_back(fmt::format("const {}& p_{}", identifier, member_name));
+    }
+
+    str << fmt::format("{}({}) : raw{{{}}} {{}}",
+                       type_name,
+                       fmt::join(arg_names, ", "),
+                       fmt::join(initializer_list, ", "));
+}
+
+void generate_raw_constructor(const module& m,
+                              std::string_view type_name,
+                              const structure& s,
+                              std::ostream& str) {
+    std::vector<std::string> arg_names;
 
     std::vector<std::string> initializer_list;
 
@@ -92,35 +143,6 @@ void generate_constructor(bool has_ref,
                        fmt::join(initializer_list, ", "));
 }
 
-void generate_specialization(const module& m,
-                             std::string_view templ_name,
-                             const structure& s,
-                             std::ostream& str) {
-    auto attr = s.attributes.get<procedure_params_attribute>("procedure_params");
-
-    std::stringstream pub;
-
-    for (auto& [name, member] : s.members) {
-        generate_raw_struct_field(name, get_identifier(m, member.type_), pub);
-    }
-
-    std::stringstream ctor;
-    generate_constructor(s.is_reference_type(m), m, templ_name, s, ctor);
-
-    constexpr auto format = R"__(template <> struct {}<&{}::{}> {{
-            {}
-            {}
-        }};)__";
-
-    str << fmt::format(format,
-                       templ_name,
-                       attr->serv_name,
-                       attr->proc_name,
-                       ctor.str(),
-                       pub.str())
-        << '\n';
-}
-
 void generate_raw_struct(const module& m,
                          std::string_view name,
                          const structure& s,
@@ -132,7 +154,7 @@ void generate_raw_struct(const module& m,
     }
 
     std::stringstream ctor;
-    generate_constructor(s.is_reference_type(m), m, name, s, ctor);
+    generate_raw_constructor(m, name, s, ctor);
 
     constexpr auto format = R"__(struct {} {{
         {}
@@ -140,6 +162,67 @@ void generate_raw_struct(const module& m,
     }};)__";
 
     str << fmt::format(format, name, ctor.str(), pub.str()) << '\n';
+}
+
+void generate_struct_body(const module& m,
+                          std::string_view name,
+                          const structure& s,
+                          std::ostream& str) {
+    std::stringstream pub;
+    for (auto& [name, member] : s.members) {
+        generate_struct_field(m, name, member, pub);
+    }
+
+    std::stringstream priv;
+    generate_raw_struct(m, "raw_t", s, priv);
+
+    std::stringstream ctor;
+    generate_constructor(m, name, s, ctor);
+
+    constexpr auto format = R"__(
+    public:
+        {}
+        {}
+    private:
+        {}
+        raw_t raw;
+    )__";
+
+    str << fmt::format(format, ctor.str(), pub.str(), priv.str()) << '\n';
+}
+
+void generate_specialization(const module& m,
+                             std::string_view templ_name,
+                             const structure& s,
+                             std::ostream& str) {
+    constexpr auto format = R"__(template <> struct {}<&{}::{}> {{
+        {}
+    }};)__";
+
+    std::stringstream body;
+    generate_struct_body(m, templ_name, s, body);
+    auto attr = s.attributes.get<procedure_params_attribute>("procedure_params");
+
+    str << fmt::format(format,
+                       templ_name,
+                       attr->serv_name,
+                       attr->proc_name,
+                       body.str())
+        << '\n';
+}
+
+void generate_struct(const module& m,
+                     std::string_view name,
+                     const structure& s,
+                     std::ostream& str) {
+    constexpr auto format = R"__(class {} {{
+        {}
+    }};)__";
+
+    std::stringstream body;
+    generate_struct_body(m, name, s, body);
+
+    str << fmt::format(format, name, body.str()) << '\n';
 }
 
 void generate_enum(const module& m,
@@ -319,7 +402,7 @@ void generate(const module& mod, std::ostream& str) {
 
         auto name = nameof(*mod.symbols->definition_lookup(&s));
         if (!s.attributes.get_untyped("procedure_params")) {
-            generate_raw_struct(mod, name, s, str);
+            generate_struct(mod, name, s, str);
             str << '\n';
             generate_static_asserts(mod, name, s, str);
             str << '\n';
