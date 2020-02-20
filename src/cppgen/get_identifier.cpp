@@ -66,4 +66,15 @@ std::string get_identifier(const module& mod, const name& n) {
 
     return fmt::format("{}<{}>", base_name, fmt::join(generic_args, ", "));
 }
+
+std::string get_user_identifier(const module& mod, const name& n) {
+    auto& ntype = *get_type(n);
+    if (ntype.is_reference_type(mod)) {
+        // must be a pointer instantiation
+        auto& base = std::get<name>(n.args[0]);
+        return get_identifier(mod, base);
+    }
+
+    return get_identifier(mod, n.base);
+}
 } // namespace lidl::cpp

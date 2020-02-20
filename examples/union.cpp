@@ -6,6 +6,6 @@ int main() {
 		lidl::message_builder builder(buf);
 		auto& p = lidl::create<procedures>(builder, 42);	
 		auto& p_str = lidl::create<procedures>(builder, lidl::create_string(builder, "foo"));	
-	  std::cout << p.index() << '\n';
-	  std::cout << p_str.index() << '\n';
+	  std::cout << lidl::nameof(p.alternative()) << '\n';
+	  std::cout << lidl::nameof(p_str.alternative()) << '\n';
 }

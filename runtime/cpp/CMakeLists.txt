@@ -4,13 +4,13 @@ target_compile_features(lidl_rt INTERFACE cxx_std_17)
 
 find_program(LIDLC_BIN
     NAMES lidlc
-    HINTS /home/fatih/lidl/build/src/tools ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/bin ${CMAKE_BINARY_DIR}/src/tools ${CMAKE_BINARY_DIR}/Debug)
+    HINTS ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/bin ${CMAKE_BINARY_DIR}/src/tools ${CMAKE_BINARY_DIR}/Debug)
 
 find_program(CLANG_FORMAT_BIN
     NAMES clang-format-8)
 
 if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
-    message(STATUS "Found lidlc")
+    message(STATUS "Found lidlc: ${LIDLC_BIN}")
 endif()
 if (NOT ${CLANG_FORMAT_BIN} MATCHES "NOTFOUND")
     message(STATUS "Found clang-format")

@@ -13,7 +13,7 @@ struct enum_member {
 struct enumeration : type {
 public:
     name underlying_type;
-    std::unordered_map<std::string, enum_member> members;
+    std::vector<std::pair<std::string, enum_member>> members;
 
     bool is_reference_type(const module& mod) const override {
         return false;
@@ -23,7 +23,8 @@ public:
         return get_type(underlying_type)->wire_layout(mod);
     }
 
-    std::unordered_map<std::string, enum_member>::const_iterator find_by_value(int val) const {
+    std::vector<std::pair<std::string, enum_member>>::const_iterator
+    find_by_value(int val) const {
         auto it = std::find_if(members.begin(), members.end(), [val](auto& member) {
             return member.second.value == val;
         });

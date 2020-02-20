@@ -17,7 +17,6 @@
 #include <yaml-cpp/yaml.h>
 
 
-
 namespace lidl::yaml {
 namespace {
 generic_declaration parse_parameters(const YAML::Node& node) {
@@ -198,8 +197,8 @@ enumeration read_enum(const YAML::Node& node, const scope& scop) {
     enumeration e;
     e.underlying_type = name{recursive_name_lookup(scop, "i8").value()};
     for (auto member : node["members"]) {
-        e.members.emplace(member.as<std::string>(),
-                          enum_member{static_cast<int>(e.members.size())});
+        e.members.emplace_back(member.as<std::string>(),
+                               enum_member{static_cast<int>(e.members.size())});
     }
     return e;
 }

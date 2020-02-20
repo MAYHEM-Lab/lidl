@@ -30,5 +30,4 @@ struct union_type : public value_type {
     std::pair<YAML::Node, size_t> bin2yaml(const module& module,
                                            gsl::span<const uint8_t> span) const override;
 };
-
 } // namespace lidl
