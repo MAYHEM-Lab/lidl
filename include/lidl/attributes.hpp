@@ -42,14 +42,10 @@ public:
         m_attribs.emplace(attrib->name(), std::move(attrib));
     }
 
-    attribute_holder() = default;
-    attribute_holder(const attribute_holder&) = delete;
-    attribute_holder(attribute_holder&&) noexcept = default;
-    attribute_holder& operator=(attribute_holder&&) noexcept = default;
-
 private:
     std::unordered_map<std::string_view, std::unique_ptr<const attribute>> m_attribs;
 };
+static_assert(std::is_move_constructible_v<attribute_holder>);
 
 namespace detail {
 struct raw_attribute : attribute {

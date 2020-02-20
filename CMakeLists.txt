@@ -30,7 +30,7 @@ add_library(lidl_core
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
-target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations)
+#target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations)
 
 add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
 

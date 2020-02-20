@@ -30,7 +30,7 @@ public:
     generic_declaration& operator=(generic_declaration&&) noexcept = default;
 
     [[nodiscard]] int32_t arity() const {
-        return m_params.size();
+        return static_cast<int32_t>(m_params.size());
     }
 
     [[nodiscard]] auto begin() {
@@ -56,7 +56,8 @@ private:
 generic_declaration
     make_generic_declaration(std::vector<std::pair<std::string, std::string>>);
 
-class module;
+struct module;
+class generic_instantiation;
 struct generic {
     explicit generic(generic_declaration decl)
         : declaration(std::move(decl)) {
@@ -66,13 +67,13 @@ struct generic {
     generic& operator=(generic&&) noexcept = default;
 
     virtual bool is_reference(const module& mod,
-                              const struct generic_instantiation&) const = 0;
+                              const generic_instantiation&) const = 0;
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const = 0;
+                                   const generic_instantiation&) const = 0;
 
     virtual std::pair<YAML::Node, size_t> bin2yaml(const module&,
-                                                   const struct generic_instantiation&,
+                                                   const generic_instantiation&,
                                                    gsl::span<const uint8_t>) const = 0;
 
     virtual ~generic() = 0;
@@ -95,20 +96,20 @@ struct generic_type_parameter : type {
 struct generic_structure : generic {
     explicit generic_structure(generic_declaration decl, structure s)
         : generic(std::move(decl))
-        , struct_(std::move(s)) {
+        , struct_(static_cast<structure&&>(s)) {
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const override {
+                                   const generic_instantiation&) const override {
         throw std::runtime_error("Wire layout shouldn't be called on a generic!");
     }
     bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
+                      const generic_instantiation& instantiation) const override {
         throw std::runtime_error("Is reference shouldn't be called on a generic!");
     }
     std::pair<YAML::Node, size_t>
     bin2yaml(const module& module,
-             const struct generic_instantiation& instantiation,
+             const generic_instantiation& instantiation,
              gsl::span<const uint8_t> span) const override {
         throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
     }
@@ -158,20 +159,20 @@ struct forward_decl : generic {
     using generic::generic;
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const override {
+                                   const generic_instantiation&) const override {
         throw std::runtime_error(
             "Wire layout shouldn't be called on a forward declaration!");
     }
 
     bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
+                      const generic_instantiation& instantiation) const override {
         throw std::runtime_error(
             "Is reference shouldn't be called on a forward declaration!");
     }
 
     std::pair<YAML::Node, size_t>
     bin2yaml(const module& module,
-             const struct generic_instantiation& instantiation,
+             const generic_instantiation& instantiation,
              gsl::span<const uint8_t> span) const override {
         throw std::runtime_error(
             "bin2yaml shouldn't be called on a forward declaration!");
@@ -183,16 +184,16 @@ struct pointer_type : generic {
     pointer_type();
 
     bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
+                      const generic_instantiation& instantiation) const override {
         return true;
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const override;
+                                   const generic_instantiation&) const override;
 
     std::pair<YAML::Node, size_t>
     bin2yaml(const module& module,
-             const struct generic_instantiation& instantiation,
+             const generic_instantiation& instantiation,
              gsl::span<const uint8_t> span) const override;
 };
 } // namespace lidl

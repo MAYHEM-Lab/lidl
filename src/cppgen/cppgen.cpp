@@ -196,9 +196,9 @@ std::string specialization_name(std::string_view tmpl, gsl::span<std::string> ar
 }
 
 std::string generate_specialization(const module& m,
-                             std::string_view templ_name,
-                             const structure& s,
-                             std::ostream& str) {
+                                    std::string_view templ_name,
+                                    const structure& s,
+                                    std::ostream& str) {
     constexpr auto format = R"__(template <> struct {} {{
         {}
     }};)__";
@@ -207,12 +207,10 @@ std::string generate_specialization(const module& m,
     generate_struct_body(m, templ_name, s, body);
     auto attr = s.attributes.get<procedure_params_attribute>("procedure_params");
 
-    std::array<std::string, 1> arg {fmt::format("&{}::{}", attr->serv_name, attr->proc_name)};
+    std::array<std::string, 1> arg{
+        fmt::format("&{}::{}", attr->serv_name, attr->proc_name)};
     auto nm = specialization_name(templ_name, arg);
-    str << fmt::format(format,
-                       nm,
-                       body.str())
-        << '\n';
+    str << fmt::format(format, nm, body.str()) << '\n';
     return nm;
 }
 
@@ -248,7 +246,7 @@ void generate_enum(const module& m,
 }
 
 void generate_union(const module& m,
-                    std::string_view name,
+                    std::string_view type_name,
                     const union_type& u,
                     std::ostream& str) {
     std::stringstream pub;
@@ -259,26 +257,74 @@ void generate_union(const module& m,
     std::stringstream ctor;
     // generate_constructor(s.is_reference_type(m), m, name, s, ctor);
 
+    int member_index = 0;
+    for (auto& [member_name, member] : u.members) {
+        std::vector<std::string> arg_names;
+        std::vector<std::string> initializer_list;
+        const auto enum_val = u.get_enum().find_by_value(member_index++)->first;
+
+        auto member_type = get_type(member.type_);
+
+        if (member_type->is_reference_type(m)) {
+            // must be a pointer instantiation
+            auto& base = std::get<name>(member.type_.args[0]);
+            auto identifier = get_identifier(m, base);
+
+            if (!member.is_nullable()) {
+                arg_names.push_back(
+                    fmt::format("const {}& p_{}", identifier, member_name));
+                initializer_list.push_back(fmt::format("{0}(p_{0})", member_name));
+                ctor << fmt::format("{}({}) : {}, discriminator{{types::{}}} {{}}\n",
+                                    type_name,
+                                    fmt::join(arg_names, ", "),
+                                    fmt::join(initializer_list, ", "),
+                                    enum_val);
+                continue;
+            }
+            arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
+            initializer_list.push_back(fmt::format(
+                "{0}(p_{0} ? decltype({0}){{*p_{0}}} : decltype({0}){{nullptr}})",
+                member_name));
+            ctor << fmt::format("{}({}) : {}, discriminator{{types::{}}} {{}}\n",
+                                type_name,
+                                fmt::join(arg_names, ", "),
+                                fmt::join(initializer_list, ", "),
+                                enum_val);
+            continue;
+        }
+
+        auto identifier = get_identifier(m, member.type_);
+        arg_names.push_back(fmt::format("const {}& p_{}", identifier, member_name));
+        initializer_list.push_back(fmt::format("{0}(p_{0})", member_name));
+
+        ctor << fmt::format("{}({}) : {}, discriminator{{types::{}}} {{}}\n",
+                            type_name,
+                            fmt::join(arg_names, ", "),
+                            fmt::join(initializer_list, ", "),
+                            enum_val);
+    }
+
     constexpr auto format = R"__(class {} {{
     public:
         int index() const noexcept {{
             return static_cast<int>(discriminator);
         }}
 
+        {}
+
     private:
         {}
         {} discriminator;
         union {{
             {}
-            {}
-        }} members; 
+        }};
     }};)__";
 
     std::stringstream enum_part;
     auto& e = u.attributes.get<union_enum_attribute>("union_enum")->union_enum;
     generate_enum(m, "types", *e, enum_part);
 
-    str << fmt::format(format, name, enum_part.str(), "types", ctor.str(), pub.str())
+    str << fmt::format(format, type_name, ctor.str(), enum_part.str(), "types", pub.str())
         << '\n';
 }
 

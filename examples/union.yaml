@@ -1,0 +1,12 @@
+device_types:
+  type: enumeration
+  members:
+    - esp8266
+    - nrf52
+    - atmega328p
+
+procedures:
+  type: union
+  variants:
+    x: i32
+    y: string

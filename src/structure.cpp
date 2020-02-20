@@ -1,13 +1,13 @@
 #include <lidl/structure.hpp>
 
 namespace lidl {
-
 bool structure::is_reference_type(const module& mod) const {
     return std::any_of(members.begin(), members.end(), [&](auto& mem) {
-      auto& [name, member] = mem;
-      return get_type(member.type_)->is_reference_type(mod);
+        auto& [name, member] = mem;
+        return get_type(member.type_)->is_reference_type(mod);
     });
 }
+
 raw_layout structure::wire_layout(const module& mod) const {
     aggregate_layout_computer computer;
     for (auto& [name, member] : members) {
@@ -19,6 +19,7 @@ raw_layout structure::wire_layout(const module& mod) const {
     }
     return computer.get();
 }
+
 std::pair<YAML::Node, size_t> structure::bin2yaml(const module& module,
                                                   gsl::span<const uint8_t> span) const {
     YAML::Node node;
@@ -33,4 +34,4 @@ std::pair<YAML::Node, size_t> structure::bin2yaml(const module& module,
 
     return {node, wire_layout(module).size()};
 }
-}
+} // namespace lidl

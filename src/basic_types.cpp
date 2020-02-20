@@ -15,11 +15,12 @@ struct basic_type : value_type {
     }
 
     virtual raw_layout wire_layout(const module&) const override {
-        return raw_layout(size_in_bytes(), size_in_bytes());
+        return raw_layout(static_cast<int16_t>(size_in_bytes()),
+                          static_cast<int16_t>(size_in_bytes()));
     }
 
     size_t size_in_bytes() const {
-        return std::ceil(size_in_bits / 8.f);
+        return static_cast<size_t>(std::ceil(size_in_bits / 8.f));
     }
 
     int32_t size_in_bits;
@@ -108,19 +109,18 @@ struct vector_type : generic {
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const struct generic_instantiation&) const override {
+                                   const generic_instantiation&) const override {
         return raw_layout{2, 2};
     }
 
     bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
+                      const generic_instantiation& instantiation) const override {
         return true;
     }
 
-    std::pair<YAML::Node, size_t>
-    bin2yaml(const module& module,
-             const struct generic_instantiation& instantiation,
-             gsl::span<const uint8_t> span) const override {
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
         auto ptr_span = span.subspan(span.size() - 2, 2);
         uint16_t off{0};
         memcpy(&off, ptr_span.data(), ptr_span.size());
@@ -154,13 +154,13 @@ pointer_type::pointer_type()
 }
 
 raw_layout pointer_type::wire_layout(const module& mod,
-                                     const struct generic_instantiation&) const {
+                                     const generic_instantiation&) const {
     return raw_layout{2, 2};
 }
 
 std::pair<YAML::Node, size_t>
 pointer_type::bin2yaml(const module& module,
-                       const struct generic_instantiation& instantiation,
+                       const generic_instantiation& instantiation,
                        gsl::span<const uint8_t> span) const {
     auto& arg = std::get<name>(instantiation.arguments()[0]);
     if (auto pointee = get_type(arg); pointee) {
@@ -181,7 +181,7 @@ struct array_type : generic {
     }
 
     bool is_reference(const module& mod,
-                      const struct generic_instantiation& instantiation) const override {
+                      const generic_instantiation& instantiation) const override {
         auto arg = std::get<name>(instantiation.arguments()[0]);
         if (auto regular = get_type(arg); regular) {
             return regular->is_reference_type(mod);
@@ -191,7 +191,7 @@ struct array_type : generic {
 
     virtual raw_layout
     wire_layout(const module& mod,
-                const struct generic_instantiation& instantiation) const override {
+                const generic_instantiation& instantiation) const override {
         if (is_reference(mod, instantiation)) {
             return {2, 2};
         }
@@ -199,15 +199,15 @@ struct array_type : generic {
         if (auto regular = get_type(arg); regular) {
             auto layout = regular->wire_layout(mod);
             auto len = std::get<int64_t>(instantiation.arguments()[1]);
-            return raw_layout(layout.size() * len, layout.alignment());
+            return raw_layout(static_cast<int16_t>(layout.size() * len),
+                              layout.alignment());
         }
         throw std::runtime_error("Array type is not regular!");
     }
 
-    std::pair<YAML::Node, size_t>
-    bin2yaml(const module& module,
-             const struct generic_instantiation& instantiation,
-             gsl::span<const uint8_t> span) const override {
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
         if (is_reference(module, instantiation)) {
             throw std::runtime_error("not implemented");
         }

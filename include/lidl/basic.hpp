@@ -7,9 +7,9 @@
 namespace lidl {
 struct type;
 struct generic;
-class enumeration;
-class union_type;
-class structure;
+struct enumeration;
+struct union_type;
+struct structure;
 
 class scope;
 

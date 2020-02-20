@@ -47,6 +47,11 @@ void reference_type_pass(module& m) {
             reference_type_pass(m, member.type_);
         }
     }
+    for (auto& s : m.unions) {
+        for (auto& [_, member] : s.members) {
+            reference_type_pass(m, member.type_);
+        }
+    }
     for (auto& s : m.services) {
         for (auto& [_, proc] : s.second.procedures) {
             for (auto& ret_type : proc.return_types) {

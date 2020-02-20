@@ -23,6 +23,13 @@ public:
         return get_type(underlying_type)->wire_layout(mod);
     }
 
+    std::unordered_map<std::string, enum_member>::const_iterator find_by_value(int val) const {
+        auto it = std::find_if(members.begin(), members.end(), [val](auto& member) {
+            return member.second.value == val;
+        });
+        return it;
+    }
+
     virtual std::pair<YAML::Node, size_t>
     bin2yaml(const module& mod, gsl::span<const uint8_t> data) const override {
         auto integral =

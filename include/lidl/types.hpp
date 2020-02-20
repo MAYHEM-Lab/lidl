@@ -11,7 +11,7 @@
 #include <yaml-cpp/yaml.h>
 
 namespace lidl {
-class module;
+struct module;
 struct type {
 public:
     virtual raw_layout wire_layout(const module& mod) const = 0;

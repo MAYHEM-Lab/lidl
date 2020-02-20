@@ -12,7 +12,7 @@ template <class T>
 class service_descriptor;
 
 template <auto Fn>
-struct procedure_params_t {};
+struct procedure_params_t;
 
 template <auto Fn>
 struct procedure_descriptor {
