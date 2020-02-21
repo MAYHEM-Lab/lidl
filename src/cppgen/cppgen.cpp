@@ -16,7 +16,6 @@
 #include <unordered_map>
 
 
-
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, const type& t) {
@@ -354,15 +353,15 @@ private:
     void generate_traits(std::string_view struct_name, const structure& str) {
         std::vector<std::string> members;
         for (auto& [name, member] : str.members) {
-            members.push_back(
-                fmt::format("member_info<&{0}::{1}>{{\"{1}\"}}", struct_name, name));
+            members.push_back(fmt::format(
+                "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", struct_name, name));
         }
-
 
         constexpr auto format = R"__(
             template <>
             struct struct_traits<{}> {{
                 static constexpr auto members = std::make_tuple({});
+                static constexpr auto arity = std::tuple_size_v<decltype(members)>;
             }};
         )__";
 

@@ -1,3 +1,5 @@
+#include "lidl/union.hpp"
+
 #include <fstream>
 #include <functional>
 #include <gsl/span>
@@ -9,10 +11,10 @@
 
 
 namespace lidl {
-structure service_params_struct(const module& mod,
-                                std::string_view serv,
-                                std::string_view name,
-                                const procedure& proc) {
+structure procedure_params_struct(const module& mod,
+                                  std::string_view serv,
+                                  std::string_view name,
+                                  const procedure& proc) {
     structure s;
     for (auto& [name, param] : proc.parameters) {
         member m;
@@ -25,10 +27,16 @@ structure service_params_struct(const module& mod,
 }
 
 void service_pass(module& mod) {
-    for (auto& [name, service] : mod.services) {
+    for (auto& [service_name, service] : mod.services) {
+        union_type procedures;
         for (auto& [proc_name, proc] : service.procedures) {
-            mod.structs.emplace_back(service_params_struct(mod, name, proc_name, proc));
+            mod.structs.emplace_back(
+                procedure_params_struct(mod, service_name, proc_name, proc));
+            auto handle =
+                define(*mod.symbols, proc_name + "_params", &mod.structs.back());
+            procedures.members.emplace_back(proc_name, member{name{handle}});
         }
+        mod.unions.push_back(std::move(procedures));
     }
 }
 
@@ -50,12 +58,11 @@ void run(const lidlc_args& args) {
         std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
         return;
     }
-        auto ym = yaml::load_module(*args.input_stream);
-        service_pass(ym);
-        reference_type_pass(ym);
-        union_enum_pass(ym);
-        backend->second(ym, *args.output_stream);
-
+    auto ym = yaml::load_module(*args.input_stream);
+    service_pass(ym);
+    reference_type_pass(ym);
+    union_enum_pass(ym);
+    backend->second(ym, *args.output_stream);
 }
 } // namespace lidl
 
