@@ -1,4 +1,4 @@
-expecteda:
+expected:
   type: generic<union>
   parameters:
     RetT: type
@@ -12,7 +12,10 @@ calculator:
   procedures:
     add:
       returns:
-        - f64
+        - name: expected
+          parameters:
+            - f64
+            - i32
       parameters:
         left: f64
         right: f64

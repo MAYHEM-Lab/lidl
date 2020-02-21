@@ -17,14 +17,22 @@
 #include <yaml-cpp/yaml.h>
 
 
+
 namespace lidl::yaml {
 namespace {
 generic_declaration parse_parameters(const YAML::Node& node) {
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> params;
 
     for (auto e : node) {
-        auto name = e["name"].as<std::string>();
-        auto type = e["type"].as<std::string>();
+        std::string name, type;
+        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+        if (val.IsScalar()) {
+            name = key.as<std::string>();
+            type = val.as<std::string>();
+        } else {
+            name = e["name"].as<std::string>();
+            type = e["type"].as<std::string>();
+        }
         auto param_type = get_generic_parameter_for_type(type);
         if (!param_type) {
             throw no_generic_type(type);
