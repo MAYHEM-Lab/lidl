@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 
+
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, const type& t) {
@@ -36,18 +37,17 @@ public:
         , m_struct{&str} {
     }
     void generate(std::ostream& ostr) {
-        std::stringstream pub;
-
         for (auto& [name, member] : str().members) {
-            generate_raw_struct_field(name, get_identifier(mod(), member.type_), pub);
+            generate_raw_struct_field(
+                name, get_identifier(mod(), member.type_), m_sections.pub);
         }
 
         generate_raw_constructor();
 
         constexpr auto format = R"__(struct {} {{
-        {}
-        {}
-    }};)__";
+            {}
+            {}
+        }};)__";
 
         ostr << fmt::format(format, m_name, m_sections.ctor.str(), m_sections.pub.str())
              << '\n';
@@ -111,7 +111,7 @@ public:
             generate_struct_field(name, member);
         }
 
-        raw_struct_gen raw_gen(mod(), m_name, str());
+        raw_struct_gen raw_gen(mod(), "raw_t", str());
         raw_gen.generate(m_sections.priv);
 
         generate_constructor();
@@ -199,6 +199,7 @@ private:
 
     struct {
         std::stringstream pub, priv, ctor;
+        std::stringstream traits;
     } m_sections;
 
     const module* m_module;
@@ -226,6 +227,15 @@ struct cppgen {
             generate(name, u);
             // generate_static_asserts(mod(), name, u, str);
             str << '\n';
+        }
+
+        for (auto& s : mod().structs) {
+            if (is_anonymous(*m_module, s)) {
+                continue;
+            }
+
+            auto name = nameof(*mod().symbols->definition_lookup(&s));
+            generate_traits(name, s);
         }
 
         str << m_sections.enums.str() << '\n';
@@ -300,7 +310,7 @@ private:
         constexpr auto format = R"__(
             template <>
             struct union_traits<{}> {{
-                using types = list<{}>;
+                using types = meta::list<{}>;
             }};
         )__";
 
@@ -340,6 +350,25 @@ private:
 
         traits << fmt::format(format, enum_name, names.size(), fmt::join(names, ", "));
     }
+
+    void generate_traits(std::string_view struct_name, const structure& str) {
+        std::vector<std::string> members;
+        for (auto& [name, member] : str.members) {
+            members.push_back(
+                fmt::format("member_info<&{0}::{1}>{{\"{1}\"}}", struct_name, name));
+        }
+
+
+        constexpr auto format = R"__(
+            template <>
+            struct struct_traits<{}> {{
+                static constexpr auto members = std::make_tuple({});
+            }};
+        )__";
+
+        traits << fmt::format(format, struct_name, fmt::join(members, ", "));
+    }
+
 
     struct {
         std::stringstream enums;
@@ -498,9 +527,6 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
-    cppgen gen(mod);
-    gen.generate(str);
-
     for (auto& s : mod.structs) {
         if (is_anonymous(mod, s)) {
             continue;
@@ -514,6 +540,9 @@ void generate(const module& mod, std::ostream& str) {
             str << '\n';
         }
     }
+
+    cppgen gen(mod);
+    gen.generate(str);
 
     for (auto& [name, service] : mod.services) {
         generate_service(mod, name, service, str);

@@ -75,6 +75,6 @@ std::string get_user_identifier(const module& mod, const name& n) {
         return get_identifier(mod, base);
     }
 
-    return get_identifier(mod, n.base);
+    return get_identifier(mod, n);
 }
 } // namespace lidl::cpp

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <lidl/meta.hpp>
+
 namespace lidl {
 template<class T>
 struct union_base {
@@ -12,6 +14,6 @@ protected:
     }
 };
 
-template <class UnionT>
+template<class UnionT>
 struct union_traits;
 } // namespace lidl

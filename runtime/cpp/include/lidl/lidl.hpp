@@ -1,8 +1,9 @@
 #pragma once
 
 #include "array.hpp"
+#include "enumeration.hpp"
 #include "ptr.hpp"
 #include "string.hpp"
-#include "vector.hpp"
+#include "structure.hpp"
 #include "union.hpp"
-#include "enumeration.hpp"
+#include "vector.hpp"
