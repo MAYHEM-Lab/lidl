@@ -37,6 +37,7 @@ void service_pass(module& mod) {
             procedures.members.emplace_back(proc_name, member{name{handle}});
         }
         mod.unions.push_back(std::move(procedures));
+        auto handle = define(*mod.symbols, service_name + "_call", &mod.unions.back());
     }
 }
 
