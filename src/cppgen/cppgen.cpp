@@ -293,7 +293,7 @@ private:
         constexpr auto case_format = R"__(
             case {0}::{1}:
             {{
-                fn(val.{1});
+                return fn(val.{1});
                 break;
             }}
         )__";
@@ -560,6 +560,10 @@ void generate_service_descriptor(const module& mod,
         "using params_union = {};",
         get_identifier(
             mod, name{*mod.symbols->definition_lookup(service.procedure_params_union)}));
+    str << fmt::format(
+        "using results_union = {};",
+        get_identifier(
+            mod, name{*mod.symbols->definition_lookup(service.procedure_results_union)}));
     str << "};";
 }
 

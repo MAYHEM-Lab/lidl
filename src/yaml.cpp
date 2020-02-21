@@ -165,6 +165,19 @@ generic_structure read_generic_structure(const YAML::Node& node, const scope& sc
     return generic_structure{std::move(params), std::move(str)};
 }
 
+generic_union read_generic_union(const YAML::Node& node, const scope& scop) {
+    auto gen_scope = scop.add_child_scope();
+
+    auto params = parse_parameters(node["parameters"]);
+    for (auto& [name, param] : params) {
+        gen_scope->declare(name);
+    }
+
+    auto str = read_union(node, *gen_scope);
+
+    return generic_union{std::move(params), std::move(str)};
+}
+
 procedure parse_procedure(const YAML::Node& node, const module& mod) {
     procedure result;
     if (auto returns = node["returns"]; returns) {
@@ -223,6 +236,8 @@ module load_module(std::istream& file) {
             m.symbols->declare(key.as<std::string>());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             m.symbols->declare(key.as<std::string>());
+        } else if (val["type"].as<std::string>() == "generic<union>") {
+            m.symbols->declare(key.as<std::string>());
         }
     }
 
@@ -244,6 +259,9 @@ module load_module(std::istream& file) {
         } else if (val["type"].as<std::string>() == "generic<structure>") {
             m.generic_structs.emplace_back(read_generic_structure(val, *m.symbols));
             define(*m.symbols, key.as<std::string>(), &m.generic_structs.back());
+        } else if (val["type"].as<std::string>() == "generic<union>") {
+            m.generic_unions.emplace_back(read_generic_union(val, *m.symbols));
+            define(*m.symbols, key.as<std::string>(), &m.generic_unions.back());
         } else if (val["type"].as<std::string>() == "service") {
             m.services.emplace_back(key.as<std::string>(), parse_service(val, m));
         }

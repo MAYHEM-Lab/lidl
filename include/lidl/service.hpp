@@ -15,11 +15,13 @@ struct procedure {
     std::deque<name> return_types;
     std::deque<std::pair<std::string, name>> parameters;
     const structure* params_struct;
+    const structure* results_struct;
 };
 
 struct service {
     std::deque<std::pair<std::string, procedure>> procedures;
     const union_type* procedure_params_union;
+    const union_type* procedure_results_union;
 };
 
 class procedure_params_attribute : public attribute {

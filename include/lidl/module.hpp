@@ -21,7 +21,10 @@ struct module {
     std::deque<structure> structs;
     std::deque<union_type> unions;
     std::deque<enumeration> enums;
+
     std::deque<generic_structure> generic_structs;
+    std::deque<generic_union> generic_unions;
+
     std::deque<std::pair<std::string, service>> services;
 };
 

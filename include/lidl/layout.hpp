@@ -19,23 +19,22 @@ public:
         }
     }
 
-    [[nodiscard]]
-    int16_t size() const {
+    [[nodiscard]] int16_t size() const {
         return m_size;
     }
 
-    [[nodiscard]]
-    int16_t alignment() const {
+    [[nodiscard]] int16_t alignment() const {
         return m_alignment;
     }
 
-    [[nodiscard]]
-    int16_t padding() const {
+    [[nodiscard]] int16_t padding() const {
         return m_padding;
     }
 
     friend bool operator==(const raw_layout& left, const raw_layout& right) {
-        return left.size() == right.size() && left.alignment() == right.alignment();//left.padding() == right.padding();
+        return left.size() == right.size() &&
+               left.alignment() ==
+                   right.alignment(); // left.padding() == right.padding();
     }
 
 private:
@@ -51,14 +50,14 @@ inline std::ostream& operator<<(std::ostream& os, const raw_layout& layout) {
 
 struct union_layout_computer {
 public:
-    void add(const raw_layout& layout) {
+    union_layout_computer& add(const raw_layout& layout) {
         m_current = raw_layout(
             std::max(m_current.size(), layout.size()),
             std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
+        return *this;
     }
 
-    [[nodiscard]]
-    raw_layout get() const {
+    [[nodiscard]] raw_layout get() const {
         return m_current;
     }
 
@@ -68,7 +67,7 @@ private:
 
 struct aggregate_layout_computer {
 public:
-    void add(const raw_layout& layout) {
+    aggregate_layout_computer& add(const raw_layout& layout) {
         int padding = 0;
         while ((m_current.size() - m_current.padding() + padding) % layout.alignment()) {
             padding++;
@@ -76,10 +75,10 @@ public:
         m_current = raw_layout(
             m_current.size() + layout.size() - m_current.padding() + padding,
             std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
+        return *this;
     }
 
-    [[nodiscard]]
-    raw_layout get() const {
+    [[nodiscard]] raw_layout get() const {
         return m_current;
     }
 

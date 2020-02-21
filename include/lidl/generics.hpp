@@ -7,6 +7,7 @@
 #include <lidl/basic.hpp>
 #include <lidl/layout.hpp>
 #include <lidl/scope.hpp>
+#include <lidl/union.hpp>
 #include <string>
 #include <vector>
 
@@ -66,8 +67,7 @@ struct generic {
     generic(generic&&) noexcept = default;
     generic& operator=(generic&&) noexcept = default;
 
-    virtual bool is_reference(const module& mod,
-                              const generic_instantiation&) const = 0;
+    virtual bool is_reference(const module& mod, const generic_instantiation&) const = 0;
 
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const = 0;
@@ -107,14 +107,36 @@ struct generic_structure : generic {
                       const generic_instantiation& instantiation) const override {
         throw std::runtime_error("Is reference shouldn't be called on a generic!");
     }
-    std::pair<YAML::Node, size_t>
-    bin2yaml(const module& module,
-             const generic_instantiation& instantiation,
-             gsl::span<const uint8_t> span) const override {
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
         throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
     }
 
     structure struct_;
+};
+
+struct generic_union : generic {
+    explicit generic_union(generic_declaration decl, union_type s)
+        : generic(std::move(decl))
+        , union_(std::move(s)) {
+    }
+
+    virtual raw_layout wire_layout(const module& mod,
+                                   const generic_instantiation&) const override {
+        throw std::runtime_error("Wire layout shouldn't be called on a generic!");
+    }
+    bool is_reference(const module& mod,
+                      const generic_instantiation& instantiation) const override {
+        throw std::runtime_error("Is reference shouldn't be called on a generic!");
+    }
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
+        throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
+    }
+
+    union_type union_;
 };
 
 class generic_instantiation : public type {
@@ -170,10 +192,9 @@ struct forward_decl : generic {
             "Is reference shouldn't be called on a forward declaration!");
     }
 
-    std::pair<YAML::Node, size_t>
-    bin2yaml(const module& module,
-             const generic_instantiation& instantiation,
-             gsl::span<const uint8_t> span) const override {
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
         throw std::runtime_error(
             "bin2yaml shouldn't be called on a forward declaration!");
     }
@@ -191,9 +212,8 @@ struct pointer_type : generic {
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override;
 
-    std::pair<YAML::Node, size_t>
-    bin2yaml(const module& module,
-             const generic_instantiation& instantiation,
-             gsl::span<const uint8_t> span) const override;
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override;
 };
 } // namespace lidl

@@ -23,7 +23,7 @@ template<class...>
 struct procedure_traits;
 
 template<class Type, class RetType, class... ArgTypes>
-struct procedure_traits<lidl::status<RetType> (Type::*)(ArgTypes...)> {
+struct procedure_traits<lidl::status<RetType> (Type::*const)(ArgTypes...)> {
     using return_type = RetType;
     using param_types = meta::list<ArgTypes...>;
 

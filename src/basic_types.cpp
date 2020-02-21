@@ -1,3 +1,5 @@
+#include "lidl/layout.hpp"
+
 #include <cmath>
 #include <iostream>
 #include <lidl/basic.hpp>
@@ -6,6 +8,7 @@
 #include <lidl/types.hpp>
 #include <string_view>
 #include <unordered_map>
+
 
 namespace lidl {
 namespace {
@@ -146,6 +149,37 @@ struct vector_type : generic {
         }
 
         throw std::runtime_error("pointee must be a regular type");
+    }
+};
+
+struct expected_type : generic {
+    expected_type()
+        : generic(make_generic_declaration({{"ResT", "type"}, {"ErrT", "type"}})) {
+    }
+
+    raw_layout wire_layout(const module& mod,
+                           const generic_instantiation& ins) const override {
+        auto& res_t = std::get<name>(ins.arguments()[0]);
+        auto& err_t = std::get<name>(ins.arguments()[1]);
+        return union_layout_computer()
+            .add(get_type(res_t)->wire_layout(mod))
+            .add(get_type(err_t)->wire_layout(mod))
+            .get();
+    }
+
+    bool is_reference(const module& mod,
+                      const generic_instantiation& ins) const override {
+        auto& res_t = std::get<name>(ins.arguments()[0]);
+        auto& err_t = std::get<name>(ins.arguments()[1]);
+
+        return get_type(res_t)->is_reference_type(mod) ||
+               get_type(err_t)->is_reference_type(mod);
+    }
+
+    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+                                           const generic_instantiation& instantiation,
+                                           gsl::span<const uint8_t> span) const override {
+        throw std::runtime_error("not implemented");
     }
 };
 
