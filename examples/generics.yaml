@@ -1,0 +1,14 @@
+foo:
+  type: generic<structure>
+  parameters:
+    T: type
+  members:
+    t: T
+
+bar:
+  type: structure
+  members:
+    baz:
+      name: foo
+      parameters:
+        - string

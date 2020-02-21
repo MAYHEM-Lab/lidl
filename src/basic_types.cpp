@@ -298,5 +298,6 @@ void add_basic_types(module& m) {
     add_generic("ptr", std::make_unique<pointer_type>());
     add_generic("vector", std::make_unique<vector_type>());
     add_generic("array", std::make_unique<array_type>());
+    add_generic("expected", std::make_unique<expected_type>());
 }
 } // namespace lidl
