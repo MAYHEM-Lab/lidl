@@ -116,6 +116,14 @@ public:
 
         generate_constructor();
 
+        std::string tags;
+        if (auto attr =
+                str().attributes.get<procedure_params_attribute>("procedure_params")) {
+            tags = fmt::format("static constexpr auto params_for = &{}::{};",
+                               attr->serv_name,
+                               attr->proc_name);
+        }
+
         constexpr auto format = R"__(
         public:
             {}
@@ -123,12 +131,15 @@ public:
         private:
             {}
             raw_t raw;
+        public:
+            {}
         )__";
 
         stream << fmt::format(format,
                               m_sections.ctor.str(),
                               m_sections.pub.str(),
-                              m_sections.priv.str())
+                              m_sections.priv.str(),
+                              tags)
                << '\n';
     }
 
@@ -241,6 +252,7 @@ struct cppgen {
         str << m_sections.enums.str() << '\n';
         str << m_sections.unions.str() << '\n';
         str << "namespace lidl {\n" << traits.str() << "\n}\n";
+        str << "namespace std {\n" << std_traits.str() << "\n}\n";
     }
 
 private:
@@ -278,7 +290,31 @@ private:
                                 enum_val);
         }
 
-        constexpr auto format = R"__(class {0} {{
+        constexpr auto case_format = R"__(
+            case {0}::{1}:
+            {{
+                fn(val.{1});
+                break;
+            }}
+        )__";
+
+        std::vector<std::string> cases;
+        for (auto& [name, mem] : u.members) {
+            cases.push_back(fmt::format(case_format, enum_name, name));
+        }
+
+        constexpr auto visitor_format = R"__(
+            template <class FunT>
+            friend auto visit(const FunT& fn, const {0}& val) {{
+                switch (val.alternative()) {{
+                    {1}
+                }}
+            }}
+        )__";
+
+        auto visitor = fmt::format(visitor_format, union_name, fmt::join(cases, "\n"));
+
+        constexpr auto format = R"__(class {0} : ::lidl::union_base<{0}> {{
         public:
             {1} alternative() const noexcept {{
                 return discriminator;
@@ -291,13 +327,15 @@ private:
             union {{
                 {3}
             }};
+
+            {4}
         }};)__";
 
         generate(enum_name, u.get_enum());
 
-        m_sections.unions << fmt::format(
-                                 format, union_name, enum_name, ctor.str(), pub.str())
-                          << '\n';
+        m_sections.unions
+            << fmt::format(format, union_name, enum_name, ctor.str(), pub.str(), visitor)
+            << '\n';
         generate_traits(union_name, u);
     }
 
@@ -367,6 +405,25 @@ private:
         )__";
 
         traits << fmt::format(format, struct_name, fmt::join(members, ", "));
+
+        constexpr auto std_format = R"__(
+            template <>
+            struct tuple_size<{}> : std::integral_constant<std::size_t, {}> {{
+            }};
+        )__";
+
+        std::vector<std::string> tuple_elements;
+        int idx = 0;
+        for (auto& [name, member] : str.members) {
+            tuple_elements.push_back(fmt::format(
+                "template <> struct tuple_element<{}, {}> {{ using type = {}; }};",
+                idx++,
+                struct_name,
+                get_user_identifier(mod(), member.type_)));
+        }
+
+        std_traits << fmt::format(std_format, struct_name, members.size());
+        std_traits << fmt::format("{}", fmt::join(tuple_elements, "\n"));
     }
 
 
@@ -378,6 +435,7 @@ private:
     } m_sections;
 
     std::stringstream traits;
+    std::stringstream std_traits;
 
     const module& mod() {
         return *m_module;
@@ -415,8 +473,8 @@ void generate_struct(const module& m,
                      std::string_view name,
                      const structure& s,
                      std::ostream& str) {
-    constexpr auto format = R"__(class {} {{
-        {}
+    constexpr auto format = R"__(class {0} : public ::lidl::struct_base<{0}> {{
+        {1}
     }};)__";
 
     std::stringstream body;
@@ -478,28 +536,30 @@ void generate_service_descriptor(const module& mod,
                                  std::string_view service_name,
                                  const service& service,
                                  std::ostream& str) {
-    std::vector<std::string> names(service.procedures.size());
     std::vector<std::string> tuple_types(service.procedures.size());
-    std::transform(service.procedures.begin(),
-                   service.procedures.end(),
-                   names.begin(),
-                   [&](auto& proc) {
-                       return fmt::format("{{\"{}\"}}", std::get<std::string>(proc));
-                   });
-    std::transform(service.procedures.begin(),
-                   service.procedures.end(),
-                   tuple_types.begin(),
-                   [&](auto& proc) {
-                       return fmt::format("::lidl::procedure_descriptor<&{}::{}>",
-                                          service_name,
-                                          std::get<std::string>(proc));
-                   });
+    std::transform(
+        service.procedures.begin(),
+        service.procedures.end(),
+        tuple_types.begin(),
+        [&](auto& proc) {
+            auto str_name = get_identifier(mod,
+                                           name{*mod.symbols->definition_lookup(
+                                               std::get<procedure>(proc).params_struct)});
+            return fmt::format("::lidl::procedure_descriptor<&{0}::{1}, {2}>{{\"{1}\"}}",
+                               service_name,
+                               std::get<std::string>(proc),
+                               str_name);
+        });
     str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
                        service_name);
-    str << fmt::format("std::tuple<{}> procedures{{{}}};\n",
-                       fmt::join(tuple_types, ", "),
-                       fmt::join(names, ", "));
-    str << fmt::format("std::string_view name = \"{}\";\n", service_name);
+    str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
+                       fmt::join(tuple_types, ", "));
+    str << fmt::format("static constexpr inline std::string_view name = \"{}\";\n",
+                       service_name);
+    str << fmt::format(
+        "using params_union = {};",
+        get_identifier(
+            mod, name{*mod.symbols->definition_lookup(service.procedure_params_union)}));
     str << "};";
 }
 
@@ -533,42 +593,43 @@ void generate(const module& mod, std::ostream& str) {
         }
 
         auto name = nameof(*mod.symbols->definition_lookup(&s));
-        if (!s.attributes.get_untyped("procedure_params")) {
-            generate_struct(mod, name, s, str);
-            str << '\n';
-            generate_static_asserts(mod, name, s, str);
-            str << '\n';
-        }
+        str << "class " << name << ";\n";
     }
 
-    cppgen gen(mod);
-    gen.generate(str);
+    for (auto& s : mod.unions) {
+        if (is_anonymous(mod, s)) {
+            continue;
+        }
+
+        auto name = nameof(*mod.symbols->definition_lookup(&s));
+        str << "class " << name << ";\n";
+    }
 
     for (auto& [name, service] : mod.services) {
         generate_service(mod, name, service, str);
         str << '\n';
     }
 
+    for (auto& s : mod.structs) {
+        if (is_anonymous(mod, s)) {
+            continue;
+        }
+
+        auto name = nameof(*mod.symbols->definition_lookup(&s));
+        generate_struct(mod, name, s, str);
+        str << '\n';
+        generate_static_asserts(mod, name, s, str);
+        str << '\n';
+    }
+
+    cppgen gen(mod);
+    gen.generate(str);
+
     for (auto& [name, service] : mod.services) {
         str << "namespace lidl {\n";
         generate_service_descriptor(mod, name, service, str);
         str << '\n';
         str << "}\n";
-    }
-
-    for (auto& s : mod.structs) {
-        if (!is_anonymous(mod, s)) {
-            continue;
-        }
-
-        if (s.attributes.get_untyped("procedure_params")) {
-            str << "namespace lidl {\n";
-            auto name = generate_specialization(mod, "procedure_params_t", s, str);
-            str << '\n';
-            generate_static_asserts(mod, name, s, str);
-            str << '\n';
-            str << "}\n";
-        }
     }
 }
 } // namespace lidl

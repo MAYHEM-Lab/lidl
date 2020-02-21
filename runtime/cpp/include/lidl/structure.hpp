@@ -30,12 +30,26 @@ template<class T>
 struct struct_traits;
 } // namespace lidl
 
-namespace std {
+namespace lidl {
 template<size_t I,
          class T,
          std::enable_if_t<(lidl::struct_traits<T>::arity > I)>* = nullptr>
-auto& get(const lidl::struct_base<T>& str) {
-    auto& elem = static_cast<T&>(str);
-    return str.*(std::get<I>(lidl::struct_traits<T>::members).const_function);
+const auto& get(const lidl::struct_base<T>& str) {
+    auto& elem = static_cast<const T&>(str);
+    return (elem.*(std::get<I>(lidl::struct_traits<T>::members).const_function))();
 }
-} // namespace std
+
+template<size_t I,
+         class T,
+         std::enable_if_t<(lidl::struct_traits<T>::arity > I)>* = nullptr>
+auto& get(lidl::struct_base<T>& str) {
+    auto& elem = static_cast<T&>(str);
+    return (elem.*(std::get<I>(lidl::struct_traits<T>::members).function))();
+}
+} // namespace lidl
+
+using lidl::get;
+
+namespace std {
+using lidl::get;
+}

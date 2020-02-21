@@ -6,16 +6,20 @@
 
 #include <deque>
 #include <lidl/attributes.hpp>
+#include <lidl/structure.hpp>
 #include <lidl/types.hpp>
+#include <lidl/union.hpp>
 
 namespace lidl {
 struct procedure {
     std::deque<name> return_types;
     std::deque<std::pair<std::string, name>> parameters;
+    const structure* params_struct;
 };
 
 struct service {
     std::deque<std::pair<std::string, procedure>> procedures;
+    const union_type* procedure_params_union;
 };
 
 class procedure_params_attribute : public attribute {
