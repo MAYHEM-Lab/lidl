@@ -81,18 +81,6 @@ struct generic {
     generic_declaration declaration;
 };
 
-struct generic_type_parameter : type {
-    virtual raw_layout wire_layout(const module& mod) const override {
-        throw std::runtime_error(
-            "Wire layout shouldn't be called on a generic type parameter!");
-    }
-
-    virtual bool is_reference_type(const module&) const override {
-        throw std::runtime_error(
-            "Is reference type shouldn't be called on a generic type parameter!");
-    }
-};
-
 struct generic_structure : generic {
     explicit generic_structure(generic_declaration decl, structure s)
         : generic(std::move(decl))
