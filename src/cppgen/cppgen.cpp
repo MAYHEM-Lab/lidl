@@ -16,7 +16,6 @@
 #include <unordered_map>
 
 
-
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, const type& t) {

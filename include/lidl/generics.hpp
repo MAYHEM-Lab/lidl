@@ -12,6 +12,7 @@
 #include <vector>
 
 
+
 namespace lidl {
 struct generic_parameter {
     virtual ~generic_parameter() = default;
@@ -91,10 +92,12 @@ struct generic_structure : generic {
                                    const generic_instantiation&) const override {
         throw std::runtime_error("Wire layout shouldn't be called on a generic!");
     }
+
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
         throw std::runtime_error("Is reference shouldn't be called on a generic!");
     }
+
     std::pair<YAML::Node, size_t> bin2yaml(const module& module,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {

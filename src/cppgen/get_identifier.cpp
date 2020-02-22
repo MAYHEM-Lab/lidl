@@ -22,7 +22,8 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"optional", "::lidl::optional"},
         {"string", "::lidl::string"},
         {"vector", "::lidl::vector"},
-        {"ptr", "::lidl::ptr"}};
+        {"ptr", "::lidl::ptr"},
+        {"expected", "::lidl::expected"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
         return std::string(it->second);

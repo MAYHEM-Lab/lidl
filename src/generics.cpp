@@ -19,6 +19,15 @@ struct value_parameter : generic_parameter {
 };
 } // namespace
 
+structure instantiate(const module& mod,
+                      const generic_structure& genstr,
+                      const generic_instantiation& ins) {
+    structure str;
+    str.scope_ = mod.symbols->add_child_scope();
+
+    str.attributes = genstr.struct_.attributes;
+}
+
 generic_declaration
 make_generic_declaration(std::vector<std::pair<std::string, std::string>> arg) {
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> res;
