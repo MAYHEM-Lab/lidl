@@ -121,7 +121,7 @@ struct vector_type : generic {
         return true;
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
         auto ptr_span = span.subspan(span.size() - 2, 2);
@@ -134,14 +134,14 @@ struct vector_type : generic {
         }
 
         auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto pointee = get_type(arg); pointee) {
-            auto layout = pointee->wire_layout(module);
+        if (auto pointee = get_type(mod, arg); pointee) {
+            auto layout = pointee->wire_layout(mod);
             auto len = off / layout.size();
 
             for (int i = 0; i < len; ++i) {
                 auto obj_span =
                     span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
-                auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
+                auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
                 arr.push_back(std::move(yaml));
             }
 
@@ -162,8 +162,8 @@ struct expected_type : generic {
         auto& res_t = std::get<name>(ins.arguments()[0]);
         auto& err_t = std::get<name>(ins.arguments()[1]);
         return union_layout_computer()
-            .add(get_type(res_t)->wire_layout(mod))
-            .add(get_type(err_t)->wire_layout(mod))
+            .add(get_type(mod, res_t)->wire_layout(mod))
+            .add(get_type(mod, err_t)->wire_layout(mod))
             .get();
     }
 
@@ -172,8 +172,8 @@ struct expected_type : generic {
         auto& res_t = std::get<name>(ins.arguments()[0]);
         auto& err_t = std::get<name>(ins.arguments()[1]);
 
-        return get_type(res_t)->is_reference_type(mod) ||
-               get_type(err_t)->is_reference_type(mod);
+        return get_type(mod, res_t)->is_reference_type(mod) ||
+               get_type(mod, err_t)->is_reference_type(mod);
     }
 
     std::pair<YAML::Node, size_t> bin2yaml(const module& module,
@@ -193,17 +193,17 @@ raw_layout pointer_type::wire_layout(const module& mod,
 }
 
 std::pair<YAML::Node, size_t>
-pointer_type::bin2yaml(const module& module,
+pointer_type::bin2yaml(const module& mod,
                        const generic_instantiation& instantiation,
                        gsl::span<const uint8_t> span) const {
     auto& arg = std::get<name>(instantiation.arguments()[0]);
-    if (auto pointee = get_type(arg); pointee) {
+    if (auto pointee = get_type(mod, arg); pointee) {
         auto ptr_span = span.subspan(span.size() - 2, 2);
         int16_t off{0};
         memcpy(&off, ptr_span.data(), ptr_span.size());
         auto obj_span =
-            span.subspan(0, span.size() - 2 - off + pointee->wire_layout(module).size());
-        auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
+            span.subspan(0, span.size() - 2 - off + pointee->wire_layout(mod).size());
+        auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
         return {std::move(yaml), consumed + 2};
     }
     throw std::runtime_error("pointee must be a regular type");
@@ -217,7 +217,7 @@ struct array_type : generic {
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
         auto arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto regular = get_type(arg); regular) {
+        if (auto regular = get_type(mod, arg); regular) {
             return regular->is_reference_type(mod);
         }
         return false;
@@ -230,7 +230,7 @@ struct array_type : generic {
             return {2, 2};
         }
         auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto regular = get_type(arg); regular) {
+        if (auto regular = get_type(mod, arg); regular) {
             auto layout = regular->wire_layout(mod);
             auto len = std::get<int64_t>(instantiation.arguments()[1]);
             return raw_layout(static_cast<int16_t>(layout.size() * len),
@@ -239,23 +239,23 @@ struct array_type : generic {
         throw std::runtime_error("Array type is not regular!");
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
-        if (is_reference(module, instantiation)) {
+        if (is_reference(mod, instantiation)) {
             throw std::runtime_error("not implemented");
         }
 
         YAML::Node arr;
         auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto pointee = get_type(arg); pointee) {
-            auto layout = pointee->wire_layout(module);
+        if (auto pointee = get_type(mod, arg); pointee) {
+            auto layout = pointee->wire_layout(mod);
             auto len = std::get<int64_t>(instantiation.arguments()[1]);
 
             for (int i = 0; i < len; ++i) {
                 auto obj_span =
                     span.subspan(0, span.size() - (len - i - 1) * layout.size());
-                auto [yaml, consumed] = pointee->bin2yaml(module, obj_span);
+                auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
                 arr.push_back(std::move(yaml));
             }
 

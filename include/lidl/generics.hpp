@@ -18,6 +18,12 @@ struct generic_parameter {
     virtual ~generic_parameter() = default;
 };
 
+struct type_parameter : generic_parameter {};
+
+struct value_parameter : generic_parameter {
+    const type* m_type;
+};
+
 std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_view type);
 
 struct generic_declaration {
@@ -82,6 +88,9 @@ struct generic {
     generic_declaration declaration;
 };
 
+const type* instantiate(const module& mod,
+                        const generic_instantiation& ins);
+
 struct generic_structure : generic {
     explicit generic_structure(generic_declaration decl, structure s)
         : generic(std::move(decl))
@@ -95,6 +104,8 @@ struct generic_structure : generic {
 
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
+        auto ins = instantiate(mod, instantiation);
+        return ins->is_reference_type(mod);
         throw std::runtime_error("Is reference shouldn't be called on a generic!");
     }
 
@@ -113,7 +124,7 @@ struct generic_union : generic {
         , union_(std::move(s)) {
     }
 
-    virtual raw_layout wire_layout(const module& mod,
+    raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override {
         throw std::runtime_error("Wire layout shouldn't be called on a generic!");
     }
@@ -132,16 +143,19 @@ struct generic_union : generic {
 
 class generic_instantiation : public type {
 public:
-    generic_instantiation(const generic& actual, std::vector<generic_argument> args)
+    generic_instantiation(
+        const generic& actual,
+        std::vector<generic_argument> args,
+        name n)
         : m_args(std::move(args))
-        , m_actual(&actual) {
+        , m_actual(&actual), m_name(std::move(n)) {
     }
 
-    virtual bool is_reference_type(const module& mod) const override {
+    bool is_reference_type(const module& mod) const override {
         return m_actual->is_reference(mod, *this);
     }
 
-    virtual raw_layout wire_layout(const module& mod) const override {
+    raw_layout wire_layout(const module& mod) const override {
         return m_actual->wire_layout(mod, *this);
     }
 
@@ -162,7 +176,12 @@ public:
         return *m_actual;
     }
 
+    const name& get_name() const {
+        return m_name;
+    }
+
 private:
+    name m_name;
     std::vector<generic_argument> m_args;
     const generic* m_actual;
 };
@@ -203,7 +222,7 @@ struct pointer_type : generic {
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override;
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override;
 };

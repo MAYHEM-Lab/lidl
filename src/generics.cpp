@@ -10,22 +10,45 @@
 
 
 namespace lidl {
-namespace {
-
-struct type_parameter : generic_parameter {};
-
-struct value_parameter : generic_parameter {
-    const type* m_type;
-};
-} // namespace
-
-structure instantiate(const module& mod,
-                      const generic_structure& genstr,
-                      const generic_instantiation& ins) {
+const type* instantiate(const module& mod,
+                        const generic_instantiation& ins) {
     structure str;
     str.scope_ = mod.symbols->add_child_scope();
 
-    str.attributes = genstr.struct_.attributes;
+    auto& genstr = dynamic_cast<const generic_structure&>(ins.generic_type());
+
+    std::unordered_map<std::string_view, name> actual;
+    int index = 0;
+    for (auto& arg : ins.arguments()) {
+        if (auto n = std::get_if<name>(&arg)) {
+            auto paramname = (genstr.declaration.begin() + index)->first;
+            actual.emplace(paramname, *n);
+        }
+        ++index;
+    }
+
+    for (auto& [member_name, mem] : genstr.struct_.members) {
+        if (!std::holds_alternative<forward_decl>(get_symbol(mem.type_.base))) {
+            // Generic parameters are forward declarations.
+            // If a member does not have a forward declared type, we can safely skip it.
+            continue;
+        }
+
+        auto generic_param_name = nameof(mem.type_.base);
+        auto it = actual.find(generic_param_name);
+
+        if (it == actual.end()) {
+            throw std::runtime_error("shouldn't happen");
+        }
+
+        member new_mem;
+        new_mem.type_ = it->second;
+        str.members.emplace_back(member_name, std::move(new_mem));
+    }
+
+    auto& det_mod = mod.get_child("detail");
+    det_mod.structs.emplace_back(std::move(str));
+    return &det_mod.structs.back();
 }
 
 generic_declaration

@@ -50,7 +50,7 @@ public:
     }
 
 private:
-    symbol& mutable_lookup(symbol_handle handle) {
+    symbol& mutable_lookup(const symbol_handle& handle) {
         return m_syms.at(handle.m_id - 1);
     }
 

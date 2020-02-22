@@ -89,16 +89,12 @@ void run(const lidlc_args& args) {
         std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
         return;
     }
-    try {
         auto ym = yaml::load_module(*args.input_stream);
         service_pass(ym);
         reference_type_pass(ym);
         union_enum_pass(ym);
         backend->second(ym, *args.output_stream);
-    } catch (std::exception& err) {
-        std::cerr << err.what() << '\n';
-        throw;
-    }
+
 }
 } // namespace lidl
 

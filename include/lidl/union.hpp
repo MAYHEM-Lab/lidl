@@ -27,7 +27,7 @@ struct union_type : public value_type {
 
     virtual raw_layout wire_layout(const module& mod) const override;
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            gsl::span<const uint8_t> span) const override;
 };
 } // namespace lidl

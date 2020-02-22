@@ -52,5 +52,7 @@ struct generic_argument : std::variant<name, int64_t> {
 
 bool operator==(const symbol_handle& left, const symbol_handle& right);
 bool operator==(const name&, const name&);
-const type* get_type(const name&);
+
+struct module;
+const type* get_type(const module& mod, const name&);
 } // namespace lidl

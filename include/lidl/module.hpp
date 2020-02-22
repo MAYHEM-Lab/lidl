@@ -26,6 +26,24 @@ struct module {
     std::deque<generic_union> generic_unions;
 
     std::deque<std::pair<std::string, service>> services;
+
+    mutable std::deque<generic_instantiation> instantiations;
+
+    module& get_child(std::string_view child_name) const {
+        auto it = std::find_if(children.begin(), children.end(), [&](auto& child) {
+            return child.first == child_name;
+        });
+        if (it != children.end()) {
+            return it->second;
+        }
+
+        children.emplace_back(std::string(child_name), module{});
+        auto& res = children.back().second;
+        res.symbols = symbols->add_child_scope();
+        return res;
+    }
+
+    mutable std::deque<std::pair<std::string, module>> children;
 };
 
 void add_basic_types(module&);

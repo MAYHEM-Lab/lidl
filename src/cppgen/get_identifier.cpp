@@ -69,7 +69,7 @@ std::string get_identifier(const module& mod, const name& n) {
 }
 
 std::string get_user_identifier(const module& mod, const name& n) {
-    auto& ntype = *get_type(n);
+    auto& ntype = *get_type(mod, n);
     if (ntype.is_reference_type(mod)) {
         // must be a pointer instantiation
         auto& base = std::get<name>(n.args[0]);

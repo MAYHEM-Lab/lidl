@@ -9,6 +9,7 @@ bar:
   type: structure
   members:
     baz:
-      name: foo
-      parameters:
-        - string
+      type:
+        name: foo
+        parameters:
+          - string

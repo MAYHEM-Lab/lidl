@@ -18,8 +18,8 @@
 
 namespace lidl::cpp {
 namespace {
-bool is_anonymous(const module& mod, const type& t) {
-    return !mod.symbols->definition_lookup(&t);
+bool is_anonymous(const module& mod, symbol t) {
+    return !recursive_definition_lookup(*mod.symbols, t);
 }
 
 void generate_raw_struct_field(std::string_view name,
@@ -59,7 +59,7 @@ private:
         std::vector<std::string> initializer_list;
 
         for (auto& [member_name, member] : str().members) {
-            auto member_type = get_type(member.type_);
+            auto member_type = get_type(mod(), member.type_);
             auto identifier = get_user_identifier(mod(), member.type_);
 
             if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
@@ -148,7 +148,7 @@ private:
         std::vector<std::string> initializer_list;
 
         for (auto& [member_name, member] : str().members) {
-            auto member_type = get_type(member.type_);
+            auto member_type = get_type(mod(), member.type_);
             auto identifier = get_user_identifier(mod(), member.type_);
             initializer_list.push_back(fmt::format("p_{}", member_name));
 
@@ -173,7 +173,7 @@ private:
 
     std::string
     generate_getter(std::string_view member_name, const member& mem, bool is_const) {
-        auto member_type = get_type(mem.type_);
+        auto member_type = get_type(mod(), mem.type_);
         if (!member_type->is_reference_type(mod())) {
             auto type_name = get_identifier(mod(), mem.type_);
             constexpr auto format = R"__({}& {}() {{ return raw.{}; }})__";
@@ -224,7 +224,7 @@ struct cppgen {
 
     void generate(std::ostream& str) {
         for (auto& e : m_module->enums) {
-            if (is_anonymous(*m_module, e)) {
+            if (is_anonymous(*m_module, &e)) {
                 continue;
             }
 
@@ -240,7 +240,7 @@ struct cppgen {
         }
 
         for (auto& s : mod().structs) {
-            if (is_anonymous(*m_module, s)) {
+            if (is_anonymous(*m_module, &s)) {
                 continue;
             }
 
@@ -269,7 +269,7 @@ private:
             std::string initializer_list;
             const auto enum_val = u.get_enum().find_by_value(member_index++)->first;
 
-            auto member_type = get_type(member.type_);
+            auto member_type = get_type(mod(), member.type_);
             auto identifier = get_user_identifier(mod(), member.type_);
             if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
                 arg_names = fmt::format("const {}& p_{}", identifier, member_name);
@@ -468,6 +468,8 @@ std::string generate_specialization(const module& m,
     return nm;
 }
 
+void generate_generic_instantiation();
+
 void generate_struct(const module& m,
                      std::string_view name,
                      const structure& s,
@@ -503,7 +505,7 @@ void generate_procedure(const module& mod,
 
     std::vector<std::string> params;
     for (auto& [param_name, param] : proc.parameters) {
-        if (get_type(param)->is_reference_type(mod)) {
+        if (get_type(mod, param)->is_reference_type(mod)) {
             if (param.args.empty()) {
                 throw std::runtime_error(
                     fmt::format("Not a pointer: {}", get_identifier(mod, param)));
@@ -517,7 +519,7 @@ void generate_procedure(const module& mod,
     }
 
     std::string ret_type_name;
-    auto ret_type = get_type(proc.return_types.at(0));
+    auto ret_type = get_type(mod, proc.return_types.at(0));
     if (!ret_type->is_reference_type(mod)) {
         // can use a regular return value
         ret_type_name = get_identifier(mod, proc.return_types.at(0));
@@ -579,10 +581,33 @@ void generate_service(const module& mod,
     str << "};";
     str << '\n';
 }
+
+void declare_template(const module& mod,
+                      std::string_view generic_name,
+                      const generic& generic,
+                      std::ostream& str) {
+    std::vector<std::string> params;
+    for (auto& [name, param] : generic.declaration) {
+        std::string type_name;
+        if (dynamic_cast<type_parameter*>(param.get())) {
+            type_name = "typename";
+        } else {
+            type_name = "int32_t";
+        }
+        params.emplace_back(fmt::format("{} {}", type_name, name));
+    }
+
+    str << fmt::format("template <{}>\nclass {};\n", fmt::join(params, ", "), generic_name);
+}
+
 } // namespace lidl::cpp
 
 namespace lidl {
 void generate(const module& mod, std::ostream& str) {
+    for (auto& [_, child] : mod.children) {
+        generate(child, str);
+    }
+
     using namespace cpp;
     str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
     if (!mod.services.empty()) {
@@ -590,8 +615,21 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
+    for (auto& generic : mod.generic_structs) {
+        if (is_anonymous(mod, &generic)) {
+            continue;
+        }
+
+        auto name = nameof(*mod.symbols->definition_lookup(&generic));
+
+        declare_template(mod, name, generic, str);
+    }
+
+    for (auto& ins : mod.instantiations) {
+    }
+
     for (auto& s : mod.structs) {
-        if (is_anonymous(mod, s)) {
+        if (is_anonymous(mod, &s)) {
             continue;
         }
 
@@ -600,7 +638,7 @@ void generate(const module& mod, std::ostream& str) {
     }
 
     for (auto& s : mod.unions) {
-        if (is_anonymous(mod, s)) {
+        if (is_anonymous(mod, &s)) {
             continue;
         }
 
@@ -614,7 +652,7 @@ void generate(const module& mod, std::ostream& str) {
     }
 
     for (auto& s : mod.structs) {
-        if (is_anonymous(mod, s)) {
+        if (is_anonymous(mod, &s)) {
             continue;
         }
 

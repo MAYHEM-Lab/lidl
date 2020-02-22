@@ -20,7 +20,7 @@ public:
     }
 
     virtual raw_layout wire_layout(const module& mod) const override {
-        return get_type(underlying_type)->wire_layout(mod);
+        return get_type(mod, underlying_type)->wire_layout(mod);
     }
 
     std::vector<std::pair<std::string, enum_member>>::const_iterator
@@ -34,7 +34,7 @@ public:
     virtual std::pair<YAML::Node, size_t>
     bin2yaml(const module& mod, gsl::span<const uint8_t> data) const override {
         auto integral =
-            get_type(underlying_type)->bin2yaml(mod, data).first.as<uint64_t>();
+            get_type(mod, underlying_type)->bin2yaml(mod, data).first.as<uint64_t>();
         auto it = std::find_if(members.begin(), members.end(), [integral](auto& member) {
             return member.second.value == integral;
         });
