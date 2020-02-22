@@ -5,6 +5,18 @@ foo:
   members:
     t: T
 
+none:
+  type: structure
+  members:
+
+maybe:
+  type: generic<union>
+  parameters:
+    T: type
+  variants:
+    no: none
+    t: T
+
 bar:
   type: structure
   members:
@@ -13,3 +25,8 @@ bar:
         name: foo
         parameters:
           - string
+    bat:
+      type:
+        name: maybe
+        parameters:
+          - u16

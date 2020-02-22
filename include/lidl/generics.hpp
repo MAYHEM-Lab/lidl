@@ -12,7 +12,6 @@
 #include <vector>
 
 
-
 namespace lidl {
 struct generic_parameter {
     virtual ~generic_parameter() = default;
@@ -88,9 +87,6 @@ struct generic {
     generic_declaration declaration;
 };
 
-const type* instantiate(const module& mod,
-                        const generic_instantiation& ins);
-
 struct generic_structure : generic {
     explicit generic_structure(generic_declaration decl, structure s)
         : generic(std::move(decl))
@@ -98,22 +94,23 @@ struct generic_structure : generic {
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation&) const override {
-        throw std::runtime_error("Wire layout shouldn't be called on a generic!");
+                                   const generic_instantiation& instantiation) const override {
+        return instantiate(mod, instantiation).wire_layout(mod);
     }
 
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
-        auto ins = instantiate(mod, instantiation);
-        return ins->is_reference_type(mod);
-        throw std::runtime_error("Is reference shouldn't be called on a generic!");
+        return instantiate(mod, instantiation).is_reference_type(mod);
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
-        throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
+        return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
+
+    structure instantiate(const module& mod,
+                          const generic_instantiation& ins) const;
 
     structure struct_;
 };
@@ -125,30 +122,33 @@ struct generic_union : generic {
     }
 
     raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation&) const override {
-        throw std::runtime_error("Wire layout shouldn't be called on a generic!");
+                           const generic_instantiation& instantiation) const override {
+        return instantiate(mod, instantiation).wire_layout(mod);
     }
+
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
-        throw std::runtime_error("Is reference shouldn't be called on a generic!");
+        return instantiate(mod, instantiation).is_reference_type(mod);
     }
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
+
+    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
-        throw std::runtime_error("bin2yaml shouldn't be called on a generic!");
+        return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
+
+    union_type instantiate(const module& mod,
+                           const generic_instantiation& ins) const;
 
     union_type union_;
 };
 
 class generic_instantiation : public type {
 public:
-    generic_instantiation(
-        const generic& actual,
-        std::vector<generic_argument> args,
-        name n)
-        : m_args(std::move(args))
-        , m_actual(&actual), m_name(std::move(n)) {
+    explicit generic_instantiation(name n) : m_name(std::move(n)) {
+        auto base = get_symbol(m_name.base);
+        auto base_type = std::get<const generic*>(base);
+        m_actual = base_type;
     }
 
     bool is_reference_type(const module& mod) const override {
@@ -165,11 +165,11 @@ public:
     }
 
     gsl::span<const generic_argument> arguments() const {
-        return m_args;
+        return m_name.args;
     }
 
     gsl::span<generic_argument> arguments() {
-        return m_args;
+        return m_name.args;
     }
 
     const generic& generic_type() const {
@@ -182,7 +182,6 @@ public:
 
 private:
     name m_name;
-    std::vector<generic_argument> m_args;
     const generic* m_actual;
 };
 

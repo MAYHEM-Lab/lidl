@@ -18,7 +18,7 @@ name pointerify(const symbol_handle& ptr_sym, const name& n) {
 }
 
 void reference_type_pass(const module& mod, name& n) {
-    auto ptr_sym = *mod.symbols->name_lookup("ptr");
+    auto ptr_sym = *recursive_name_lookup(*mod.symbols, "ptr");
     auto member_type = get_type(mod, n);
     if (!member_type->is_reference_type(mod)) {
         return;

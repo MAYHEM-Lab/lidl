@@ -26,8 +26,20 @@ struct module {
     std::deque<generic_union> generic_unions;
 
     std::deque<std::pair<std::string, service>> services;
-
     mutable std::deque<generic_instantiation> instantiations;
+
+    const generic_instantiation& create_or_get_instantiation(const name& ins) const {
+        auto it = std::find_if(name_ins.begin(), name_ins.end(), [&](auto& p) {
+            return p.first == ins;
+        });
+        if (it != name_ins.end()) {
+            return *it->second;
+        }
+
+        instantiations.emplace_back(ins);
+        name_ins.emplace_back(ins, &instantiations.back());
+        return instantiations.back();
+    }
 
     module& get_child(std::string_view child_name) const {
         auto it = std::find_if(children.begin(), children.end(), [&](auto& child) {
@@ -44,6 +56,9 @@ struct module {
     }
 
     mutable std::deque<std::pair<std::string, module>> children;
+    mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
+
+private:
 };
 
 void add_basic_types(module&);

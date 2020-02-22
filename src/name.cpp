@@ -24,8 +24,7 @@ const type* get_type(const module& mod, const name& n) {
                         n.args.size()));
     }
 
-    mod.instantiations.emplace_back(generic_instantiation(*base_type, n.args, n));
-    return &mod.instantiations.back();
+    return &mod.create_or_get_instantiation(n);
 }
 
 bool operator==(const name& left, const name& right) {

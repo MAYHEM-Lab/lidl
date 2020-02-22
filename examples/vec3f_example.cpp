@@ -4,7 +4,6 @@
 #include <iostream>
 #include <lidl/builder.hpp>
 
-
 int main() {
     std::array<uint8_t, 64> buf;
     lidl::message_builder builder(buf);

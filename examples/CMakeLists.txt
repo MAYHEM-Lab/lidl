@@ -21,3 +21,7 @@ add_lidlc(service service.yaml)
 add_executable(union_example union.cpp)
 target_link_libraries(union_example PUBLIC lidl_rt union)
 add_lidlc(union union.yaml)
+
+add_executable(generics_example generic_example.cpp)
+target_link_libraries(generics_example PUBLIC lidl_rt generics)
+add_lidlc(generics generics.yaml)

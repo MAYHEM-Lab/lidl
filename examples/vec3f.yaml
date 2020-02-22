@@ -1,15 +1,11 @@
 vec3:
   type: generic<structure>
   parameters:
-    - name: T
-      type: type
+    T: type
   members:
-    x:
-      type: T
-    y:
-      type: T
-    z:
-      type: T
+    x: T
+    y: T
+    z: T
       
 vec3f:
   type: structure
