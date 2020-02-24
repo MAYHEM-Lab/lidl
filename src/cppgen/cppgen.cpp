@@ -33,26 +33,34 @@ void generate_raw_struct_field(std::string_view name,
 }
 
 struct sections {
-    std::unordered_map<std::string, std::string> body;
-    std::unordered_map<std::string, std::string> detail;
+    std::unordered_map<std::string, std::string> m_body;
+    std::vector<std::string*> order;
+
+    void add_body(std::string_view name, std::string content) {
+        auto [it, inserted] = m_body.emplace(std::string(name), std::move(content));
+        if (inserted) {
+            order.emplace_back(&it->second);
+        }
+    }
 
     std::string merge_body() const {
         std::string res;
-        for (auto& [_, b] : body) {
-            res += b + "\n";
+        for (auto ptr : order) {
+            res += *ptr + "\n";
         }
         return res;
     }
 
     std::stringstream traits, std_traits;
 
-    sections& operator<<(sections rhs) {
-        std::copy(rhs.body.begin(), rhs.body.end(), std::inserter(body, body.begin()));
-        std::copy(
-            rhs.detail.begin(), rhs.detail.end(), std::inserter(detail, detail.begin()));
+    void merge_before(sections rhs) {
+        m_body.merge(rhs.m_body);
+        rhs.order.reserve(order.size() + rhs.order.size());
+        std::copy(order.begin(), order.end(), rhs.order.end());
+        order = std::move(rhs.order);
+
         traits << rhs.traits.str();
         std_traits << rhs.std_traits.str();
-        return *this;
     }
 };
 
@@ -116,9 +124,7 @@ public:
             {}
         }};)__";
 
-        m_sections.body.emplace(
-            name(),
-            fmt::format(format, name(), raw_sections.ctor.str(), raw_sections.pub.str()));
+        m_sections.add_body(name(), fmt::format(format, name(), raw_sections.ctor.str(), raw_sections.pub.str()));
         return m_sections;
     }
 
@@ -296,7 +302,7 @@ private:
             {}
         }};)__";
 
-        m_sections.body.emplace(
+        m_sections.add_body(
             name(),
             fmt::format(
                 format, name(), get_identifier(mod(), get().underlying_type), pub.str()));
@@ -333,7 +339,7 @@ private:
     void do_generate() {
         std::stringstream pub;
         for (auto& [name, member] : get().members) {
-            generate_raw_struct_field(name, get_identifier(mod(), member.type_), pub);
+            generate_raw_struct_field("m_" + name, get_identifier(mod(), member.type_), pub);
         }
 
         std::stringstream ctor;
@@ -348,11 +354,11 @@ private:
             auto identifier = get_user_identifier(mod(), member.type_);
             if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
                 arg_names = fmt::format("const {}& p_{}", identifier, member_name);
-                initializer_list = fmt::format("{0}(p_{0})", member_name);
+                initializer_list = fmt::format("m_{0}(p_{0})", member_name);
             } else {
                 arg_names = fmt::format("const {}* p_{}", identifier, member_name);
                 initializer_list = fmt::format(
-                    "{0}(p_{0} ? decltype({0}){{*p_{0}}} : decltype({0}){{nullptr}})",
+                    "m_{0}(p_{0} ? decltype({0}){{*p_{0}}} : decltype({0}){{nullptr}})",
                     member_name);
             }
 
@@ -365,7 +371,7 @@ private:
         }
 
         constexpr auto case_format = R"__(
-            case {0}::{1}: return fn(val.{1});
+            case {0}::{1}: return fn(val.{1}());
         )__";
 
         std::vector<std::string> cases;
@@ -375,7 +381,7 @@ private:
 
         constexpr auto visitor_format = R"__(
             template <class FunT>
-            friend auto visit(const FunT& fn, const {0}& val) {{
+            friend decltype(auto) visit(const FunT& fn, const {0}& val) {{
                 switch (val.alternative()) {{
                     {1}
                 }}
@@ -393,6 +399,8 @@ private:
 
             {2}
 
+            {5}
+
         private:
             {1} discriminator;
             union {{
@@ -402,14 +410,18 @@ private:
             {4}
         }};)__";
 
-        enum_gen en(mod(), enum_name, get().get_enum());
-        auto res = en.generate();
-        //res.detail = std::move(res.body);
-        m_sections << std::move(res);
+        std::stringstream accessors;
+        for (auto& [mem_name, mem] : get().members) {
+            accessors << generate_getter(mem_name, mem, true) << '\n';
+            accessors << generate_getter(mem_name, mem, false) << '\n';
+        }
 
-        m_sections.body.emplace(
+        enum_gen en(mod(), enum_name, get().get_enum());
+
+        m_sections.merge_before(en.generate());
+        m_sections.add_body(
             name(),
-            fmt::format(format, name(), enum_name, ctor.str(), pub.str(), visitor));
+            fmt::format(format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str()));
         generate_traits();
     }
 
@@ -427,6 +439,34 @@ private:
         )__";
 
         m_sections.traits << fmt::format(format, name(), fmt::join(names, ", "));
+    }
+
+    std::string
+    generate_getter(std::string_view member_name, const member& mem, bool is_const) {
+        auto member_type = get_type(mod(), mem.type_);
+        if (!member_type->is_reference_type(mod())) {
+            auto type_name = get_identifier(mod(), mem.type_);
+            constexpr auto format = R"__({}& {}() {{ return m_{}; }})__";
+            constexpr auto const_format =
+                R"__(const {}& {}() const {{ return m_{}; }})__";
+            return fmt::format(
+                is_const ? const_format : format, type_name, member_name, member_name);
+        } else {
+            // need to dereference before return
+            auto& base = std::get<lidl::name>(mem.type_.args[0]);
+            auto identifier = get_identifier(mod(), base);
+            if (!mem.is_nullable()) {
+                constexpr auto format =
+                    R"__({}& {}() {{ return m_{}.unsafe().get(); }})__";
+                constexpr auto const_format =
+                    R"__(const {}& {}() const {{ return m_{}.unsafe().get(); }})__";
+                return fmt::format(is_const ? const_format : format,
+                                   identifier,
+                                   member_name,
+                                   member_name);
+            }
+        }
+        return "";
     }
 };
 
@@ -447,7 +487,7 @@ private:
         std::stringstream body;
         struct_body_gen(mod(), name(), get()).generate(body);
 
-        m_sections.body.emplace(name(), fmt::format(format, name(), body.str()));
+        m_sections.add_body(name(), fmt::format(format, name(), body.str()));
         generate_traits();
     }
 
@@ -493,7 +533,7 @@ struct generic_gen : generator_base<generic_instantiation> {
     using generator_base::generator_base;
 
     auto& generate() {
-        m_sections << do_generate();
+        m_sections.merge_before(do_generate());
         return m_sections;
     }
 
@@ -533,12 +573,12 @@ private:
     sections do_generate() {
         if (auto genstr = dynamic_cast<const generic_structure*>(&get().generic_type())) {
             auto res = do_generate(*genstr);
-            res.body[full_name()] = "template <>\n" + res.body[full_name()];
+            res.m_body[full_name()] = "template <>\n" + res.m_body[full_name()];
             return res;
         }
         if (auto genun = dynamic_cast<const generic_union*>(&get().generic_type())) {
             auto res = do_generate(*genun);
-            res.body[full_name()] = "template <>\n" + res.body[full_name()];
+            res.m_body[full_name()] = "template <>\n" + res.m_body[full_name()];
             return res;
         }
         return sections();
@@ -646,11 +686,12 @@ struct cppgen {
             auto name = nameof(*mod().symbols->definition_lookup(&s));
             auto generator = struct_gen(mod(), name, s);
             auto& res = generator.generate();
-            m_sections.unions << res.merge_body();
+            m_sections.structs << res.merge_body();
             traits << res.traits.str();
             std_traits << res.std_traits.str();
         }
 
+        str << m_sections.structs.str() << '\n';
         str << m_sections.enums.str() << '\n';
         str << m_sections.unions.str() << '\n';
         str << "namespace lidl {\n" << traits.str() << "\n}\n";
@@ -693,7 +734,7 @@ void generate_procedure(const module& mod,
                         std::string_view proc_name,
                         const procedure& proc,
                         std::ostream& str) {
-    constexpr auto decl_format = "virtual ::lidl::status<{}> {}({}) = 0;";
+    constexpr auto decl_format = "virtual {} {}({}) = 0;";
 
     std::vector<std::string> params;
     for (auto& [param_name, param] : proc.parameters) {
@@ -712,13 +753,9 @@ void generate_procedure(const module& mod,
 
     std::string ret_type_name;
     auto ret_type = get_type(mod, proc.return_types.at(0));
-    if (!ret_type->is_reference_type(mod)) {
-        // can use a regular return value
-        ret_type_name = get_identifier(mod, proc.return_types.at(0));
-    } else {
-        ret_type_name = fmt::format(
-            "const {}&",
-            get_identifier(mod, std::get<name>(proc.return_types.at(0).args.at(0))));
+    ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
+    if (ret_type->is_reference_type(mod)) {
+        ret_type_name = fmt::format("const {}&", ret_type_name);
         params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
     }
 

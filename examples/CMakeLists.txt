@@ -25,3 +25,6 @@ add_lidlc(union union.yaml)
 add_executable(generics_example generic_example.cpp)
 target_link_libraries(generics_example PUBLIC lidl_rt generics)
 add_lidlc(generics generics.yaml)
+
+pybind11_add_module(pylidl python.cpp)
+target_link_libraries(pylidl PUBLIC lidl_rt service)
