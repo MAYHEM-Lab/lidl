@@ -9,14 +9,17 @@
 int main() {
     std::array<uint8_t, 64> x;
     lidl::message_builder builder(x);
-    auto& p = lidl::create<string_and_vector>(builder, builder,
-        lidl::create_string(builder, "hello"),
-        lidl::create_vector<uint16_t>(builder, 3));
-    p.numbers.unsafe()->span()[0] = 42;
-    p.numbers.unsafe()->span()[1] = 84;
-    p.numbers.unsafe()->span()[2] = 168;
+    auto& p = lidl::create<complex_vector>(
+        builder,
+        lidl::create_vector(builder,
+            lidl::create_string(builder, "foo")));
 
-    std::cout.write(reinterpret_cast<const char*>(builder.get_buffer().get_buffer().data()),
+    for (auto& str : p.vec()) {
+        std::cout << str.string_view() << '\n';
+    }
+
+    std::cout.write(
+        reinterpret_cast<const char*>(builder.get_buffer().get_buffer().data()),
         builder.get_buffer().get_buffer().size());
     std::cerr << "message took " << builder.size() << " bytes\n";
 }

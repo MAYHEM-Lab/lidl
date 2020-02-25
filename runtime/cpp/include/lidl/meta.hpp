@@ -2,5 +2,5 @@
 
 namespace lidl::meta {
 template<class...>
-struct list;
+struct list {};
 }

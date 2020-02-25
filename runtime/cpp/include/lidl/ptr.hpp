@@ -9,6 +9,8 @@ class ptr {
     struct unsafe_;
 
 public:
+    using element_type = T;
+
     explicit ptr()
         : m_unsafe{0} {
     }
@@ -54,6 +56,12 @@ public:
 
     [[nodiscard]] explicit operator bool() const {
         return get_offset() != 0;
+    }
+
+    ptr& operator=(const T& to) {
+        m_unsafe.m_offset = reinterpret_cast<const uint8_t*>(this) -
+                            reinterpret_cast<const uint8_t*>(&to);
+        return *this;
     }
 
 private:

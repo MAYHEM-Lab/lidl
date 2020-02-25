@@ -56,7 +56,7 @@ struct sections {
     void merge_before(sections rhs) {
         m_body.merge(rhs.m_body);
         rhs.order.reserve(order.size() + rhs.order.size());
-        std::copy(order.begin(), order.end(), rhs.order.end());
+        std::copy(order.begin(), order.end(), std::back_inserter(rhs.order));
         order = std::move(rhs.order);
 
         traits << rhs.traits.str();
@@ -124,7 +124,9 @@ public:
             {}
         }};)__";
 
-        m_sections.add_body(name(), fmt::format(format, name(), raw_sections.ctor.str(), raw_sections.pub.str()));
+        m_sections.add_body(
+            name(),
+            fmt::format(format, name(), raw_sections.ctor.str(), raw_sections.pub.str()));
         return m_sections;
     }
 
@@ -317,8 +319,9 @@ private:
 
         constexpr auto format = R"__(
             template <>
-            struct enum_traits<{}> {{
-                static constexpr inline std::array<const char*, {}> names {{{}}};
+            struct enum_traits<{0}> {{
+                static constexpr inline std::array<const char*, {1}> names {{{2}}};
+                static constexpr const char* name = "{0}";
             }};
         )__";
 
@@ -330,16 +333,17 @@ private:
 struct union_gen : generator_base<union_type> {
     using generator_base::generator_base;
 
-    auto& generate() {
+    auto generate() {
         do_generate();
-        return m_sections;
+        return std::move(m_sections);
     }
 
 private:
     void do_generate() {
         std::stringstream pub;
         for (auto& [name, member] : get().members) {
-            generate_raw_struct_field("m_" + name, get_identifier(mod(), member.type_), pub);
+            generate_raw_struct_field(
+                "m_" + name, get_identifier(mod(), member.type_), pub);
         }
 
         std::stringstream ctor;
@@ -419,26 +423,73 @@ private:
         enum_gen en(mod(), enum_name, get().get_enum());
 
         m_sections.merge_before(en.generate());
-        m_sections.add_body(
-            name(),
-            fmt::format(format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str()));
+        m_sections.add_body(name(),
+                            fmt::format(format,
+                                        name(),
+                                        enum_name,
+                                        ctor.str(),
+                                        pub.str(),
+                                        visitor,
+                                        accessors.str()));
         generate_traits();
     }
 
     void generate_traits() {
+        std::vector<std::string> members;
+        for (auto& [memname, member] : get().members) {
+            members.push_back(fmt::format(
+                "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", name(), memname));
+        }
+
         std::vector<std::string> names;
         for (auto& [name, member] : get().members) {
             names.emplace_back(get_user_identifier(mod(), member.type_));
         }
 
+        std::vector<std::string> ctors;
+        std::vector<std::string> ctor_names;
+        int member_index = 0;
+        for (auto& [member_name, member] : get().members) {
+            std::string arg_names;
+            std::string initializer_list;
+            const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
+
+            auto member_type = get_type(mod(), member.type_);
+            auto identifier = get_user_identifier(mod(), member.type_);
+            if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
+                arg_names = fmt::format("const {}& p_{}", identifier, member_name);
+            } else {
+                arg_names = fmt::format("const {}* p_{}", identifier, member_name);
+            }
+            initializer_list = fmt::format("p_{0}", member_name);
+
+            static constexpr auto format =
+                R"__(static {0}& ctor_{1}(::lidl::message_builder& builder, {2}){{
+                return ::lidl::create<{0}>(builder, {3});
+            }})__";
+
+            ctors.push_back(fmt::format(
+                format, ctor_name(), member_name, arg_names, initializer_list));
+            ctor_names.push_back("&union_traits::ctor_" + member_name);
+        }
+
         constexpr auto format = R"__(
             template <>
-            struct union_traits<{}> {{
-                using types = meta::list<{}>;
+            struct union_traits<{0}> {{
+                static constexpr auto members = std::make_tuple({4});
+                using types = meta::list<{1}>;
+                static constexpr const char* name = "{0}";
+                {2}
+                static constexpr auto ctors = std::make_tuple({3});
             }};
         )__";
 
-        m_sections.traits << fmt::format(format, name(), fmt::join(names, ", "));
+        m_sections.traits << fmt::format(format,
+                                         name(),
+                                         fmt::join(names, ", "),
+                                         fmt::join(ctors, "\n"),
+                                         fmt::join(ctor_names, ", "),
+                                         fmt::join(members, ", "));
     }
 
     std::string
@@ -473,9 +524,9 @@ private:
 struct struct_gen : generator_base<structure> {
     using generator_base::generator_base;
 
-    auto& generate() {
+    auto generate() {
         do_generate();
-        return m_sections;
+        return std::move(m_sections);
     }
 
 private:
@@ -492,21 +543,52 @@ private:
     }
 
     void generate_traits() {
+        std::vector<std::string> member_types;
+        for (auto& [memname, member] : get().members) {
+            auto identifier = get_user_identifier(mod(), member.type_);
+            member_types.push_back(identifier);
+        }
+
         std::vector<std::string> members;
         for (auto& [memname, member] : get().members) {
             members.push_back(fmt::format(
                 "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", name(), memname));
         }
 
+        std::vector<std::string> ctor_types;
+        std::vector<std::string> ctor_args;
+        for (auto& [member_name, member] : get().members) {
+            auto member_type = get_type(mod(), member.type_);
+            auto identifier = get_user_identifier(mod(), member.type_);
+            ctor_args.push_back(fmt::format("p_{}", member_name));
+
+            if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
+                ctor_types.push_back(
+                    fmt::format("const {}& p_{}", identifier, member_name));
+                continue;
+            }
+            ctor_types.push_back(fmt::format("const {}* p_{}", identifier, member_name));
+        }
+
         constexpr auto format = R"__(
             template <>
-            struct struct_traits<{}> {{
-                static constexpr auto members = std::make_tuple({});
+            struct struct_traits<{0}> {{
+                using raw_members = meta::list<{4}>;
+                static constexpr auto members = std::make_tuple({1});
                 static constexpr auto arity = std::tuple_size_v<decltype(members)>;
+                static constexpr const char* name = "{0}";
+                static {0}& ctor(::lidl::message_builder& builder, {2}) {{
+                    return ::lidl::create<{0}>(builder, {3});
+                }}
             }};
         )__";
 
-        m_sections.traits << fmt::format(format, name(), fmt::join(members, ", "));
+        m_sections.traits << fmt::format(format,
+                                         name(),
+                                         fmt::join(members, ", "),
+                                         fmt::join(ctor_types, ", "),
+                                         fmt::join(ctor_args, ", "),
+                                         fmt::join(member_types, ", "));
 
         constexpr auto std_format = R"__(
             template <>
@@ -532,9 +614,9 @@ private:
 struct generic_gen : generator_base<generic_instantiation> {
     using generator_base::generator_base;
 
-    auto& generate() {
+    auto generate() {
         m_sections.merge_before(do_generate());
-        return m_sections;
+        return std::move(m_sections);
     }
 
 private:
@@ -548,10 +630,7 @@ private:
         tmpmod.structs.emplace_back(str.instantiate(mod(), get()));
         reference_type_pass(tmpmod);
 
-        struct_gen gen(tmpmod,
-                       full_name(),
-                       name(),
-                       tmpmod.structs.back());
+        struct_gen gen(tmpmod, full_name(), name(), tmpmod.structs.back());
         return std::move(gen.generate());
     }
 
@@ -562,10 +641,7 @@ private:
         reference_type_pass(tmpmod);
         union_enum_pass(tmpmod);
 
-        union_gen gen(tmpmod,
-                      full_name(),
-                      name(),
-                      tmpmod.unions.back());
+        union_gen gen(tmpmod, full_name(), name(), tmpmod.unions.back());
 
         return std::move(gen.generate());
     }
@@ -610,6 +686,8 @@ struct cppgen {
     }
 
     void generate(std::ostream& str) {
+        str << fmt::format("struct {};", name());
+
         for (auto& generic : mod().generic_unions) {
             if (is_anonymous(mod(), &generic)) {
                 continue;
@@ -641,7 +719,6 @@ struct cppgen {
             if (is_anonymous(mod(), &s)) {
                 continue;
             }
-
             auto name = nameof(*mod().symbols->definition_lookup(&s));
             str << "class " << name << ";\n";
         }
@@ -652,62 +729,62 @@ struct cppgen {
             }
 
             auto name = nameof(*m_module->symbols->definition_lookup(&e));
-            enum_gen eg(mod(), name, e);
-            auto res = eg.generate();
-            m_sections.enums << res.merge_body();
-            traits << res.traits.str();
-            std_traits << res.std_traits.str();
+            enum_gen generator(mod(), name, e);
+            m_sections.merge_before(generator.generate());
         }
 
         for (auto& ins : mod().instantiations) {
             auto name = nameof(*mod().symbols->definition_lookup(&ins.generic_type()));
             auto generator = generic_gen(mod(), name, ins);
-            auto& res = generator.generate();
-            m_sections.unions << res.merge_body();
-            traits << res.traits.str();
-            std_traits << res.std_traits.str();
+            m_sections.merge_before(generator.generate());
         }
 
         for (auto& u : mod().unions) {
             auto name = nameof(*mod().symbols->definition_lookup(&u));
             auto generator = union_gen(mod(), name, u);
-            auto& res = generator.generate();
-            m_sections.unions << res.merge_body();
-            traits << res.traits.str();
-            std_traits << res.std_traits.str();
-            // generate_static_asserts(mod(), name, u, str);
+            m_sections.merge_before(generator.generate());
         }
 
         for (auto& s : mod().structs) {
             if (is_anonymous(*m_module, &s)) {
                 continue;
             }
-
             auto name = nameof(*mod().symbols->definition_lookup(&s));
             auto generator = struct_gen(mod(), name, s);
-            auto& res = generator.generate();
-            m_sections.structs << res.merge_body();
-            traits << res.traits.str();
-            std_traits << res.std_traits.str();
+            m_sections.merge_before(generator.generate());
         }
 
-        str << m_sections.structs.str() << '\n';
-        str << m_sections.enums.str() << '\n';
-        str << m_sections.unions.str() << '\n';
-        str << "namespace lidl {\n" << traits.str() << "\n}\n";
-        str << "namespace std {\n" << std_traits.str() << "\n}\n";
+        generate_module_traits();
+        str << m_sections.merge_body() << '\n';
+        str << "namespace lidl {\n" << m_sections.traits.str() << "\n}\n";
+        str << "namespace std {\n" << m_sections.std_traits.str() << "\n}\n";
     }
 
 private:
-    struct {
-        std::stringstream enums;
-        std::stringstream structs;
-        std::stringstream unions;
-        std::stringstream services;
-    } m_sections;
+    void generate_module_traits() {
+        static constexpr auto format = R"__(
+            template<>
+            struct module_traits<{0}> {{
+                static constexpr const char* name = "{0}";
+                using symbols = meta::list<{1}>;
+            }};
+        )__";
 
-    std::stringstream traits;
-    std::stringstream std_traits;
+        std::vector<std::string> symbol_names;
+        for (auto& s : m_sections.m_body) {
+            symbol_names.emplace_back(s.first);
+        }
+
+        m_sections.traits << fmt::format(format, name(), fmt::join(symbol_names, ", "));
+    }
+
+    sections m_sections;
+
+    std::string m_name = "mod";
+
+    std::string_view name() {
+        return m_name;
+    }
 
     const module& mod() {
         return *m_module;
