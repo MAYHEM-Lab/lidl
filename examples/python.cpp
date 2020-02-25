@@ -126,7 +126,6 @@ struct struct_wrapper : type_wrapper {
         auto ctor_name = "create_" + m_name;
         py::class_<T> bind(m, name().c_str());
         if constexpr (!lidl::is_reference_type<T>{}) {
-            //bind.def(py::init<int>());
             add_raw_ctor(bind, typename lidl::struct_traits<T>::raw_members{});
         }
         m.def(ctor_name.c_str(),
@@ -147,7 +146,7 @@ struct struct_wrapper : type_wrapper {
     }
 
 private:
-    template <class... Ts>
+    template<class... Ts>
     void add_raw_ctor(py::class_<T>& c, lidl::meta::list<Ts...>) {
         c.def(py::init<const Ts&...>());
     }
@@ -217,8 +216,18 @@ void bind_all(py::module& mod, lidl::meta::list<Ts...>) {
 
 template<class T>
 void add_types(T&& t) {
-    create_basic_types<uint8_t, int8_t, uint16_t, int16_t, bool>(
-        "u8", "i8", "u16", "i16", "bool");
+    create_basic_types<uint8_t,
+                       int8_t,
+                       uint16_t,
+                       int16_t,
+                       uint32_t,
+                       int32_t,
+                       uint64_t,
+                       int64_t,
+                       float,
+                       double,
+                       bool>(
+        "u8", "i8", "u16", "i16", "u32", "i32", "u64", "i64", "f32", "f64", "bool");
     wrapped_types.emplace_back(std::make_unique<string_wrapper>());
     wrapped_types.emplace_back(std::make_unique<vector_wrapper>());
 

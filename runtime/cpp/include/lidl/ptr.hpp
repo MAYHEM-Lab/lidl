@@ -25,8 +25,8 @@ public:
 
     template<class U = T, std::enable_if_t<!std::is_same_v<U, uint8_t*>>* = nullptr>
     explicit ptr(const T& to)
-        : ptr(reinterpret_cast<const uint8_t*>(this) -
-              reinterpret_cast<const uint8_t*>(&to)) {
+        : m_unsafe{int16_t(reinterpret_cast<const uint8_t*>(this) -
+                           reinterpret_cast<const uint8_t*>(&to))} {
     }
 
     template<class U = T, std::enable_if_t<!std::is_same_v<U, uint8_t>>* = nullptr>

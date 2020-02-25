@@ -152,37 +152,6 @@ struct vector_type : generic {
     }
 };
 
-struct expected_type : generic {
-    expected_type()
-        : generic(make_generic_declaration({{"ResT", "type"}, {"ErrT", "type"}})) {
-    }
-
-    raw_layout wire_layout(const module& mod,
-                           const generic_instantiation& ins) const override {
-        auto& res_t = std::get<name>(ins.arguments()[0]);
-        auto& err_t = std::get<name>(ins.arguments()[1]);
-        return union_layout_computer()
-            .add(get_type(mod, res_t)->wire_layout(mod))
-            .add(get_type(mod, err_t)->wire_layout(mod))
-            .get();
-    }
-
-    bool is_reference(const module& mod,
-                      const generic_instantiation& ins) const override {
-        auto& res_t = std::get<name>(ins.arguments()[0]);
-        auto& err_t = std::get<name>(ins.arguments()[1]);
-
-        return get_type(mod, res_t)->is_reference_type(mod) ||
-               get_type(mod, err_t)->is_reference_type(mod);
-    }
-
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
-        throw std::runtime_error("not implemented");
-    }
-};
-
 pointer_type::pointer_type()
     : generic(make_generic_declaration({{"T", "type"}})) {
 }
@@ -298,6 +267,5 @@ void add_basic_types(module& m) {
     add_generic("ptr", std::make_unique<pointer_type>());
     add_generic("vector", std::make_unique<vector_type>());
     add_generic("array", std::make_unique<array_type>());
-    add_generic("expected", std::make_unique<expected_type>());
 }
 } // namespace lidl
