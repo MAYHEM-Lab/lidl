@@ -119,7 +119,7 @@ private:
 
 template <class T>
 class vector<T, true> : vector<ptr<T>, true> {
-    using vector::vector;
+    using vector<ptr<T>, true>::vector;
 };
 
 template <class T, std::enable_if_t<!is_ptr<T>{} && !is_reference_type<T>{}>* = nullptr>
