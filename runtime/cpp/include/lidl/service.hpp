@@ -14,7 +14,7 @@ namespace lidl {
 template<class T>
 class service_descriptor;
 
-template<auto Fn, class ParamsT>
+template<auto Fn, class ParamsT, class ResultsT>
 struct procedure_descriptor {
     std::string_view name;
 };

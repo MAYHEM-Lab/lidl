@@ -15,9 +15,15 @@ public:
     }
 
     [[nodiscard]]
-    tos::span<T> span() {
+    tos::span<T> span()  {
         auto base = &m_ptr.unsafe().get();
         return tos::span<T>(base, size());
+    }
+
+    [[nodiscard]]
+    tos::span<const T> span() const {
+        auto base = &m_ptr.unsafe().get();
+        return tos::span<const T>(base, size());
     }
 
     auto begin() {

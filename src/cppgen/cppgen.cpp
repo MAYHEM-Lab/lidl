@@ -555,8 +555,8 @@ private:
                 "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", name(), memname));
         }
 
-        std::vector<std::string> ctor_types;
-        std::vector<std::string> ctor_args;
+        std::vector<std::string> ctor_types{""};
+        std::vector<std::string> ctor_args{""};
         for (auto& [member_name, member] : get().members) {
             auto member_type = get_type(mod(), member.type_);
             auto identifier = get_user_identifier(mod(), member.type_);
@@ -577,8 +577,8 @@ private:
                 static constexpr auto members = std::make_tuple({1});
                 static constexpr auto arity = std::tuple_size_v<decltype(members)>;
                 static constexpr const char* name = "{0}";
-                static {0}& ctor(::lidl::message_builder& builder, {2}) {{
-                    return ::lidl::create<{0}>(builder, {3});
+                static {0}& ctor(::lidl::message_builder& builder{2}) {{
+                    return ::lidl::create<{0}>(builder{3});
                 }}
             }};
         )__";
@@ -844,19 +844,25 @@ void generate_service_descriptor(const module& mod,
                                  const service& service,
                                  std::ostream& str) {
     std::vector<std::string> tuple_types(service.procedures.size());
-    std::transform(
-        service.procedures.begin(),
-        service.procedures.end(),
-        tuple_types.begin(),
-        [&](auto& proc) {
-            auto str_name = get_identifier(mod,
-                                           name{*mod.symbols->definition_lookup(
-                                               std::get<procedure>(proc).params_struct)});
-            return fmt::format("::lidl::procedure_descriptor<&{0}::{1}, {2}>{{\"{1}\"}}",
-                               service_name,
-                               std::get<std::string>(proc),
-                               str_name);
-        });
+    std::transform(service.procedures.begin(),
+                   service.procedures.end(),
+                   tuple_types.begin(),
+                   [&](auto& proc) {
+                       auto param_name =
+                           get_identifier(mod,
+                                          name{*mod.symbols->definition_lookup(
+                                              std::get<procedure>(proc).params_struct)});
+                       auto res_name =
+                           get_identifier(mod,
+                                          name{*mod.symbols->definition_lookup(
+                                              std::get<procedure>(proc).results_struct)});
+                       return fmt::format(
+                           "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
+                           service_name,
+                           std::get<std::string>(proc),
+                           param_name,
+                           res_name);
+                   });
     str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
                        service_name);
     str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
