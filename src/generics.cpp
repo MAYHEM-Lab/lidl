@@ -94,6 +94,12 @@ union_type generic_union::instantiate(const module& mod,
 
     return newstr;
 }
+void generic_union::yaml2bin(const module& mod,
+                             const generic_instantiation& instantiation,
+                             const YAML::Node& node,
+                             ibinary_writer& writer) const {
+    return instantiate(mod, instantiation).yaml2bin(mod, node, writer);
+}
 
 generic_declaration
 make_generic_declaration(std::vector<std::pair<std::string, std::string>> arg) {

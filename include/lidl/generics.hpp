@@ -82,6 +82,8 @@ struct generic {
                                                    const generic_instantiation&,
                                                    gsl::span<const uint8_t>) const = 0;
 
+    virtual void yaml2bin(const module& mod, const generic_instantiation&, const YAML::Node&, ibinary_writer&) const = 0;
+
     virtual ~generic() = 0;
 
     generic_declaration declaration;
@@ -107,6 +109,13 @@ struct generic_structure : generic {
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
         return instantiate(mod, instantiation).bin2yaml(mod, span);
+    }
+
+    int yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        return instantiate(mod, instantiation).yaml2bin(mod, node, writer);
     }
 
     structure instantiate(const module& mod,
@@ -137,6 +146,11 @@ struct generic_union : generic {
         return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
 
+    void yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override;
+
     union_type instantiate(const module& mod,
                            const generic_instantiation& ins) const;
 
@@ -162,6 +176,12 @@ public:
     std::pair<YAML::Node, size_t> bin2yaml(const module& module,
                                            gsl::span<const uint8_t> span) const override {
         return m_actual->bin2yaml(module, *this, span);
+    }
+
+    int yaml2bin(const module& mod,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        return m_actual->yaml2bin(mod, *this, node, writer);
     }
 
     gsl::span<const generic_argument> arguments() const {
@@ -207,6 +227,14 @@ struct forward_decl : generic {
         throw std::runtime_error(
             "bin2yaml shouldn't be called on a forward declaration!");
     }
+
+    void yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        throw std::runtime_error(
+            "yaml2bin shouldn't be called on a forward declaration!");
+    }
 };
 } // namespace detail
 
@@ -220,6 +248,11 @@ struct pointer_type : generic {
 
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override;
+
+    void yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override;
 
     std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,

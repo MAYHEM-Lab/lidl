@@ -50,13 +50,25 @@ struct integral_type : basic_type {
         }
     }
 
-    bool is_unsigned;
-};
-
-struct half_type : basic_type {
-    explicit half_type()
-        : basic_type(16) {
+    int yaml2bin(const module& mod,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        if (is_unsigned) {
+            auto data = node.as<uint64_t>();
+            auto layout = wire_layout(mod);
+            std::vector<char> buf(layout.size());
+            memcpy(buf.data(), &data, layout.size());
+            writer.write_raw(buf);
+        } else {
+            auto data = node.as<int64_t>();
+            auto layout = wire_layout(mod);
+            std::vector<char> buf(layout.size());
+            memcpy(buf.data(), &data, layout.size());
+            writer.write_raw(buf);
+        }
     }
+
+    bool is_unsigned;
 };
 
 struct float_type : basic_type {
@@ -71,6 +83,12 @@ struct float_type : basic_type {
         float x{0};
         memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
         return {YAML::Node(x), s.size()};
+    }
+
+    int yaml2bin(const module& module,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        writer.write(node.as<double>());
     }
 };
 
@@ -87,6 +105,12 @@ struct double_type : basic_type {
         memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
         return {YAML::Node(x), s.size()};
     }
+
+    int yaml2bin(const module& module,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        writer.write(node.as<double>());
+    }
 };
 
 struct string_type : reference_type {
@@ -102,6 +126,16 @@ struct string_type : reference_type {
             s.pop_back();
         }
         return {YAML::Node(s), off + 2};
+    }
+
+    int yaml2bin(const module& module,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        auto str = node.as<std::string>();
+        writer.write_raw(str);
+        writer.align(2);
+        uint16_t len = str.size();
+        writer.write(len);
     }
 };
 } // namespace
@@ -150,6 +184,22 @@ struct vector_type : generic {
 
         throw std::runtime_error("pointee must be a regular type");
     }
+
+    void yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        auto init_pos = writer.tell();
+        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto pointee = get_type(mod, arg); pointee) {
+            for (auto& elem : node) {
+                pointee->yaml2bin(mod, elem, writer);
+            }
+        }
+        writer.align(2);
+        uint16_t diff = writer.tell() - init_pos;
+        writer.write(diff);
+    }
 };
 
 pointer_type::pointer_type()
@@ -177,6 +227,23 @@ pointer_type::bin2yaml(const module& mod,
     }
     throw std::runtime_error("pointee must be a regular type");
 }
+
+void pointer_type::yaml2bin(const module& mod,
+                            const generic_instantiation& instantiation,
+                            const YAML::Node& node,
+                            ibinary_writer& writer) const {
+    auto init_pos = writer.tell();
+    auto& arg = std::get<name>(instantiation.arguments()[0]);
+    if (auto pointee = get_type(mod, arg); pointee) {
+        pointee->yaml2bin(mod, node, writer);
+        uint16_t diff = writer.tell() - init_pos;
+        writer.align(2);
+        writer.write(diff);
+        return;
+    }
+    throw std::runtime_error("pointee must be a regular type");
+}
+
 
 struct array_type : generic {
     array_type()
@@ -211,10 +278,6 @@ struct array_type : generic {
     std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override {
-        if (is_reference(mod, instantiation)) {
-            throw std::runtime_error("not implemented");
-        }
-
         YAML::Node arr;
         auto& arg = std::get<name>(instantiation.arguments()[0]);
         if (auto pointee = get_type(mod, arg); pointee) {
@@ -232,6 +295,23 @@ struct array_type : generic {
         }
 
         throw std::runtime_error("pointee must be a regular type");
+    }
+
+    void yaml2bin(const module& mod,
+                  const generic_instantiation& instantiation,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        auto& len = std::get<int64_t>(instantiation.arguments()[1]);
+        if (len != node.size()) {
+            throw std::runtime_error("Array sizes do not match!");
+        }
+
+        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        if (auto pointee = get_type(mod, arg); pointee) {
+            for (auto& elem : node) {
+                pointee->yaml2bin(mod, elem, writer);
+            }
+        }
     }
 };
 
@@ -258,7 +338,6 @@ void add_basic_types(module& m) {
     add_type("u32", std::make_unique<integral_type>(32, true));
     add_type("u64", std::make_unique<integral_type>(64, true));
 
-    add_type("f16", std::make_unique<half_type>());
     add_type("f32", std::make_unique<float_type>());
     add_type("f64", std::make_unique<double_type>());
 

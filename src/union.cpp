@@ -22,15 +22,18 @@ std::pair<YAML::Node, size_t> union_type::bin2yaml(const module& mod,
                                                    gsl::span<const uint8_t> span) const {
     YAML::Node node;
 
-    auto cur_span = span;
-    for (auto it = members.rbegin(); it != members.rend(); ++it) {
-        auto& [name, member] = *it;
-        node[name] = get_type(mod, member.type_)->bin2yaml(mod, cur_span).first;
-        cur_span = cur_span.subspan(
-            0, cur_span.size() - get_type(mod, member.type_)->wire_layout(mod).size());
-    }
+    auto& enumerator = get_enum();
+    auto my_layout = wire_layout(mod);
+    auto enum_layout = enumerator.wire_layout(mod);
+    auto enum_span = span.subspan(0,  span.size() - my_layout.size() + enum_layout.size());
 
-    return {node, wire_layout(mod).size()};
+    auto alternative_node = enumerator.bin2yaml(mod, enum_span);
+    int alternative = alternative_node.first.as<uint64_t>();
+
+    auto& [name, member] = members[alternative];
+    node[name] = get_type(mod, member.type_)->bin2yaml(mod, span).first;
+
+    return {node, my_layout.size()};
 }
 
 bool union_type::is_reference_type(const module& mod) const {
@@ -42,5 +45,21 @@ bool union_type::is_reference_type(const module& mod) const {
 
 const enumeration& union_type::get_enum() const {
     return *attributes.get<union_enum_attribute>("union_enum")->union_enum;
+}
+int union_type::yaml2bin(const module& mod,
+                          const YAML::Node& node,
+                          ibinary_writer& writer) const {
+    if (node.size() != 1) {
+        throw std::runtime_error("Union has not exactly 1 member!");
+    }
+
+    auto active_member = node.begin()->first.as<std::string>();
+    auto& enumerator = get_enum();
+    auto enum_index = enumerator.find_by_name(active_member);
+    YAML::Node enumerator_val(enum_index);
+    enumerator.yaml2bin(mod, enumerator_val, writer);
+    auto& [name, mem] = members[enum_index];
+    writer.align(get_type(mod, mem.type_)->wire_layout(mod).alignment());
+    get_type(mod, mem.type_)->yaml2bin(mod, node.begin()->second, writer);
 }
 }

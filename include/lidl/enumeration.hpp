@@ -31,6 +31,13 @@ public:
         return it;
     }
 
+    int find_by_name(std::string_view name) const {
+        auto it = std::find_if(members.begin(), members.end(), [name](auto& member) {
+            return member.first == name;
+        });
+        return it->second.value;
+    }
+
     virtual std::pair<YAML::Node, size_t>
     bin2yaml(const module& mod, gsl::span<const uint8_t> data) const override {
         auto integral =
@@ -41,7 +48,18 @@ public:
         if (it == members.end()) {
             throw std::runtime_error("unknown enum value");
         }
-        return {YAML::Node(it->first), 0};
+        return {YAML::Node(it->second.value), 0};
+    }
+
+    int yaml2bin(const module& mod,
+                  const YAML::Node& node,
+                  ibinary_writer& writer) const override {
+        auto val = node.as<int64_t>();
+        auto underlying = get_type(mod, underlying_type);
+        writer.align(underlying->wire_layout(mod).alignment());
+        auto pos = writer.tell();
+        underlying->yaml2bin(mod, node, writer);
+        return pos;
     }
 
 private:
