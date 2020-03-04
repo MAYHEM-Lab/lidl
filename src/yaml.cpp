@@ -246,6 +246,8 @@ module load_module(std::istream& file) {
             m.symbols->declare(key.as<std::string>());
         } else if (val["type"].as<std::string>() == "generic<union>") {
             m.symbols->declare(key.as<std::string>());
+        } else if (val["type"].as<std::string>() == "service") {
+            m.symbols->declare(key.as<std::string>());
         }
     }
 
@@ -271,7 +273,8 @@ module load_module(std::istream& file) {
             m.generic_unions.emplace_back(read_generic_union(val, *m.symbols));
             define(*m.symbols, key.as<std::string>(), &m.generic_unions.back());
         } else if (val["type"].as<std::string>() == "service") {
-            m.services.emplace_back(key.as<std::string>(), parse_service(val, m));
+            m.services.emplace_back(parse_service(val, m));
+            define(*m.symbols, key.as<std::string>(), &m.services.back());
         }
     }
 

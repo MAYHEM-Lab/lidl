@@ -53,7 +53,7 @@ void reference_type_pass(module& m) {
         }
     }
     for (auto& s : m.services) {
-        for (auto& [_, proc] : s.second.procedures) {
+        for (auto& [_, proc] : s.procedures) {
             for (auto& ret_type : proc.return_types) {
                 reference_type_pass(m, ret_type);
             }

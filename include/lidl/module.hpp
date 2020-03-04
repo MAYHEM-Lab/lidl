@@ -13,6 +13,8 @@
 
 namespace lidl {
 struct module {
+    std::string name_space;
+
     std::shared_ptr<scope> symbols = std::make_shared<scope>();
 
     std::deque<std::unique_ptr<type>> basic_types;
@@ -25,7 +27,7 @@ struct module {
     std::deque<generic_structure> generic_structs;
     std::deque<generic_union> generic_unions;
 
-    std::deque<std::pair<std::string, service>> services;
+    std::deque<service> services;
     mutable std::deque<generic_instantiation> instantiations;
 
     const generic_instantiation& create_or_get_instantiation(const name& ins) const {
@@ -57,9 +59,11 @@ struct module {
 
     mutable std::deque<std::pair<std::string, module>> children;
     mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
+    module() = default;
 
 private:
+    friend const module& get_root_module();
 };
 
-void add_basic_types(module&);
+const module& get_root_module();
 } // namespace lidl

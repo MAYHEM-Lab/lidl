@@ -17,7 +17,7 @@ inline bool operator==(forward_decl, forward_decl) {
     return false;
 }
 
-using symbol = std::variant<const type*, const generic*, forward_decl>;
+using symbol = std::variant<const type*, const generic*, const service*, forward_decl>;
 
 class scope : public std::enable_shared_from_this<scope> {
 public:

@@ -34,7 +34,8 @@ structure procedure_results_struct(const module& mod,
 }
 
 void service_pass(module& mod) {
-    for (auto& [service_name, service] : mod.services) {
+    for (auto& service : mod.services) {
+        std::string service_name(nameof(*mod.symbols->definition_lookup(&service)));
         union_type procedure_params;
         union_type procedure_results;
         for (auto& [proc_name, proc] : service.procedures) {

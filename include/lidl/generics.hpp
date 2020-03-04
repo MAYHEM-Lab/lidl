@@ -82,7 +82,7 @@ struct generic {
                                                    const generic_instantiation&,
                                                    gsl::span<const uint8_t>) const = 0;
 
-    virtual void yaml2bin(const module& mod, const generic_instantiation&, const YAML::Node&, ibinary_writer&) const = 0;
+    virtual int yaml2bin(const module& mod, const generic_instantiation&, const YAML::Node&, ibinary_writer&) const = 0;
 
     virtual ~generic() = 0;
 
@@ -146,7 +146,7 @@ struct generic_union : generic {
         return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
 
-    void yaml2bin(const module& mod,
+    int yaml2bin(const module& mod,
                   const generic_instantiation& instantiation,
                   const YAML::Node& node,
                   ibinary_writer& writer) const override;
@@ -228,7 +228,7 @@ struct forward_decl : generic {
             "bin2yaml shouldn't be called on a forward declaration!");
     }
 
-    void yaml2bin(const module& mod,
+    int yaml2bin(const module& mod,
                   const generic_instantiation& instantiation,
                   const YAML::Node& node,
                   ibinary_writer& writer) const override {
@@ -249,7 +249,7 @@ struct pointer_type : generic {
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override;
 
-    void yaml2bin(const module& mod,
+    int yaml2bin(const module& mod,
                   const generic_instantiation& instantiation,
                   const YAML::Node& node,
                   ibinary_writer& writer) const override;

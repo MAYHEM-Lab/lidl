@@ -94,7 +94,7 @@ union_type generic_union::instantiate(const module& mod,
 
     return newstr;
 }
-void generic_union::yaml2bin(const module& mod,
+int generic_union::yaml2bin(const module& mod,
                              const generic_instantiation& instantiation,
                              const YAML::Node& node,
                              ibinary_writer& writer) const {

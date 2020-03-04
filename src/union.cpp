@@ -53,6 +53,9 @@ int union_type::yaml2bin(const module& mod,
         throw std::runtime_error("Union has not exactly 1 member!");
     }
 
+    writer.align(wire_layout(mod).alignment());
+    auto pos = writer.tell();
+
     auto active_member = node.begin()->first.as<std::string>();
     auto& enumerator = get_enum();
     auto enum_index = enumerator.find_by_name(active_member);
@@ -61,5 +64,7 @@ int union_type::yaml2bin(const module& mod,
     auto& [name, mem] = members[enum_index];
     writer.align(get_type(mod, mem.type_)->wire_layout(mod).alignment());
     get_type(mod, mem.type_)->yaml2bin(mod, node.begin()->second, writer);
+
+    return pos;
 }
 }

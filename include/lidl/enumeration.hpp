@@ -61,7 +61,6 @@ public:
         underlying->yaml2bin(mod, node, writer);
         return pos;
     }
-
 private:
 };
 

@@ -18,7 +18,13 @@ struct procedure {
     const structure* results_struct;
 };
 
+struct property : member {
+    using member::member;
+};
+
 struct service {
+    std::vector<name> extends;
+    std::deque<std::pair<std::string, property>> properties;
     std::deque<std::pair<std::string, procedure>> procedures;
     const union_type* procedure_params_union;
     const union_type* procedure_results_union;

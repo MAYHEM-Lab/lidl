@@ -908,7 +908,9 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
-    for (auto& [name, service] : mod.services) {
+    for (auto& service : mod.services) {
+        Expects(!is_anonymous(mod, &service));
+        auto name = nameof(*mod.symbols->definition_lookup(&service));
         generate_service(mod, name, service, str);
         str << '\n';
     }
@@ -916,7 +918,8 @@ void generate(const module& mod, std::ostream& str) {
     cppgen gen(mod);
     gen.generate(str);
 
-    for (auto& [name, service] : mod.services) {
+    for (auto& service : mod.services) {
+        auto name = nameof(*mod.symbols->definition_lookup(&service));
         str << "namespace lidl {\n";
         generate_service_descriptor(mod, name, service, str);
         str << '\n';

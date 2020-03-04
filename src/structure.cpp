@@ -37,10 +37,13 @@ std::pair<YAML::Node, size_t> structure::bin2yaml(const module& mod,
 int structure::yaml2bin(const module& mod,
                          const YAML::Node& node,
                          ibinary_writer& writer) const {
+    writer.align(wire_layout(mod).alignment());
+    auto pos = writer.tell();
     for (auto& [mem_name, mem] : members) {
         auto& elem = node[mem_name];
         writer.align(get_type(mod, mem.type_)->wire_layout(mod).alignment());
         get_type(mod, mem.type_)->yaml2bin(mod, elem, writer);
     }
+    return pos;
 }
 } // namespace lidl

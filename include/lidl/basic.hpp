@@ -10,6 +10,7 @@ struct generic;
 struct enumeration;
 struct union_type;
 struct structure;
+struct service;
 
 class scope;
 
