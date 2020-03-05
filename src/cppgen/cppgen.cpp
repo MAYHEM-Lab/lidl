@@ -819,7 +819,7 @@ void generate_procedure(const module& mod,
                         std::string_view proc_name,
                         const procedure& proc,
                         std::ostream& str) {
-    constexpr auto decl_format = "virtual {} {}({}) = 0;";
+    constexpr auto decl_format = "    virtual {} {}({}) = 0;";
 
     std::vector<std::string> params;
     for (auto& [param_name, param] : proc.parameters) {
@@ -902,7 +902,7 @@ void generate_service(const module& mod,
         generate_procedure(mod, name, proc, str);
         str << '\n';
     }
-    str << fmt::format("virtual ~{}() = default;\n", name);
+    str << fmt::format("    virtual ~{}() = default;\n", name);
     str << "};";
     str << '\n';
 }
@@ -917,7 +917,7 @@ void generate(const module& mod, std::ostream& str) {
     using namespace cpp;
     str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
     if (!mod.services.empty()) {
-        str << "#include<lidl/service.hpp>\n";
+        str << "#include <lidl/service.hpp>\n";
     }
     str << '\n';
 
