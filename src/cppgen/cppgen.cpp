@@ -735,7 +735,8 @@ struct cppgen {
         }
 
         for (auto& ins : mod().instantiations) {
-            auto name = nameof(*recursive_definition_lookup(*mod().symbols, &ins.generic_type()));
+            auto name =
+                nameof(*recursive_definition_lookup(*mod().symbols, &ins.generic_type()));
             auto generator = generic_gen(mod(), name, ins);
             m_sections.merge_before(generator.generate());
         }
@@ -897,7 +898,12 @@ void generate_service(const module& mod,
         inheritance.emplace_back(nameof(base.base));
     }
 
-    str << fmt::format("class {}{} {{\npublic:\n", name, inheritance.empty() ? "" : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
+    str << fmt::format(
+        "class {}{} {{\npublic:\n",
+        name,
+        inheritance.empty()
+            ? ""
+            : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
     for (auto& [name, proc] : service.procedures) {
         generate_procedure(mod, name, proc, str);
         str << '\n';
