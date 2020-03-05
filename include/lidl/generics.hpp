@@ -32,10 +32,6 @@ public:
         : m_params{std::move(params)} {
     }
 
-    generic_declaration(const generic_declaration&) = delete;
-    generic_declaration(generic_declaration&&) noexcept = default;
-    generic_declaration& operator=(generic_declaration&&) noexcept = default;
-
     [[nodiscard]] int32_t arity() const {
         return static_cast<int32_t>(m_params.size());
     }
@@ -59,6 +55,7 @@ public:
 private:
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> m_params;
 };
+static_assert(std::is_move_constructible_v<generic_declaration>);
 
 generic_declaration
     make_generic_declaration(std::vector<std::pair<std::string, std::string>>);
@@ -70,8 +67,7 @@ struct generic {
         : declaration(std::move(decl)) {
     }
 
-    generic(generic&&) noexcept = default;
-    generic& operator=(generic&&) noexcept = default;
+    generic(generic&&) = default;
 
     virtual bool is_reference(const module& mod, const generic_instantiation&) const = 0;
 
