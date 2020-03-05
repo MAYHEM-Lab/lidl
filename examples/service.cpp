@@ -98,8 +98,9 @@ auto request_handler(std::common_type_t<ServiceT>& service) {
 
 static_assert(lidl::procedure_traits<decltype(&repeat::echo)>::takes_response_builder());
 int main(int argc, char** argv) {
-    std::ifstream file(argv[1]);
-    std::vector<uint8_t> req(std::istream_iterator<uint8_t>(file), std::istream_iterator<uint8_t>{});
+    //std::ifstream file(argv[1]);
+    //std::vector<uint8_t> req(std::istream_iterator<uint8_t>(file), std::istream_iterator<uint8_t>{});
+    auto req = get_request();
     auto buf = lidl::buffer(req);
 //    std::cout.write((const char*)req.data(), req.size());
     std::cout << lidl::nameof(lidl::get_root<calculator_call>(buf).alternative()) << '\n';
