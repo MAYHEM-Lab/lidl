@@ -884,7 +884,12 @@ void generate_service(const module& mod,
                       std::string_view name,
                       const service& service,
                       std::ostream& str) {
-    str << fmt::format("class {} {{\npublic:\n", name);
+    std::vector<std::string> inheritance;
+    for (auto& base : service.extends) {
+        inheritance.emplace_back(nameof(base.base));
+    }
+
+    str << fmt::format("class {}{} {{\npublic:\n", name, inheritance.empty() ? "" : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
     for (auto& [name, proc] : service.procedures) {
         generate_procedure(mod, name, proc, str);
         str << '\n';

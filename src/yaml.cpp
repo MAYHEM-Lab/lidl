@@ -207,6 +207,10 @@ procedure parse_procedure(const YAML::Node& node, const module& mod) {
 
 service parse_service(const YAML::Node& node, const module& mod) {
     service serv;
+    for (auto base : node["extends"]) {
+        serv.extends.push_back(read_type(base, *mod.symbols));
+    }
+
     for (auto procedure : node["procedures"]) {
         auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(procedure);
         serv.procedures.emplace_back(name.as<std::string>(), parse_procedure(val, mod));

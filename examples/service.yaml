@@ -14,6 +14,17 @@ calculator:
         left: f64
         right: f64
 
+scientific_calculator:
+  type: service
+  extends:
+    - calculator
+  procedures:
+    log:
+      returns:
+        - f64
+      parameters:
+        val: f64
+
 repeat:
   type: service
   procedures:
