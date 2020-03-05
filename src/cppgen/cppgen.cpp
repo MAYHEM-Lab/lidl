@@ -735,7 +735,7 @@ struct cppgen {
         }
 
         for (auto& ins : mod().instantiations) {
-            auto name = nameof(*mod().symbols->definition_lookup(&ins.generic_type()));
+            auto name = nameof(*recursive_definition_lookup(*mod().symbols, &ins.generic_type()));
             auto generator = generic_gen(mod(), name, ins);
             m_sections.merge_before(generator.generate());
         }
