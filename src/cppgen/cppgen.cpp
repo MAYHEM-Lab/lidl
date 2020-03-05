@@ -879,11 +879,11 @@ void generate_service_descriptor(const module& mod,
     str << fmt::format("static constexpr inline std::string_view name = \"{}\";\n",
                        service_name);
     str << fmt::format(
-        "using params_union = {};",
+        "using params_union = {};\n",
         get_identifier(
             mod, name{*mod.symbols->definition_lookup(service.procedure_params_union)}));
     str << fmt::format(
-        "using results_union = {};",
+        "using results_union = {};\n",
         get_identifier(
             mod, name{*mod.symbols->definition_lookup(service.procedure_results_union)}));
     str << "};";
