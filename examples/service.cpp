@@ -1,12 +1,13 @@
 #include "lidl/builder.hpp"
 #include "service_generated.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <unordered_map>
 #include <iterator>
+#include <unordered_map>
 
-class calculator_impl : public calculator {
+class calculator_impl : public scientific_calculator {
 public:
     double add(const double& left, const double& right) override {
         return left + right;
@@ -14,6 +15,10 @@ public:
 
     double multiply(const double& left, const double& right) override {
         return left * right;
+    }
+
+    double log(const double& val) override {
+        return ::log(val);
     }
 };
 
