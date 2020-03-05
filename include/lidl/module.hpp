@@ -48,17 +48,17 @@ struct module {
             return child.first == child_name;
         });
         if (it != children.end()) {
-            return it->second;
+            return *(it->second);
         }
 
-        children.emplace_back(std::string(child_name), module{});
-        auto& res = children.back().second;
+        children.emplace_back(std::string(child_name), std::make_unique<module>());
+        auto& res = *children.back().second;
         res.parent = this;
         res.symbols = symbols->add_child_scope();
         return res;
     }
 
-    mutable std::deque<std::pair<std::string, module>> children;
+    mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
     mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
     module() = default;
 
