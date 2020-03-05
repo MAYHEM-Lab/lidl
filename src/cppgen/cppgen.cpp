@@ -917,7 +917,7 @@ void generate_service(const module& mod,
 namespace lidl {
 void generate(const module& mod, std::ostream& str) {
     for (auto& [_, child] : mod.children) {
-        generate(child, str);
+        generate(*child, str);
     }
 
     using namespace cpp;
