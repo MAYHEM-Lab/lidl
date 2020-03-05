@@ -686,7 +686,8 @@ struct cppgen {
     }
 
     void generate(std::ostream& str) {
-        str << fmt::format("struct {};", name());
+        std::stringstream forward_decls;
+        forward_decls << fmt::format("struct {};\n", name());
 
         for (auto& generic : mod().generic_unions) {
             if (is_anonymous(mod(), &generic)) {
@@ -694,7 +695,7 @@ struct cppgen {
             }
 
             auto name = nameof(*mod().symbols->definition_lookup(&generic));
-            declare_template(mod(), name, generic, str);
+            declare_template(mod(), name, generic, forward_decls);
         }
 
         for (auto& generic : mod().generic_structs) {
@@ -703,7 +704,7 @@ struct cppgen {
             }
 
             auto name = nameof(*mod().symbols->definition_lookup(&generic));
-            declare_template(mod(), name, generic, str);
+            declare_template(mod(), name, generic, forward_decls);
         }
 
         for (auto& s : mod().structs) {
@@ -712,7 +713,7 @@ struct cppgen {
             }
 
             auto name = nameof(*mod().symbols->definition_lookup(&s));
-            str << "class " << name << ";\n";
+            forward_decls << "class " << name << ";\n";
         }
 
         for (auto& s : mod().unions) {
@@ -720,7 +721,7 @@ struct cppgen {
                 continue;
             }
             auto name = nameof(*mod().symbols->definition_lookup(&s));
-            str << "class " << name << ";\n";
+            forward_decls << "class " << name << ";\n";
         }
 
         for (auto& e : m_module->enums) {
