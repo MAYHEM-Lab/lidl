@@ -228,11 +228,10 @@ enumeration read_enum(const YAML::Node& node, const scope& scop) {
     return e;
 }
 } // namespace
-module load_module(std::istream& file) {
+module& load_module(std::istream& file) {
     auto node = YAML::Load(file);
 
-    module m;
-    add_basic_types(m);
+    module& m = get_root_module().get_child("mod");
 
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);

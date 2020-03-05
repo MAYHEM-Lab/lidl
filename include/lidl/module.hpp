@@ -14,7 +14,7 @@
 namespace lidl {
 struct module {
     std::string name_space;
-
+    const module* parent = nullptr;
     std::shared_ptr<scope> symbols = std::make_shared<scope>();
 
     std::deque<std::unique_ptr<type>> basic_types;
@@ -53,6 +53,7 @@ struct module {
 
         children.emplace_back(std::string(child_name), module{});
         auto& res = children.back().second;
+        res.parent = this;
         res.symbols = symbols->add_child_scope();
         return res;
     }
