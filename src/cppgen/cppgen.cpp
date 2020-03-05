@@ -755,7 +755,14 @@ struct cppgen {
         }
 
         generate_module_traits();
+        if (!mod().name_space.empty()) {
+            str << fmt::format("namespace {} {{\n", mod().name_space);
+        }
+        str << forward_decls.str() << '\n';
         str << m_sections.merge_body() << '\n';
+        if (!mod().name_space.empty()) {
+            str << "}\n";
+        }
         str << "namespace lidl {\n" << m_sections.traits.str() << "\n}\n";
         str << "namespace std {\n" << m_sections.std_traits.str() << "\n}\n";
     }
@@ -913,11 +920,17 @@ void generate(const module& mod, std::ostream& str) {
     }
     str << '\n';
 
+    if (!mod.name_space.empty()) {
+        str << fmt::format("namespace {} {{\n", mod.name_space);
+    }
     for (auto& service : mod.services) {
         Expects(!is_anonymous(mod, &service));
         auto name = nameof(*mod.symbols->definition_lookup(&service));
         generate_service(mod, name, service, str);
         str << '\n';
+    }
+    if (!mod.name_space.empty()) {
+        str << "}\n";
     }
 
     cppgen gen(mod);
