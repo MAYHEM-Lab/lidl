@@ -32,13 +32,15 @@ static_assert(alignof(string) == 2);
 template <> struct is_reference_type<string> : std::true_type {};
 
 inline string& create_string(message_builder& builder, int len) {
+    auto padding = (builder.size() + len) % alignof(string);
+    builder.allocate(padding, 1);
     auto alloc = builder.allocate(len, 1);
     return emplace_raw<string>(builder, alloc);
 }
 
 inline string& create_string(message_builder& builder, std::string_view sv) {
-    auto alloc = builder.allocate(sv.size(), 1);
-    std::copy(sv.begin(), sv.end(), reinterpret_cast<char*>(alloc));
-    return emplace_raw<string>(builder, alloc);
+    auto& str = create_string(builder, sv.size());
+    std::copy(sv.begin(), sv.end(), const_cast<char*>(str.string_view().data()));
+    return str;
 }
 } // namespace lidl

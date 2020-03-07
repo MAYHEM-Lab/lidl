@@ -130,16 +130,20 @@ class vector<T, true> : vector<ptr<T>, true> {
 
 template <class T, std::enable_if_t<!is_ptr<T>{} && !is_reference_type<T>{}>* = nullptr>
 vector<T>& create_vector_sized(message_builder& builder, int size) {
+    auto padding = (builder.size() + size * sizeof(T)) % alignof(vector<T>);
+    builder.allocate(padding, 1);
     auto alloc = builder.allocate(size * sizeof(T), alignof(T));
     auto& res = emplace_raw<vector<T>>(builder, reinterpret_cast<T*>(alloc));
     return res;
 }
 
 template <class T, std::enable_if_t<!is_ptr<T>{} && !is_reference_type<T>{}>* = nullptr>
-vector<T>& create_vector(message_builder& builder, T elem) {
-    auto alloc = builder.allocate(1 * sizeof(T), alignof(T));
+vector<T>& create_vector(message_builder& builder, tos::span<const T> elems) {
+    auto padding = (builder.size() + elems.size() * sizeof(T)) % alignof(vector<T>);
+    builder.allocate(padding, 1);
+    auto alloc = builder.allocate(elems.size() * sizeof(T), alignof(T));
     auto& res = emplace_raw<vector<T>>(builder, reinterpret_cast<T*>(alloc));
-    res.span()[0] = elem;
+    copy(res.span(), elems);
     return res;
 }
 

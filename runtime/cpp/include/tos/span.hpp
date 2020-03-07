@@ -327,4 +327,9 @@ template<class T, class U>
 constexpr bool operator!=(tos::span<T> left, span<U> right) {
     return !(left == right);
 }
+
+template <class T, class U>
+void copy(tos::span<T> lhs, tos::span<const U> rhs) {
+    std::copy(rhs.begin(), rhs.end(), lhs.begin());
+}
 } // namespace tos
