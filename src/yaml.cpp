@@ -237,6 +237,14 @@ module& load_module(std::istream& file) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         Expects(key);
         Expects(val);
+
+        if (key.as<std::string>() == "metadata") {
+            if (val["name"]) {
+                m.module_name = val["name"].as<std::string>();
+            }
+            continue;
+        }
+
         Expects(val["type"]);
 
         if (val["type"].as<std::string>() == "structure") {
@@ -257,6 +265,11 @@ module& load_module(std::istream& file) {
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         Expects(key);
+
+        if (key.as<std::string>() == "metadata") {
+            continue;
+        }
+
         Expects(val);
         Expects(val["type"]);
 

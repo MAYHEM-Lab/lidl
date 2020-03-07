@@ -789,10 +789,8 @@ private:
 
     sections m_sections;
 
-    std::string m_name = "mod";
-
     std::string_view name() {
-        return m_name;
+        return mod().module_name;
     }
 
     const module& mod() {
