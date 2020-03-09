@@ -53,17 +53,33 @@ int union_type::yaml2bin(const module& mod,
         throw std::runtime_error("Union has not exactly 1 member!");
     }
 
-    writer.align(wire_layout(mod).alignment());
-    auto pos = writer.tell();
-
     auto active_member = node.begin()->first.as<std::string>();
     auto& enumerator = get_enum();
     auto enum_index = enumerator.find_by_name(active_member);
+    auto& [mem_name, mem] = members[enum_index];
+    auto t = get_type(mod, mem.type_);
+
+    int pointee_pos = 0;
+    if (t->is_reference_type(mod)) {
+        auto pointee = std::get<name>(mem.type_.args[0].get_variant());
+        auto pointee_type = get_type(mod, pointee);
+        writer.align(pointee_type->wire_layout(mod).alignment());
+        pointee_pos = pointee_type->yaml2bin(mod, node.begin()->second, writer);
+    }
+
+    writer.align(wire_layout(mod).alignment());
+    auto pos = writer.tell();
+
     YAML::Node enumerator_val(enum_index);
     enumerator.yaml2bin(mod, enumerator_val, writer);
-    auto& [name, mem] = members[enum_index];
-    writer.align(get_type(mod, mem.type_)->wire_layout(mod).alignment());
-    get_type(mod, mem.type_)->yaml2bin(mod, node.begin()->second, writer);
+
+    if (!t->is_reference_type(mod)) {
+        writer.align(t->wire_layout(mod).alignment());
+        t->yaml2bin(mod, node.begin()->second, writer);
+    } else {
+        YAML::Node ptr_node(pointee_pos);
+        t->yaml2bin(mod, ptr_node, writer);
+    }
 
     return pos;
 }
