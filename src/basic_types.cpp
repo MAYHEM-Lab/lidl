@@ -137,8 +137,11 @@ int string_type::yaml2bin(const module& module,
      *
      * |h|e|l|l|o|0|6|0|
      *
-     * That 0 byte was inserted due to aligning the pointer to a 2 byte boundary. lidl
-     * strings are _not_ null terminated for now.
+     * That 0 byte was inserted due to aligning the pointer to a 2 byte boundary. This
+     * causes to pointer to be 1 byte away from the beginning of the string, and will
+     * place 6 into the pointer. Since the size of a string is equal to it's pointer's
+     * offset, any lidl runtime will think this is a 6 element string, whereas the user
+     * probably intended it to be a 5 element string.
      *
      * Therefore, to put the pointer on a 2 byte address, we need to _pre-align_ the
      * string so that it looks like this:
