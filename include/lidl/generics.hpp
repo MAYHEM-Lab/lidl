@@ -256,8 +256,5 @@ struct pointer_type : generic {
     std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
                                            gsl::span<const uint8_t> span) const override;
-
-    const type* pointee_type(const module& mod,
-                             const generic_instantiation& instantiation) const;
 };
 } // namespace lidl

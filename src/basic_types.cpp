@@ -125,15 +125,6 @@ int vector_type::yaml2bin(const module& mod,
     return pos;
 }
 
-const type * pointer_type::pointee_type(const module& mod,
-                                        const generic_instantiation& instantiation) const {
-    auto& arg = std::get<name>(instantiation.arguments()[0]);
-    if (auto pointee = get_type(mod, arg); pointee) {
-        return pointee;
-    }
-    return nullptr;
-}
-
 int string_type::yaml2bin(const module& module,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
