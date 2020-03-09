@@ -133,4 +133,38 @@ const type * pointer_type::pointee_type(const module& mod,
     }
     return nullptr;
 }
+
+int string_type::yaml2bin(const module& module,
+                          const YAML::Node& node,
+                          ibinary_writer& writer) const {
+    /**
+     * A string is encoded as the contents of the string, plus a pointer for length.
+     * We need to pre-align the string so that the pointer ends up on a 2 byte boundary,
+     * and is well-aligned.
+     * If we don't do the pre-alignment, the buffer ends up looking like this for odd
+     * length strings, for instance "hello":
+     *
+     * |h|e|l|l|o|0|6|0|
+     *
+     * That 0 byte was inserted due to aligning the pointer to a 2 byte boundary. lidl
+     * strings are _not_ null terminated for now.
+     *
+     * Therefore, to put the pointer on a 2 byte address, we need to _pre-align_ the
+     * string so that it looks like this:
+     *
+     * |0|h|e|l|l|o|5|0|
+     *
+     * This way, the length is 5 as expected.
+     */
+    auto str = node.as<std::string>();
+    auto pre_pad = (writer.tell() + str.size()) % 2;
+    std::vector<char> pad(pre_pad);
+    writer.write_raw(pad);
+    writer.write_raw(str);
+    writer.align(2); // Unnecessary, but kept for completeness
+    auto pos = writer.tell();
+    uint16_t len = str.size();
+    writer.write(len);
+    return pos;
+}
 } // namespace lidl

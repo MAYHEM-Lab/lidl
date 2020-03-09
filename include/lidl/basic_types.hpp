@@ -199,15 +199,7 @@ struct string_type : reference_type {
 
     int yaml2bin(const module& module,
                  const YAML::Node& node,
-                 ibinary_writer& writer) const override {
-        auto str = node.as<std::string>();
-        writer.write_raw(str);
-        writer.align(2);
-        auto pos = writer.tell();
-        uint16_t len = str.size();
-        writer.write(len);
-        return pos;
-    }
+                 ibinary_writer& writer) const override;
 };
 
 struct vector_type : generic {
