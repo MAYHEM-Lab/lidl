@@ -110,8 +110,6 @@ make_generic_declaration(std::vector<std::pair<std::string, std::string>> arg) {
     return generic_declaration(std::move(res));
 }
 
-generic::~generic() = default;
-
 std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_view type) {
     if (type == "type") {
         return std::make_unique<type_parameter>();

@@ -1,3 +1,41 @@
+my_struct:
+  type: structure
+  members:
+    i: i8
+
+complex_struct:
+  type: structure
+  members:
+    v:
+      type:
+        name: vector
+        parameters:
+          - u8
+
+example:
+  type: service
+  procedures:
+    take_struct:
+      returns:
+        - i8
+      parameters:
+        str: my_struct
+    echo_struct:
+      returns:
+        - my_struct
+      parameters:
+        str: my_struct
+    take_complex:
+      returns:
+        - i8
+      parameters:
+        str: complex_struct
+    echo_complex:
+      returns:
+        - complex_struct
+      parameters:
+        str: complex_struct
+
 calculator:
   type: service
   procedures:

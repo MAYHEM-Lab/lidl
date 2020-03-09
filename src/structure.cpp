@@ -37,12 +37,31 @@ std::pair<YAML::Node, size_t> structure::bin2yaml(const module& mod,
 int structure::yaml2bin(const module& mod,
                          const YAML::Node& node,
                          ibinary_writer& writer) const {
+    std::unordered_map<std::string, int> references;
+    for (auto& [mem_name, mem] : members) {
+        auto t = get_type(mod, mem.type_);
+        if (!t->is_reference_type(mod)) {
+            // Continue, we'll place it inline
+            continue;
+        }
+        auto pointee = get_type(mod, std::get<name>(mem.type_.args[0].get_variant()));
+        references.emplace(mem_name, pointee->yaml2bin(mod, node[mem_name], writer));
+    }
+
     writer.align(wire_layout(mod).alignment());
     auto pos = writer.tell();
     for (auto& [mem_name, mem] : members) {
-        auto& elem = node[mem_name];
-        writer.align(get_type(mod, mem.type_)->wire_layout(mod).alignment());
-        get_type(mod, mem.type_)->yaml2bin(mod, elem, writer);
+        auto t = get_type(mod, mem.type_);
+        if (t->is_reference_type(mod)) {
+            const auto pos = references[mem_name];
+            YAML::Node ptr_node(pos);
+            writer.align(t->wire_layout(mod).alignment());
+            t->yaml2bin(mod, ptr_node, writer);
+        } else {
+            auto& elem = node[mem_name];
+            writer.align(t->wire_layout(mod).alignment());
+            t->yaml2bin(mod, elem, writer);
+        }
     }
     return pos;
 }

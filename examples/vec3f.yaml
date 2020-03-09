@@ -28,6 +28,8 @@ vertex:
 texture2d:
   type: structure
   members:
+    width: i16
+    height: i16
     path:
       type: string
 
