@@ -29,7 +29,7 @@ texture2d:
   type: structure
   members:
     width: i16
-    height: i16
+    height: i32 # force padding
     path:
       type: string
 
