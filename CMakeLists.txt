@@ -26,8 +26,8 @@ add_library(lidl_core
     src/enumeration.cpp
     include/lidl/union.hpp
     include/lidl/enumeration.hpp
-    src/union_enum_pass.cpp src/instantiation_pass.cpp src/service_pass.cpp include/lidl/basic_types.hpp)
-target_compile_features(lidl_core PUBLIC cxx_std_20)
+    src/union_enum_pass.cpp src/instantiation_pass.cpp src/service_pass.cpp include/lidl/basic_types.hpp src/layout.cpp)
+target_compile_features(lidl_core PUBLIC cxx_std_17)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
 target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations -Werror=return-type)

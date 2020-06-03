@@ -9,15 +9,19 @@ bool structure::is_reference_type(const module& mod) const {
 }
 
 raw_layout structure::wire_layout(const module& mod) const {
-    aggregate_layout_computer computer;
+    return layout(mod).get();
+}
+
+compound_layout structure::layout(const module& mod) const {
+    compound_layout computer;
     for (auto& [name, member] : members) {
         if (get_type(mod, member.type_)->is_reference_type(mod)) {
-            computer.add({2, 2});
+            computer.add_member(name, {2, 2});
         } else {
-            computer.add(get_type(mod, member.type_)->wire_layout(mod));
+            computer.add_member(name, get_type(mod, member.type_)->wire_layout(mod));
         }
     }
-    return computer.get();
+    return computer;
 }
 
 std::pair<YAML::Node, size_t> structure::bin2yaml(const module& mod,

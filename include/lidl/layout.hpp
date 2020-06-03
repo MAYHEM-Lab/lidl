@@ -4,13 +4,18 @@
 #include <cstdint>
 #include <fmt/format.h>
 #include <numeric>
+#include <unordered_map>
 
 namespace lidl {
 struct raw_layout {
 public:
-    raw_layout(int16_t sz, int16_t align)
+    raw_layout(size_t sz, size_t align)
         : m_size{sz}
         , m_alignment{align} {
+        if ((m_size % m_alignment) != 0) {
+            throw std::runtime_error("Bad alignment!");
+        }
+
         if (m_alignment != 0) {
             while (m_size % m_alignment) {
                 m_size++;
@@ -39,8 +44,8 @@ public:
 
 private:
     int16_t m_padding = 0;
-    int16_t m_size;
-    int16_t m_alignment;
+    size_t m_size;
+    size_t m_alignment;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const raw_layout& layout) {
@@ -65,24 +70,19 @@ private:
     raw_layout m_current{0, 0};
 };
 
-struct aggregate_layout_computer {
+class compound_layout {
 public:
-    aggregate_layout_computer& add(const raw_layout& layout) {
-        int padding = 0;
-        while ((m_current.size() - m_current.padding() + padding) % layout.alignment()) {
-            padding++;
-        }
-        m_current = raw_layout(
-            m_current.size() + layout.size() - m_current.padding() + padding,
-            std::lcm(std::max<int>(1, m_current.alignment()), layout.alignment()));
-        return *this;
-    }
+    compound_layout& add_member(std::string_view member_name, const raw_layout& member_layout);
 
-    [[nodiscard]] raw_layout get() const {
+    [[nodiscard]] std::optional<size_t> offset_of(std::string_view name) const;
+
+    const raw_layout& get() const {
         return m_current;
     }
 
 private:
-    raw_layout m_current{0, 0};
+    raw_layout m_current{1, 1};
+    size_t m_padding = 1;
+    std::unordered_map<std::string, size_t> m_offsets;
 };
 } // namespace lidl
