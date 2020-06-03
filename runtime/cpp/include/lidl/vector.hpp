@@ -155,6 +155,15 @@ vector<T>& create_vector(message_builder& builder, typename T::element_type& ele
     return res;
 }
 
+template <class T, std::enable_if_t<is_ptr<T>{}>* = nullptr>
+vector<T>& create_vector(message_builder& builder, typename T::element_type& elem,typename T::element_type& elem1) {
+    auto alloc = builder.allocate(2 * sizeof(T), alignof(T));
+    auto& res = emplace_raw<vector<T>>(builder, reinterpret_cast<T*>(alloc));
+    res.get_raw().span()[0] = elem;
+    res.get_raw().span()[1] = elem1;
+    return res;
+}
+
 template <class T, std::enable_if_t<is_reference_type<T>{}>* = nullptr>
 vector<ptr<T>>& create_vector(message_builder& builder, T& elem) {
     return create_vector<ptr<T>>(builder, elem);

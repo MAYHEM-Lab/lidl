@@ -5,7 +5,7 @@
 
 namespace lidl {
 template<class T>
-class ptr {
+class alignas(2) ptr {
     struct unsafe_;
 
 public:
