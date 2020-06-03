@@ -111,13 +111,35 @@ int vector_type::yaml2bin(const module& mod,
                           const generic_instantiation& instantiation,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
-    auto init_pos = writer.tell();
     auto& arg = std::get<name>(instantiation.arguments()[0]);
-    if (auto pointee = get_type(mod, arg); pointee) {
+    auto pointee = get_type(mod, arg);
+    Expects(pointee != nullptr);
+
+    int init_pos = 0;
+    if (pointee->is_reference_type(mod)) {
+        auto actual_pointee = get_type(mod, std::get<name>(arg.args[0].get_variant()));
+
+        std::vector<int> positions;
         for (auto& elem : node) {
+            writer.align(actual_pointee->wire_layout(mod).alignment());
+            positions.push_back(actual_pointee->yaml2bin(mod, elem, writer));
+        }
+
+        writer.align(2);
+        init_pos = writer.tell();
+        for (auto pos : positions) {
+            YAML::Node ptr_node(pos);
+            writer.align(pointee->wire_layout(mod).alignment());
+            pointee->yaml2bin(mod, ptr_node, writer);
+        }
+    } else {
+        init_pos = writer.tell();
+        for (auto& elem : node) {
+            writer.align(pointee->wire_layout(mod).alignment());
             pointee->yaml2bin(mod, elem, writer);
         }
     }
+
     writer.align(2);
     auto pos = writer.tell();
     uint16_t diff = writer.tell() - init_pos;
