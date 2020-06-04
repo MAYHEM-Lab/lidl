@@ -16,8 +16,6 @@
 #include <string>
 #include <yaml-cpp/yaml.h>
 
-
-
 namespace lidl::yaml {
 namespace {
 generic_declaration parse_parameters(const YAML::Node& node) {

@@ -9,6 +9,7 @@ if (BUILD_TESTS)
     enable_testing()
     add_library(test_main test_main.cpp)
     target_include_directories(test_main PUBLIC ".")
+    target_compile_features(test_main PUBLIC cxx_std_17)
 
     add_executable(layout_test layout_test.cpp)
     target_link_libraries(layout_test PUBLIC lidl_core test_main)

@@ -3,6 +3,7 @@
 #include <lidl/module.hpp>
 #include <lidl/scope.hpp>
 #include <string>
+#include "generator.hpp"
 
 namespace lidl::cpp {
 std::string get_identifier(const module& mod, const name& n);

@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-
 namespace lidl {
 struct generic_parameter {
     virtual ~generic_parameter() = default;

@@ -1,0 +1,15 @@
+= lidl C++ backend
+
+== Section design
+
+Each codegen component emits a list of sections.
+
+A section comprises of two code bodies that will be verbatim
+written to the resulting C++ file and the list of other
+sections this section depends on.
+
+The dependency information is required since C++ requires
+forward declarations for stuff.
+
+The two bodies in the sections are the declaration and the
+definition of whatever the

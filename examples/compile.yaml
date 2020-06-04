@@ -1,0 +1,28 @@
+cxx_standard:
+  type: enumeration
+  members:
+    - cpp11
+    - cpp14
+    - cpp17
+    - cpp20
+
+compile_job:
+  type: structure
+  members:
+    file: 
+      type: string
+      attributes:
+        positional: True
+    standard:
+      type: cxx_standard
+      attributes:
+        short: std
+    output:
+      type: string 
+      attributes:
+        short: o
+    flags:
+      type:
+        name: vector
+        parameters:
+          - string

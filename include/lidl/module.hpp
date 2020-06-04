@@ -14,7 +14,8 @@
 namespace lidl {
 struct module {
     std::string module_name;
-    std::string name_space;
+    std::string name_space = "lidlmod";
+
     const module* parent = nullptr;
     std::shared_ptr<scope> symbols = std::make_shared<scope>();
 
@@ -31,34 +32,9 @@ struct module {
     std::deque<service> services;
     mutable std::deque<generic_instantiation> instantiations;
 
-    const generic_instantiation& create_or_get_instantiation(const name& ins) const {
-        auto it = std::find_if(name_ins.begin(), name_ins.end(), [&](auto& p) {
-            return p.first == ins;
-        });
-        if (it != name_ins.end()) {
-            return *it->second;
-        }
+    const generic_instantiation& create_or_get_instantiation(const name& ins) const;
 
-        instantiations.emplace_back(ins);
-        name_ins.emplace_back(ins, &instantiations.back());
-        return instantiations.back();
-    }
-
-    module& get_child(std::string_view child_name) const {
-        auto it = std::find_if(children.begin(), children.end(), [&](auto& child) {
-            return child.first == child_name;
-        });
-        if (it != children.end()) {
-            return *(it->second);
-        }
-
-        children.emplace_back(std::string(child_name), std::make_unique<module>());
-        auto& res = *children.back().second;
-        res.parent = this;
-        res.symbols = symbols->add_child_scope();
-        res.module_name = child_name;
-        return res;
-    }
+    module& get_child(std::string_view child_name) const;
 
     mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
     mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;

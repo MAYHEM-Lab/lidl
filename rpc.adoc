@@ -1,0 +1,109 @@
+= LIDL Design
+
+LIDL is the interface description language of tos, and related projects.
+
+It's primary objective is to perform efficient remote procedure calls both within a 
+tos device and between tos devices.
+
+As lidl supports calls over networks, it also defines a network protocol for 
+serialization. 
+
+== Design goals
+
+. Efficient, zero-overhead execution for local calls.
+.. Must support true zero-copy interfaces. Need to support `span`.
+.. No network serialization, preferably a direct virtual call or table dispatch.
+. Easy remote calls.
+.. The interfaces should _speak_ C++ or whatever the language is, so `std::string_view`, not `whatever::string`.
+. Use C struct layout rules.
+.. This allows for true direct access to structs that only contain primitives.
+
+== Non-goals
+
+. Support for _mmap and forget_ usage.
+.. This _always_ requires all the data is inline. Contradicts the zero overhead call requirement. 
+After an `mmap`, pointers may need to be adjusted. Same for before sending over wire.
+
+== Data design
+
+=== Primitive types
+
+Primitive types are types of objects that are completely self contained.
+This essentially means anything that is not or does not contain a pointer.
+
+List of primitive types:
+
+- `{i,u}{8,16,32,64}`.
+- `f32`, `f64`.
+- `bool`.
+- `array<T>` where `T` is a primitive type.
+- Structures whose members are all primitive types.
+
+Primitive objects (instances of primitive types) are always stored inline.
+
+=== Reference types
+
+Reference types are types of objects that contain pointers to other data.
+
+There are 3 primary reference types in lidl:
+
+. `vector<T>`
+. `string`
+. `optional<T>`
+
+Reference types are represented as offsets in the wire format. They cannot
+be placed inline as the size of what they point to is often unknown. Optionals
+of primitive types have known sizes at build time, but for simplicity, they 
+are implemented as reference types.
+
+=== Compound types
+
+Compound types are types that are types that are made out of other, existing types.
+Examples of compound types are structures and arrays.
+
+=== View types
+
+View types are non-owning views into existing memory. View types do not have a 
+wire representation. They can only appear in procedure signatures. How they are
+transferred over the network is implementation defined.
+
+Currently, the following view types are supported:
+
+. `std::string_view`: referred to as `string_view` in declarations.
+. `tos::span<T>` where `T` is a primitive type, referred to as `span` in declarations.
+
+== LIDL RPC
+
+=== Services
+
+A service comprises of a list of procedures.
+
+=== Procedures
+
+A procedure is the core piece of lidl RPC. It defines a list of parameter types and
+a return type. The combination of the parameter and return types is called the 
+signature of the procedure.
+
+The types in the signature can be any lidl type, plus view types.
+
+=== C++ Codegen
+
+For every service, lidl generates an _abstract class_ with the procedures as it's 
+pure member functions.
+
+Every procedure gets a unique type for it's parameters and return types. Unless
+view types are involved, these types are simply structs with the parameter and 
+return types as members.
+
+The network types are language independent and they support serialization to 
+disk as well. This means that even if a procedure has a view type, the view type
+must be _lowered_ to a native lidl type before being sent over the network.
+
+For instance, a `tos::span<const uint8_t>` in the parameters list will become 
+a `vector<u8>` in the network type. Since a local lidl call will not involve the
+network serialization, this has no impact on the efficiency of the mechanism.
+
+== Schemas
+
+All lidl types and services are written in schemas. Currently, lidl schemas are
+encoded in yaml files.

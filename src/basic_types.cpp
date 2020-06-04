@@ -98,6 +98,19 @@ const module& get_root_module() {
     return m;
 }
 
+const generic_instantiation& module::create_or_get_instantiation(const name& ins) const {
+    auto it = std::find_if(name_ins.begin(), name_ins.end(), [&](auto& p) {
+      return p.first == ins;
+    });
+    if (it != name_ins.end()) {
+        return *it->second;
+    }
+
+    instantiations.emplace_back(ins);
+    name_ins.emplace_back(ins, &instantiations.back());
+    return instantiations.back();
+}
+
 bool array_type::is_reference(const module& mod,
                               const generic_instantiation& instantiation) const {
     auto arg = std::get<name>(instantiation.arguments()[0]);
