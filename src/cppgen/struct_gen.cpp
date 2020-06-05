@@ -7,18 +7,21 @@
 #include "cppgen.hpp"
 #include "struct_bodygen.hpp"
 
+#include <lidl/service.hpp>
+
 namespace lidl::cpp {
 sections struct_gen::do_generate() {
     constexpr auto format = R"__(class {0} : public ::lidl::struct_base<{0}> {{
             {1}
         }};)__";
 
-    std::stringstream body;
-    struct_body_gen(mod(), name(), get()).generate(body);
+    auto body = struct_body_gen(mod(), symbol(), name(), get()).generate();
 
     section s;
-    s.name = fmt::format("{}_def", name());
-    s.definition = fmt::format(format, name(), body.str());
+    s.key.symbol = symbol();
+    s.key.type   = section_type::definition;
+    s.definition = fmt::format(format, name(), body.m_sections[0].definition);
+    s.depends_on = body.m_sections[0].depends_on;
 
     auto result = generate_traits();
     result.add(std::move(s));
@@ -42,7 +45,7 @@ sections struct_gen::generate_traits() {
     std::vector<std::string> ctor_args{""};
     for (auto& [member_name, member] : get().members) {
         auto member_type = get_type(mod(), member.type_);
-        auto identifier = get_user_identifier(mod(), member.type_);
+        auto identifier  = get_user_identifier(mod(), member.type_);
         ctor_args.push_back(fmt::format("p_{}", member_name));
 
         if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
@@ -66,7 +69,6 @@ sections struct_gen::generate_traits() {
         )__";
 
     section trait_sect;
-    trait_sect.name = fmt::format("{}_lidl_trait", name());
     trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
                                         name(),
@@ -74,7 +76,7 @@ sections struct_gen::generate_traits() {
                                         fmt::join(ctor_types, ", "),
                                         fmt::join(ctor_args, ", "),
                                         fmt::join(member_types, ", "));
-    trait_sect.add_dependency(fmt::format("{}_def", name()));
+    trait_sect.add_dependency(def_key());
 
     constexpr auto std_format = R"__(
             template <>
@@ -94,19 +96,29 @@ sections struct_gen::generate_traits() {
 
 
     section std_trait_sect;
-    std_trait_sect.name = fmt::format("{}_lidl_trait", name());
     std_trait_sect.name_space = "std";
-    std_trait_sect.definition = fmt::format(format,
-                                            name(),
-                                            fmt::join(members, ", "),
-                                            fmt::join(ctor_types, ", "),
-                                            fmt::join(ctor_args, ", "),
-                                            fmt::join(member_types, ", ")) +
-                                fmt::format(std_format, name(), members.size()) +
+    std_trait_sect.definition = fmt::format(std_format, name(), members.size()) +
                                 fmt::format("{}", fmt::join(tuple_elements, "\n"));
-    std_trait_sect.add_dependency(fmt::format("{}_def", name()));
+    std_trait_sect.add_dependency(def_key());
 
-    return sections{{std::move(trait_sect), std::move(std_trait_sect)}};
+    auto res = sections{{std::move(trait_sect), std::move(std_trait_sect)}};
+
+    if (auto attr =
+            get().attributes.get<procedure_params_attribute>("procedure_params")) {
+        constexpr auto rpc_trait_format = R"__(template <> struct rpc_param_traits<{}> {{
+            static constexpr auto params_for = &{}::{};
+        }};)__";
+
+        section rpc_traits_sect;
+        rpc_traits_sect.name_space = "lidl";
+        rpc_traits_sect.definition =
+            fmt::format(rpc_trait_format, name(), attr->serv_name, attr->proc_name);
+        rpc_traits_sect.add_dependency(def_key());
+        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        res.add(std::move(rpc_traits_sect));
+    }
+
+    return res;
 }
 
 

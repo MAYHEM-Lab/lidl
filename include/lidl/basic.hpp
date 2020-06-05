@@ -36,6 +36,11 @@ private:
 
 struct generic_argument;
 
+/**
+ * A name object refers to a concrete type in a lidl module.
+ *
+ * If the type is a generic instantiation, the name stores the arguments.
+ */
 struct name {
     symbol_handle base;
     std::vector<generic_argument> args;

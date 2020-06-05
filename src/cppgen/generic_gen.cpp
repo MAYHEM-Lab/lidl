@@ -24,7 +24,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
     tmpmod.structs.emplace_back(str.instantiate(mod(), get()));
     reference_type_pass(tmpmod);
 
-    struct_gen gen(tmpmod, full_name(), name(), tmpmod.structs.back());
+    struct_gen gen(tmpmod, symbol(), full_name(), name(), tmpmod.structs.back());
     return std::move(gen.generate());
 }
 
@@ -35,7 +35,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     reference_type_pass(tmpmod);
     union_enum_pass(tmpmod);
 
-    union_gen gen(tmpmod, full_name(), name(), tmpmod.unions.back());
+    union_gen gen(tmpmod, symbol(), full_name(), name(), tmpmod.unions.back());
 
     return std::move(gen.generate());
 }

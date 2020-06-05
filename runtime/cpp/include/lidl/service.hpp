@@ -35,4 +35,7 @@ struct procedure_traits<RetType (Type::*const)(ArgTypes...)> {
 template<class Type, class RetType, class... ArgTypes>
 struct procedure_traits<RetType (Type::*)(ArgTypes...)> : procedure_traits<RetType (Type::*const)(ArgTypes...)> {
 };
+
+template <class T>
+class rpc_param_traits;
 } // namespace lidl

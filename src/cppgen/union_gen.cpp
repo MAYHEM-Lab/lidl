@@ -14,14 +14,14 @@ std::string union_gen::generate_getter(std::string_view member_name,
                                        bool is_const) {
     auto member_type = get_type(mod(), mem.type_);
     if (!member_type->is_reference_type(mod())) {
-        auto type_name = get_identifier(mod(), mem.type_);
-        constexpr auto format = R"__({}& {}() {{ return m_{}; }})__";
+        auto type_name              = get_identifier(mod(), mem.type_);
+        constexpr auto format       = R"__({}& {}() {{ return m_{}; }})__";
         constexpr auto const_format = R"__(const {}& {}() const {{ return m_{}; }})__";
         return fmt::format(
             is_const ? const_format : format, type_name, member_name, member_name);
     } else {
         // need to dereference before return
-        auto& base = std::get<lidl::name>(mem.type_.args[0]);
+        auto& base      = std::get<lidl::name>(mem.type_.args[0]);
         auto identifier = get_identifier(mod(), base);
         if (!mem.is_nullable()) {
             constexpr auto format = R"__({}& {}() {{ return m_{}.unsafe().get(); }})__";
@@ -42,7 +42,7 @@ sections union_gen::do_generate() {
     }
 
     std::stringstream ctor;
-    auto enum_name = fmt::format("{}_alternatives", ctor_name());
+    auto enum_name   = fmt::format("{}_alternatives", ctor_name());
     int member_index = 0;
     for (auto& [member_name, member] : get().members) {
         std::string arg_names;
@@ -50,12 +50,12 @@ sections union_gen::do_generate() {
         const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
 
         auto member_type = get_type(mod(), member.type_);
-        auto identifier = get_user_identifier(mod(), member.type_);
+        auto identifier  = get_user_identifier(mod(), member.type_);
         if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
-            arg_names = fmt::format("const {}& p_{}", identifier, member_name);
+            arg_names        = fmt::format("const {}& p_{}", identifier, member_name);
             initializer_list = fmt::format("m_{0}(p_{0})", member_name);
         } else {
-            arg_names = fmt::format("const {}* p_{}", identifier, member_name);
+            arg_names        = fmt::format("const {}* p_{}", identifier, member_name);
             initializer_list = fmt::format(
                 "m_{0}(p_{0} ? decltype({0}){{*p_{0}}} : decltype({0}){{nullptr}})",
                 member_name);
@@ -115,13 +115,21 @@ sections union_gen::do_generate() {
         accessors << generate_getter(mem_name, mem, false) << '\n';
     }
 
-    enum_gen en(mod(), enum_name, get().get_enum());
+    enum_gen en(mod(), {}, enum_name, get().get_enum());
 
     section s;
-    s.name = fmt::format("{}_def", name());
+    s.key        = def_key();
     s.definition = fmt::format(
         format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str());
-    s.add_dependency(enum_name + "_def");
+    s.add_dependency({enum_name, section_type::definition});
+
+    // Member types must be defined before us
+    for (auto& [name, member] : get().members) {
+        auto deps = def_keys_from_name(mod(), member.type_);
+        for (auto& key : deps) {
+            s.add_dependency(key);
+        }
+    }
 
     auto result = generate_traits();
 
@@ -152,7 +160,7 @@ sections union_gen::generate_traits() {
         const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
 
         auto member_type = get_type(mod(), member.type_);
-        auto identifier = get_user_identifier(mod(), member.type_);
+        auto identifier  = get_user_identifier(mod(), member.type_);
         if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
             arg_names = fmt::format("const {}& p_{}", identifier, member_name);
         } else {
@@ -182,7 +190,6 @@ sections union_gen::generate_traits() {
         )__";
 
     section trait_sect;
-    trait_sect.name = fmt::format("{}_lidl_trait", name());
     trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
                                         name(),
@@ -190,7 +197,7 @@ sections union_gen::generate_traits() {
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
-    trait_sect.add_dependency(fmt::format("{}_def", name()));
+    trait_sect.add_dependency(def_key());
 
     return sections{{std::move(trait_sect)}};
 }

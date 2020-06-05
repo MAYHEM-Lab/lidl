@@ -47,6 +47,84 @@ void declare_template(const module& mod,
         "template <{}>\nclass {};\n", fmt::join(params, ", "), generic_name);
 }
 
+
+std::vector<section_key_t> generate_procedure(const module& mod,
+                                              std::string_view proc_name,
+                                              const procedure& proc,
+                                              std::ostream& str) {
+    constexpr auto decl_format = "    virtual {} {}({}) = 0;";
+
+    std::vector<section_key_t> dependencies;
+
+    std::vector<std::string> params;
+    for (auto& [param_name, param] : proc.parameters) {
+        auto deps = def_keys_from_name(mod, param);
+        for (auto& key : deps) {
+            dependencies.push_back(key);
+        }
+
+        if (get_type(mod, param)->is_reference_type(mod)) {
+            if (param.args.empty()) {
+                throw std::runtime_error(
+                    fmt::format("Not a pointer: {}", get_identifier(mod, param)));
+            }
+            auto identifier = get_identifier(mod, std::get<name>(param.args.at(0)));
+            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
+        } else {
+            auto identifier = get_identifier(mod, param);
+            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
+        }
+    }
+
+    std::string ret_type_name;
+    auto deps = def_keys_from_name(mod, proc.return_types.at(0));
+    for (auto& key : deps) {
+        dependencies.push_back(key);
+    }
+    auto ret_type = get_type(mod, proc.return_types.at(0));
+    ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
+    if (ret_type->is_reference_type(mod)) {
+        ret_type_name = fmt::format("const {}&", ret_type_name);
+        params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
+    }
+
+    str << fmt::format(decl_format, ret_type_name, proc_name, fmt::join(params, ", "));
+
+    return dependencies;
+}
+
+sections
+generate_service(const module& mod, std::string_view name, const service& service) {
+    std::vector<std::string> inheritance;
+    for (auto& base : service.extends) {
+        inheritance.emplace_back(nameof(base.base));
+    }
+
+    std::stringstream str;
+
+    section def_sec;
+
+    str << fmt::format(
+        "class {}{} {{\npublic:\n",
+        name,
+        inheritance.empty()
+        ? ""
+        : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
+    for (auto& [name, proc] : service.procedures) {
+        auto deps = generate_procedure(mod, name, proc, str);
+        def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
+        str << '\n';
+    }
+    str << fmt::format("    virtual ~{}() = default;\n", name);
+    str << "};";
+    str << '\n';
+
+    def_sec.key = {std::string(name), section_type::definition};
+    def_sec.definition = str.str();
+
+    return {{std::move(def_sec)}};
+}
+
 struct cppgen {
     explicit cppgen(const module& mod)
         : m_module(&mod) {
@@ -96,21 +174,23 @@ struct cppgen {
                 continue;
             }
 
-            auto name = nameof(*m_module->symbols->definition_lookup(&e));
-            enum_gen generator(mod(), name, e);
+            auto sym  = *m_module->symbols->definition_lookup(&e);
+            auto name = nameof(sym);
+            enum_gen generator(mod(), sym, name, e);
             m_sections.merge_before(generator.generate());
         }
 
         for (auto& ins : mod().instantiations) {
-            auto name =
-                nameof(*recursive_definition_lookup(*mod().symbols, &ins.generic_type()));
-            auto generator = generic_gen(mod(), name, ins);
+            auto sym  = *recursive_definition_lookup(*mod().symbols, &ins.generic_type());
+            auto name = nameof(sym);
+            auto generator = generic_gen(mod(), sym, name, ins);
             m_sections.merge_before(generator.generate());
         }
 
         for (auto& u : mod().unions) {
-            auto name = nameof(*mod().symbols->definition_lookup(&u));
-            auto generator = union_gen(mod(), name, u);
+            auto sym       = *mod().symbols->definition_lookup(&u);
+            auto name      = nameof(sym);
+            auto generator = union_gen(mod(), sym, name, u);
             m_sections.merge_before(generator.generate());
         }
 
@@ -118,16 +198,23 @@ struct cppgen {
             if (is_anonymous(*m_module, &s)) {
                 continue;
             }
-            auto name = nameof(*mod().symbols->definition_lookup(&s));
-            auto generator = struct_gen(mod(), name, s);
+            auto sym       = *mod().symbols->definition_lookup(&s);
+            auto name      = nameof(sym);
+            auto generator = struct_gen(mod(), sym, name, s);
             m_sections.merge_before(generator.generate());
+        }
+
+        for (auto& service : mod().services) {
+            Expects(!is_anonymous(mod(), &service));
+            auto name = nameof(*mod().symbols->definition_lookup(&service));
+            m_sections.merge_before(generate_service(mod(), name, service));
         }
 
         m_sections.merge_before(generate_module_traits());
 
         str << forward_decls.str() << '\n';
 
-        emitter e(m_sections);
+        emitter e(mod(), m_sections);
 
         str << e.emit() << '\n';
     }
@@ -144,12 +231,11 @@ private:
 
         std::vector<std::string> symbol_names;
         for (auto& s : m_sections.m_sections) {
-            //TODO:
-//            symbol_names.emplace_back(s.name.name);
+            // TODO:
+            //            symbol_names.emplace_back(s.name.name);
         }
 
         section s;
-        s.name = "mod_traits";
         s.name_space = "lidl";
         s.definition = fmt::format(format, name(), fmt::join(symbol_names, ", "));
         return sections{{std::move(s)}};
@@ -168,38 +254,6 @@ private:
     const module* m_module;
 };
 } // namespace
-
-void generate_procedure(const module& mod,
-                        std::string_view proc_name,
-                        const procedure& proc,
-                        std::ostream& str) {
-    constexpr auto decl_format = "    virtual {} {}({}) = 0;";
-
-    std::vector<std::string> params;
-    for (auto& [param_name, param] : proc.parameters) {
-        if (get_type(mod, param)->is_reference_type(mod)) {
-            if (param.args.empty()) {
-                throw std::runtime_error(
-                    fmt::format("Not a pointer: {}", get_identifier(mod, param)));
-            }
-            auto identifier = get_identifier(mod, std::get<name>(param.args.at(0)));
-            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
-        } else {
-            auto identifier = get_identifier(mod, param);
-            params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
-        }
-    }
-
-    std::string ret_type_name;
-    auto ret_type = get_type(mod, proc.return_types.at(0));
-    ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
-    if (ret_type->is_reference_type(mod)) {
-        ret_type_name = fmt::format("const {}&", ret_type_name);
-        params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
-    }
-
-    str << fmt::format(decl_format, ret_type_name, proc_name, fmt::join(params, ", "));
-}
 
 void generate_service_descriptor(const module& mod,
                                  std::string_view service_name,
@@ -241,30 +295,6 @@ void generate_service_descriptor(const module& mod,
             mod, name{*mod.symbols->definition_lookup(service.procedure_results_union)}));
     str << "};";
 }
-
-void generate_service(const module& mod,
-                      std::string_view name,
-                      const service& service,
-                      std::ostream& str) {
-    std::vector<std::string> inheritance;
-    for (auto& base : service.extends) {
-        inheritance.emplace_back(nameof(base.base));
-    }
-
-    str << fmt::format(
-        "class {}{} {{\npublic:\n",
-        name,
-        inheritance.empty()
-            ? ""
-            : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
-    for (auto& [name, proc] : service.procedures) {
-        generate_procedure(mod, name, proc, str);
-        str << '\n';
-    }
-    str << fmt::format("    virtual ~{}() = default;\n", name);
-    str << "};";
-    str << '\n';
-}
 } // namespace lidl::cpp
 
 namespace lidl {
@@ -289,20 +319,13 @@ void generate(const module& mod, std::ostream& str) {
 
     cppgen gen(mod);
     gen.generate(str);
-    //
-    //    for (auto& service : mod.services) {
-    //        Expects(!is_anonymous(mod, &service));
-    //        auto name = nameof(*mod.symbols->definition_lookup(&service));
-    //        generate_service(mod, name, service, str);
-    //        str << '\n';
-    //    }
-    //
-    //    for (auto& service : mod.services) {
-    //        auto name = nameof(*mod.symbols->definition_lookup(&service));
-    //        str << "namespace lidl {\n";
-    //        generate_service_descriptor(mod, name, service, str);
-    //        str << '\n';
-    //        str << "}\n";
-    //    }
+
+    for (auto& service : mod.services) {
+        auto name = nameof(*mod.symbols->definition_lookup(&service));
+        str << "namespace lidl {\n";
+        generate_service_descriptor(mod, name, service, str);
+        str << '\n';
+        str << "}\n";
+    }
 }
 } // namespace lidl
