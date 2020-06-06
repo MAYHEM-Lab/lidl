@@ -21,6 +21,8 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"array", "::lidl::array"},
         {"optional", "::lidl::optional"},
         {"string", "::lidl::string"},
+        {"string_view", "std::string_view"},
+        {"span", "tos::span"},
         {"vector", "::lidl::vector"},
         {"ptr", "::lidl::ptr"},
         {"expected", "::lidl::expected"}};

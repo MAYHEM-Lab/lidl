@@ -43,17 +43,4 @@ struct reference_type : type {
                           /*.alignment=*/2};
     }
 };
-
-namespace detail {
-struct future_type : type {
-    virtual raw_layout wire_layout(const module& mod) const override {
-        throw std::runtime_error(
-            "Wire layout shouldn't be called on a forward declaration!");
-    }
-
-    virtual bool is_reference_type(const module&) const override {
-        return false;
-    }
-};
-} // namespace detail
 } // namespace lidl

@@ -38,4 +38,13 @@ struct procedure_traits<RetType (Type::*)(ArgTypes...)> : procedure_traits<RetTy
 
 template <class T>
 class rpc_param_traits;
+
+class service_base {
+public:
+    virtual ~service_base() = default;
+};
+
+template <class ServiceT>
+class service : service_base {
+};
 } // namespace lidl

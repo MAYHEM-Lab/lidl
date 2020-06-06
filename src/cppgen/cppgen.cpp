@@ -15,6 +15,7 @@
 #include <fmt/format.h>
 #include <lidl/basic.hpp>
 #include <lidl/module.hpp>
+#include <lidl/view_types.hpp>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -63,13 +64,17 @@ std::vector<section_key_t> generate_procedure(const module& mod,
             dependencies.push_back(key);
         }
 
-        if (get_type(mod, param)->is_reference_type(mod)) {
+        auto param_type = get_type(mod, param);
+        if (param_type->is_reference_type(mod)) {
             if (param.args.empty()) {
                 throw std::runtime_error(
                     fmt::format("Not a pointer: {}", get_identifier(mod, param)));
             }
             auto identifier = get_identifier(mod, std::get<name>(param.args.at(0)));
             params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
+        } else if (auto vt = dynamic_cast<const view_type*>(param_type); vt) {
+            auto identifier = get_identifier(mod, param);
+            params.emplace_back(fmt::format("{} {}", identifier, param_name));
         } else {
             auto identifier = get_identifier(mod, param);
             params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
@@ -81,10 +86,13 @@ std::vector<section_key_t> generate_procedure(const module& mod,
     for (auto& key : deps) {
         dependencies.push_back(key);
     }
+
     auto ret_type = get_type(mod, proc.return_types.at(0));
     ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
     if (ret_type->is_reference_type(mod)) {
         ret_type_name = fmt::format("const {}&", ret_type_name);
+        params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
+    } else if (auto vt = dynamic_cast<const view_type*>(ret_type); vt) {
         params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
     }
 
@@ -99,6 +107,7 @@ generate_service(const module& mod, std::string_view name, const service& servic
     for (auto& base : service.extends) {
         inheritance.emplace_back(nameof(base.base));
     }
+    inheritance.emplace_back(fmt::format("::lidl::service<{}>", name));
 
     std::stringstream str;
 
@@ -108,8 +117,8 @@ generate_service(const module& mod, std::string_view name, const service& servic
         "class {}{} {{\npublic:\n",
         name,
         inheritance.empty()
-        ? ""
-        : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
+            ? ""
+            : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
     for (auto& [name, proc] : service.procedures) {
         auto deps = generate_procedure(mod, name, proc, str);
         def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
@@ -119,7 +128,7 @@ generate_service(const module& mod, std::string_view name, const service& servic
     str << "};";
     str << '\n';
 
-    def_sec.key = {std::string(name), section_type::definition};
+    def_sec.key        = {std::string(name), section_type::definition};
     def_sec.definition = str.str();
 
     return {{std::move(def_sec)}};

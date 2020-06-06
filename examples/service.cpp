@@ -24,9 +24,9 @@ public:
 
 class repeat_impl : public repeat {
 public:
-    const lidl::string& echo(const lidl::string& str,
-                             lidl::message_builder& response) override {
-        return lidl::create_string(response, str.string_view());
+    std::string_view echo(std::string_view str,
+                          lidl::message_builder& response) override {
+        return str;
     }
 };
 
@@ -92,9 +92,8 @@ auto request_handler(std::common_type_t<ServiceT>& service) {
                         auto res = (service.*(proc))(args...);
                         lidl::create<results_union>(response, result_type(res));
                     } else {
-                        auto& res =
-                            (service.*(proc))(args..., response);
-                        auto& r = lidl::create<result_type>(response, res);
+                        auto& res = (service.*(proc))(args..., response);
+                        auto& r   = lidl::create<result_type>(response, res);
                         lidl::create<results_union>(response, r);
                     }
                 };

@@ -22,6 +22,10 @@ public:
         return {&m_ptr.unsafe().get(), static_cast<size_t>(m_ptr.get_offset())};
     }
 
+    operator std::string_view() const {
+        return string_view();
+    }
+
 private:
     ptr<char> m_ptr{nullptr};
 };

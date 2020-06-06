@@ -57,7 +57,7 @@ void reference_type_pass(module& m) {
             for (auto& ret_type : proc.return_types) {
                 reference_type_pass(m, ret_type);
             }
-            for (auto& [__, param_type] : proc.parameters) {
+            for (auto& [_, param_type] : proc.parameters) {
                 reference_type_pass(m, param_type);
             }
         }

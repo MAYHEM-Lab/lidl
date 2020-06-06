@@ -9,6 +9,7 @@
 #include <lidl/basic_types.hpp>
 #include <string_view>
 #include <unordered_map>
+#include <lidl/view_types.hpp>
 
 namespace lidl {
 pointer_type::pointer_type()
@@ -58,7 +59,7 @@ namespace {
 void add_basic_types(module& m) {
     auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
         m.basic_types.emplace_back(std::move(t));
-        define(*m.symbols, name, m.basic_types.back().get());
+        return define(*m.symbols, name, m.basic_types.back().get());
     };
 
     auto add_generic = [&](std::string_view name, std::unique_ptr<generic> t) {
@@ -81,7 +82,9 @@ void add_basic_types(module& m) {
     add_type("f32", std::make_unique<float_type>());
     add_type("f64", std::make_unique<double_type>());
 
-    add_type("string", std::make_unique<string_type>());
+    auto str = add_type("string", std::make_unique<string_type>());
+
+    add_type("string_view", std::make_unique<view_type>(name{str}));
 
     add_generic("ptr", std::make_unique<pointer_type>());
     add_generic("vector", std::make_unique<vector_type>());

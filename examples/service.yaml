@@ -68,6 +68,6 @@ repeat:
   procedures:
     echo:
       returns:
-        - string
+        - string_view
       parameters:
-        message: string
+        message: string_view
