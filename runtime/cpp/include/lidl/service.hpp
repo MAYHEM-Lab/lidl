@@ -36,15 +36,29 @@ template<class Type, class RetType, class... ArgTypes>
 struct procedure_traits<RetType (Type::*)(ArgTypes...)> : procedure_traits<RetType (Type::*const)(ArgTypes...)> {
 };
 
+template <class ServiceT>
+class service_call_union;
+
+template <class ServiceT>
+class service_return_union;
+
 template <class T>
 class rpc_param_traits;
 
 class service_base {
 public:
     virtual ~service_base() = default;
+    virtual std::string_view name() const = 0;
 };
 
 template <class ServiceT>
-class service : service_base {
+class service : public service_base {
+public:
+    std::string_view name() const override {
+        return service_descriptor<ServiceT>::name;
+    }
+
+    using call_union = service_call_union<ServiceT>;
+    using return_union = service_return_union<ServiceT>;
 };
 } // namespace lidl

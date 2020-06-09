@@ -19,7 +19,7 @@ structure procedure_params_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = vt->m_wire_type;
+            m.type_ = vt->get_wire_type();
         } else {
             m.type_ = param;
         }
@@ -45,7 +45,7 @@ structure procedure_results_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = vt->m_wire_type;
+            m.type_ = vt->get_wire_type();
         } else {
             m.type_ = param;
         }
@@ -81,11 +81,15 @@ void service_pass(module& mod) {
         }
         mod.unions.push_back(std::move(procedure_params));
         auto handle = define(*mod.symbols, service_name + "_call", &mod.unions.back());
+        mod.unions.back().attributes.add(
+            std::make_unique<service_call_union_attribute>(service_name, service));
         service.procedure_params_union = &mod.unions.back();
 
         mod.unions.push_back(std::move(procedure_results));
         auto res_handle =
             define(*mod.symbols, service_name + "_return", &mod.unions.back());
+        mod.unions.back().attributes.add(
+            std::make_unique<service_return_union_attribute>(service_name, service));
         service.procedure_results_union = &mod.unions.back();
     }
 }

@@ -26,7 +26,8 @@ class repeat_impl : public repeat {
 public:
     std::string_view echo(std::string_view str,
                           lidl::message_builder& response) override {
-        return str;
+        std::cerr << "echo got " << str << '\n';
+        return str.substr(0, 3);
     }
 };
 
@@ -37,6 +38,17 @@ std::vector<uint8_t> get_request() {
     buf.resize(builder.size());
     return buf;
 }
+
+std::vector<uint8_t> get_echo_req() {
+    std::vector<uint8_t> buf(64);
+    lidl::message_builder builder(buf);
+    lidl::create<repeat_call>(builder,
+                              lidl::create<repeat_echo_params>(
+                                  builder, lidl::create_string(builder, "foobar")));
+    buf.resize(builder.size());
+    return buf;
+}
+
 template<class... ParamsT>
 struct get_result_type_impl;
 
@@ -63,19 +75,30 @@ struct Index<T, std::tuple<U, Types...>> {
 template<class ServiceT, class ParamsT>
 struct get_result_type {};
 
+template<class T>
+using remove_cref = std::remove_const_t<std::remove_reference_t<T>>;
+
 template<class ServiceT>
-auto request_handler(std::common_type_t<ServiceT>& service) {
+auto make_request_handler() {
+    /**
+     * Don't panic!
+     *
+     * Yes, this is full of fearsome metaprogramming magic, but I'll walk you through.
+     */
+
+    // The service descriptor stores the list of procedures in a service. We'll use this
+    // information to decode lidl messages into actual calls to services.
     using descriptor = lidl::service_descriptor<ServiceT>;
 
-    using params_union  = typename descriptor::params_union;
-    using results_union = typename descriptor::results_union;
+    using params_union  = typename ServiceT::call_union;
+    using results_union = typename ServiceT::return_union;
 
     using all_params =
         typename get_result_type_impl<decltype(descriptor::procedures)>::params;
     using all_results =
         typename get_result_type_impl<decltype(descriptor::procedures)>::results;
 
-    return [&](lidl::buffer buffer, lidl::message_builder& response) {
+    return [](ServiceT& service, lidl::buffer buffer, lidl::message_builder& response) {
         visit(
             [&](const auto& call_params) -> decltype(auto) {
                 constexpr auto proc = lidl::rpc_param_traits<std::remove_const_t<
@@ -87,17 +110,58 @@ auto request_handler(std::common_type_t<ServiceT>& service) {
                 using result_type = std::remove_const_t<std::remove_reference_t<decltype(
                     std::get<idx>(std::declval<all_results>()))>>;
 
-                auto fn = [&](const auto&... args) -> void {
+                /**
+                 * This ugly thing is where the final magic happens.
+                 *
+                 * The apply call will pass each member of the parameters of the call to
+                 * this function.
+                 *
+                 * Inside, we have a bunch of cases:
+                 *
+                 * 1. Does the procedure take a message builder or not?
+                 *
+                 *    Procedures that do not return a _reference type_ (types that contain
+                 *    pointers) do not need a message builder since their result will be
+                 *    self contained.
+                 *
+                 * 2. Is the return value a view type?
+                 *
+                 *    Procedures that return a view type need special care. The special
+                 *    care is basically that we copy whatever it returns to the response
+                 *    buffer.
+                 *
+                 *    If not, we return whatever the procedure returned directly.
+                 *
+                 */
+                auto make_service_call = [&service,
+                                          &response](const auto&... args) -> void {
                     if constexpr (!proc_traits::takes_response_builder()) {
                         auto res = (service.*(proc))(args...);
                         lidl::create<results_union>(response, result_type(res));
                     } else {
-                        auto& res = (service.*(proc))(args..., response);
-                        auto& r   = lidl::create<result_type>(response, res);
-                        lidl::create<results_union>(response, r);
+                        const auto& res = (service.*(proc))(args..., response);
+                        if constexpr (std::is_same_v<remove_cref<decltype(res)>,
+                                                     std::string_view>) {
+                            /**
+                             * The procedure returned a view.
+                             *
+                             * We need to see if the returned view is already in the
+                             * response buffer. If it is not, we will copy it.
+                             *
+                             * Issue #6.
+                             */
+
+                            auto& str     = lidl::create_string(response, res);
+                            const auto& r = lidl::create<result_type>(response, str);
+                            lidl::create<results_union>(response, r);
+                        } else {
+                            const auto& r = lidl::create<result_type>(response, res);
+                            lidl::create<results_union>(response, r);
+                        }
                     }
                 };
-                lidl::apply(fn, call_params);
+
+                lidl::apply(make_service_call, call_params);
             },
             lidl::get_root<params_union>(buffer));
     };
@@ -114,13 +178,24 @@ int main(int argc, char** argv) {
     std::cout << lidl::nameof(lidl::get_root<calculator_call>(buf).alternative()) << '\n';
 
     calculator_impl c;
-    auto handler = request_handler<calculator>(c);
+    auto handler = make_request_handler<calculator>();
+
+    repeat_impl r;
+    auto rep_handler = make_request_handler<repeat>();
 
     std::array<uint8_t, 256> resp;
-    lidl::message_builder resp_builder(resp);
-    handler(buf, resp_builder);
+    auto resp_builder = lidl::message_builder(resp);
+    handler(c, buf, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
     auto& res = lidl::get_root<calculator_return>(resp_builder.get_buffer()).multiply();
     std::cout << res.ret0() << '\n';
+
+    resp_builder = lidl::message_builder(resp);
+    req          = get_echo_req();
+    rep_handler(r, lidl::buffer(req), resp_builder);
+    std::cout << resp_builder.size() << '\n';
+
+    auto& rep_res = lidl::get_root<repeat_return>(resp_builder.get_buffer()).echo();
+    std::cout << rep_res.ret0().string_view() << '\n';
 }

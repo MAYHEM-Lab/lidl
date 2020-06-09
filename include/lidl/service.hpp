@@ -44,4 +44,24 @@ public:
     std::string proc_name;
     const procedure* proc;
 };
+
+class service_call_union_attribute : public attribute {
+public:
+    service_call_union_attribute(std::string serv_name, const service& serv)
+        : attribute("service_call_union"), serv_name{std::move(serv_name)}, serv{&serv} {
+    }
+
+    std::string serv_name;
+    const service* serv;
+};
+
+class service_return_union_attribute : public attribute {
+public:
+    service_return_union_attribute(std::string serv_name, const service& serv)
+        : attribute("service_return_union"), serv_name{std::move(serv_name)}, serv{&serv} {
+    }
+
+    std::string serv_name;
+    const service* serv;
+};
 } // namespace lidl

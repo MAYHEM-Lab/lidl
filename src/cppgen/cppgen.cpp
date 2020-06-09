@@ -48,7 +48,6 @@ void declare_template(const module& mod,
         "template <{}>\nclass {};\n", fmt::join(params, ", "), generic_name);
 }
 
-
 std::vector<section_key_t> generate_procedure(const module& mod,
                                               std::string_view proc_name,
                                               const procedure& proc,

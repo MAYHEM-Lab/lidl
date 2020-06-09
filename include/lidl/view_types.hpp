@@ -2,6 +2,7 @@
 
 #include <lidl/basic.hpp>
 #include <lidl/types.hpp>
+#include <lidl/generics.hpp>
 
 namespace lidl {
 struct view_type : type {
@@ -26,6 +27,11 @@ struct view_type : type {
         throw std::runtime_error("View type");
     }
 
+    name get_wire_type() const {
+        return m_wire_type;
+    }
+
+private:
     name m_wire_type;
 };
 }

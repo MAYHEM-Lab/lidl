@@ -26,6 +26,14 @@ public:
         return tos::span<const T>(base, size());
     }
 
+    operator tos::span<T>() {
+        return span();
+    }
+
+    operator tos::span<const T>() const {
+        return span();
+    }
+
     auto begin() {
         return span().begin();
     }

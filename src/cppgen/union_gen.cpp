@@ -199,6 +199,38 @@ sections union_gen::generate_traits() {
                                         fmt::join(members, ", "));
     trait_sect.add_dependency(def_key());
 
-    return sections{{std::move(trait_sect)}};
+    auto res = sections{{std::move(trait_sect)}};
+
+    if (auto attr =
+            get().attributes.get<service_call_union_attribute>("service_call_union")) {
+        constexpr auto rpc_trait_format =
+            R"__(template <> struct service_call_union<{}> : {} {{
+        }};)__";
+
+        section rpc_traits_sect;
+        rpc_traits_sect.name_space = "lidl";
+        rpc_traits_sect.definition =
+            fmt::format(rpc_trait_format, attr->serv_name, name());
+        rpc_traits_sect.add_dependency(def_key());
+        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        res.add(std::move(rpc_traits_sect));
+    }
+
+    if (auto attr =
+        get().attributes.get<service_return_union_attribute>("service_return_union")) {
+        constexpr auto rpc_trait_format =
+            R"__(template <> struct service_return_union<{}> : {} {{
+        }};)__";
+
+        section rpc_traits_sect;
+        rpc_traits_sect.name_space = "lidl";
+        rpc_traits_sect.definition =
+            fmt::format(rpc_trait_format, attr->serv_name, name());
+        rpc_traits_sect.add_dependency(def_key());
+        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        res.add(std::move(rpc_traits_sect));
+    }
+
+    return res;
 }
 } // namespace lidl::cpp
