@@ -2,6 +2,7 @@
 
 #include "lidl/attributes.hpp"
 #include "lidl/basic.hpp"
+#include "lidl/module_meta.hpp"
 #include "lidl/scope.hpp"
 
 #include <fstream>
@@ -15,6 +16,7 @@
 #include <stdexcept>
 #include <string>
 #include <yaml-cpp/yaml.h>
+
 
 namespace lidl::yaml {
 namespace {
@@ -66,7 +68,7 @@ std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const s
     std::vector<generic_argument> args;
 
     for (auto& arg : arg_strs) {
-        auto arg_lookup = recursive_name_lookup(s, arg);
+        auto arg_lookup = recursive_full_name_lookup(s, arg);
         if (!arg_lookup) {
             args.push_back(std::stoll(arg));
             continue;
@@ -80,7 +82,7 @@ std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const s
 name read_type(const YAML::Node& type_node, const scope& s) {
     if (type_node.IsScalar()) {
         auto type_name = type_node.as<std::string>();
-        auto lookup    = recursive_name_lookup(s, type_name);
+        auto lookup    = recursive_full_name_lookup(s, type_name);
         if (!lookup) {
             throw std::runtime_error("no such type: " + type_name);
         }
@@ -88,7 +90,7 @@ name read_type(const YAML::Node& type_node, const scope& s) {
     } else {
         auto base_name = type_node["name"].as<std::string>();
 
-        auto lookup = recursive_name_lookup(s, base_name);
+        auto lookup = recursive_full_name_lookup(s, base_name);
         if (!lookup) {
             throw std::runtime_error("no such type: " + base_name);
         }
@@ -213,7 +215,7 @@ service parse_service(const YAML::Node& node, const module& mod) {
 
 enumeration read_enum(const YAML::Node& node, const scope& scop) {
     enumeration e;
-    e.underlying_type = name{recursive_name_lookup(scop, "i8").value()};
+    e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
     for (auto member : node["members"]) {
         e.members.emplace_back(member.as<std::string>(),
                                enum_member{static_cast<int>(e.members.size())});
@@ -221,81 +223,147 @@ enumeration read_enum(const YAML::Node& node, const scope& scop) {
     return e;
 }
 } // namespace
+
+class yaml_loader {
+public:
+    yaml_loader(module& root, YAML::Node node)
+        : m_root{&root}
+        , m_node{node} {
+    }
+
+    module_meta parse_metadata() {
+        module_meta res;
+        auto metadata = m_node["$lidlmeta"];
+        if (metadata) {
+            if (auto ns = metadata["name"]; ns) {
+                res.name = ns.as<std::string>();
+            }
+            if (auto imports = metadata["imports"]; imports) {
+                res.imports = imports.as<std::vector<std::string>>();
+            }
+        }
+        return res;
+    }
+
+    module& start() {
+        auto meta = parse_metadata();
+        m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("default"));
+
+        for (auto& import : meta.imports) {
+            std::cerr << "Import " << import << '\n';
+            auto path = fmt::format("{}.yaml", import);
+            std::ifstream import_file(path);
+            if (!import_file.good()) {
+                std::cerr << "Could not open " << path << '\n';
+            }
+            auto import_node = YAML::Load(import_file);
+            yaml_loader loader(*m_root, import_node);
+
+            auto imported_meta = loader.parse_metadata();
+
+            auto& imported_module = loader.start();
+            m_imports.push_back(std::move(loader));
+        }
+
+        return *m_mod;
+    }
+
+    void declare_pass() {
+        for (auto& imported : m_imports) {
+            imported.declare_pass();
+        }
+
+        for (auto e : m_node) {
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            Expects(key);
+            Expects(val);
+
+            if (key.as<std::string>() == "$lidlmeta") {
+                continue;
+            }
+
+            Expects(val["type"]);
+
+            if (val["type"].as<std::string>() == "structure") {
+                m_mod->symbols->declare(key.as<std::string>());
+            } else if (val["type"].as<std::string>() == "union") {
+                m_mod->symbols->declare(key.as<std::string>());
+            } else if (val["type"].as<std::string>() == "enumeration") {
+                m_mod->symbols->declare(key.as<std::string>());
+            } else if (val["type"].as<std::string>() == "generic<structure>") {
+                m_mod->symbols->declare(key.as<std::string>());
+            } else if (val["type"].as<std::string>() == "generic<union>") {
+                m_mod->symbols->declare(key.as<std::string>());
+            } else if (val["type"].as<std::string>() == "service") {
+                m_mod->symbols->declare(key.as<std::string>());
+            }
+        }
+    }
+
+    void define_pass() {
+        for (auto& imported : m_imports) {
+            imported.define_pass();
+        }
+
+        for (auto e : m_node) {
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            Expects(key);
+
+            auto name = key.as<std::string>();
+
+            if (name == "$lidlmeta") {
+                continue;
+            }
+
+            Expects(val);
+            Expects(val["type"]);
+
+            auto scope = m_mod->symbols->add_child_scope(name);
+
+            if (val["type"].as<std::string>() == "structure") {
+                m_mod->structs.emplace_back(read_structure(val, *scope));
+                define(*m_mod->symbols, name, &m_mod->structs.back());
+            } else if (val["type"].as<std::string>() == "union") {
+                m_mod->unions.emplace_back(read_union(val, *scope));
+                define(*m_mod->symbols, name, &m_mod->unions.back());
+            } else if (val["type"].as<std::string>() == "enumeration") {
+                m_mod->enums.emplace_back(read_enum(val, *scope));
+                define(*m_mod->symbols, name, &m_mod->enums.back());
+            } else if (val["type"].as<std::string>() == "generic<structure>") {
+                m_mod->generic_structs.emplace_back(read_generic_structure(val, *scope));
+                define(*m_mod->symbols, name, &m_mod->generic_structs.back());
+            } else if (val["type"].as<std::string>() == "generic<union>") {
+                m_mod->generic_unions.emplace_back(read_generic_union(val, *scope));
+                define(*m_mod->symbols, name, &m_mod->generic_unions.back());
+            } else if (val["type"].as<std::string>() == "service") {
+                m_mod->services.emplace_back(parse_service(val, *m_mod));
+                define(*m_mod->symbols, name, &m_mod->services.back());
+            }
+        }
+    }
+
+    module& get() {
+        return *m_mod;
+    }
+
+private:
+    std::vector<yaml_loader> m_imports;
+
+    YAML::Node m_node;
+    module* m_root;
+    module* m_mod;
+};
+
+
 module& load_module(module& root, std::istream& file) {
     auto node = YAML::Load(file);
 
-    std::string module_name = "default_module";
-    auto metadata = node["$lidlmeta"];
-    if (metadata) {
-        if (auto ns = metadata["name"]; ns) {
-            module_name = ns.as<std::string>();
-        }
-    }
+    yaml_loader loader(root, node);
 
-    auto& m = root.get_child(module_name);
+    auto& m = loader.start();
 
-    for (auto e : node) {
-        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        Expects(key);
-        Expects(val);
-
-        if (key.as<std::string>() == "$lidlmeta") {
-            continue;
-        }
-
-        Expects(val["type"]);
-
-        if (val["type"].as<std::string>() == "structure") {
-            m.symbols->declare(key.as<std::string>());
-        } else if (val["type"].as<std::string>() == "union") {
-            m.symbols->declare(key.as<std::string>());
-        } else if (val["type"].as<std::string>() == "enumeration") {
-            m.symbols->declare(key.as<std::string>());
-        } else if (val["type"].as<std::string>() == "generic<structure>") {
-            m.symbols->declare(key.as<std::string>());
-        } else if (val["type"].as<std::string>() == "generic<union>") {
-            m.symbols->declare(key.as<std::string>());
-        } else if (val["type"].as<std::string>() == "service") {
-            m.symbols->declare(key.as<std::string>());
-        }
-    }
-
-    for (auto e : node) {
-        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        Expects(key);
-
-        auto name = key.as<std::string>();
-
-        if (name == "$lidlmeta") {
-            continue;
-        }
-
-        Expects(val);
-        Expects(val["type"]);
-
-        auto scope = m.symbols->add_child_scope(name);
-
-        if (val["type"].as<std::string>() == "structure") {
-            m.structs.emplace_back(read_structure(val, *scope));
-            define(*m.symbols, name, &m.structs.back());
-        } else if (val["type"].as<std::string>() == "union") {
-            m.unions.emplace_back(read_union(val, *scope));
-            define(*m.symbols, name, &m.unions.back());
-        } else if (val["type"].as<std::string>() == "enumeration") {
-            m.enums.emplace_back(read_enum(val, *scope));
-            define(*m.symbols, name, &m.enums.back());
-        } else if (val["type"].as<std::string>() == "generic<structure>") {
-            m.generic_structs.emplace_back(read_generic_structure(val, *scope));
-            define(*m.symbols, name, &m.generic_structs.back());
-        } else if (val["type"].as<std::string>() == "generic<union>") {
-            m.generic_unions.emplace_back(read_generic_union(val, *scope));
-            define(*m.symbols, name, &m.generic_unions.back());
-        } else if (val["type"].as<std::string>() == "service") {
-            m.services.emplace_back(parse_service(val, m));
-            define(*m.symbols, name, &m.services.back());
-        }
-    }
-
+    loader.declare_pass();
+    loader.define_pass();
     return m;
 }
 } // namespace lidl::yaml
