@@ -30,8 +30,4 @@ const type* get_type(const module& mod, const name& n) {
 bool operator==(const name& left, const name& right) {
     return left.base == right.base && left.args == right.args;
 }
-
-bool operator==(const symbol_handle& left, const symbol_handle& right) {
-    return left.get_id() == right.get_id() && left.get_scope() == right.get_scope();
-}
 } // namespace lidl

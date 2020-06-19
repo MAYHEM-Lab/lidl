@@ -32,6 +32,9 @@ private:
     int m_id = 0;
     std::weak_ptr<scope> m_scope;
     friend class scope;
+    friend bool operator==(const symbol_handle& left, const symbol_handle& right) {
+        return left.m_scope.lock() == right.m_scope.lock() && left.m_id == right.m_id;
+    }
 };
 
 struct generic_argument;
