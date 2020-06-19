@@ -32,36 +32,36 @@ struct service {
 
 class procedure_params_attribute : public attribute {
 public:
-    explicit procedure_params_attribute(std::string serv_name,
+    explicit procedure_params_attribute(const service& serv,
                                         std::string name,
                                         const procedure& p)
         : attribute("procedure_params")
-        , serv_name(std::move(serv_name))
+        , serv(&serv)
         , proc_name(std::move(name))
         , proc(&p) {
     }
-    std::string serv_name;
+    const service* serv;
     std::string proc_name;
     const procedure* proc;
 };
 
 class service_call_union_attribute : public attribute {
 public:
-    service_call_union_attribute(std::string serv_name, const service& serv)
-        : attribute("service_call_union"), serv_name{std::move(serv_name)}, serv{&serv} {
+    explicit service_call_union_attribute(const service& serv)
+        : attribute("service_call_union")
+        , serv{&serv} {
     }
 
-    std::string serv_name;
     const service* serv;
 };
 
 class service_return_union_attribute : public attribute {
 public:
-    service_return_union_attribute(std::string serv_name, const service& serv)
-        : attribute("service_return_union"), serv_name{std::move(serv_name)}, serv{&serv} {
+    explicit service_return_union_attribute(const service& serv)
+        : attribute("service_return_union")
+        , serv{&serv} {
     }
 
-    std::string serv_name;
     const service* serv;
 };
 } // namespace lidl
