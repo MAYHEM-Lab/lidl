@@ -101,6 +101,64 @@ std::vector<section_key_t> generate_procedure(const module& mod,
     return dependencies;
 }
 
+
+sections
+generate_service_descriptor(const module& mod, std::string_view, const service& service) {
+    auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
+    auto serv_full_name = get_identifier(mod, {serv_handle});
+
+    std::ostringstream str;
+    section sect;
+    sect.name_space = "lidl";
+    sect.key        = section_key_t{serv_handle, section_type::misc};
+    sect.depends_on.push_back(section_key_t{serv_handle, section_type::definition});
+
+    auto params_union =
+        recursive_definition_lookup(*mod.symbols, service.procedure_params_union).value();
+
+    auto results_union =
+        recursive_definition_lookup(*mod.symbols, service.procedure_results_union)
+            .value();
+
+    sect.add_dependency({params_union, section_type::definition});
+    sect.add_dependency({results_union, section_type::definition});
+
+    std::vector<std::string> tuple_types(service.procedures.size());
+    std::transform(service.procedures.begin(),
+                   service.procedures.end(),
+                   tuple_types.begin(),
+                   [&](auto& proc) {
+                       auto param_name =
+                           get_identifier(mod,
+                                          name{*mod.symbols->definition_lookup(
+                                              std::get<procedure>(proc).params_struct)});
+                       auto res_name =
+                           get_identifier(mod,
+                                          name{*mod.symbols->definition_lookup(
+                                              std::get<procedure>(proc).results_struct)});
+                       return fmt::format(
+                           "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
+                           serv_full_name,
+                           std::get<std::string>(proc),
+                           param_name,
+                           res_name);
+                   });
+    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
+                       serv_full_name);
+    str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
+                       fmt::join(tuple_types, ", "));
+    str << fmt::format("static constexpr inline std::string_view name = \"{}\";\n",
+                       serv_full_name);
+    str << fmt::format("using params_union = {};\n",
+                       get_identifier(mod, name{params_union}));
+    str << fmt::format("using results_union = {};\n",
+                       get_identifier(mod, name{results_union}));
+    str << "};";
+
+    sect.definition = str.str();
+    return sections{{sect}};
+}
+
 sections
 generate_service(const module& mod, std::string_view name, const service& service) {
     std::vector<std::string> inheritance;
@@ -131,11 +189,14 @@ generate_service(const module& mod, std::string_view name, const service& servic
     auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
     auto serv_full_name = get_identifier(mod, {serv_handle});
 
-    def_sec.key        = {serv_full_name, section_type::definition};
+    def_sec.key        = {serv_handle, section_type::definition};
     def_sec.definition = str.str();
     def_sec.name_space = mod.name_space;
 
-    return {{std::move(def_sec)}};
+    auto sects = generate_service_descriptor(mod, name, service);
+    sects.add(std::move(def_sec));
+
+    return sects;
 }
 
 struct cppgen {
@@ -274,51 +335,6 @@ private:
     const module* m_module;
 };
 } // namespace
-
-void generate_service_descriptor(const module& mod,
-                                 std::string_view,
-                                 const service& service,
-                                 std::ostream& str) {
-    auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
-    auto serv_full_name = get_identifier(mod, {serv_handle});
-
-
-    std::vector<std::string> tuple_types(service.procedures.size());
-    std::transform(service.procedures.begin(),
-                   service.procedures.end(),
-                   tuple_types.begin(),
-                   [&](auto& proc) {
-                       auto param_name =
-                           get_identifier(mod,
-                                          name{*mod.symbols->definition_lookup(
-                                              std::get<procedure>(proc).params_struct)});
-                       auto res_name =
-                           get_identifier(mod,
-                                          name{*mod.symbols->definition_lookup(
-                                              std::get<procedure>(proc).results_struct)});
-                       return fmt::format(
-                           "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
-                           serv_full_name,
-                           std::get<std::string>(proc),
-                           param_name,
-                           res_name);
-                   });
-    str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
-                       serv_full_name);
-    str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
-                       fmt::join(tuple_types, ", "));
-    str << fmt::format("static constexpr inline std::string_view name = \"{}\";\n",
-                       serv_full_name);
-    str << fmt::format(
-        "using params_union = {};\n",
-        get_identifier(
-            mod, name{*mod.symbols->definition_lookup(service.procedure_params_union)}));
-    str << fmt::format(
-        "using results_union = {};\n",
-        get_identifier(
-            mod, name{*mod.symbols->definition_lookup(service.procedure_results_union)}));
-    str << "};";
-}
 } // namespace lidl::cpp
 
 namespace lidl {
@@ -343,13 +359,5 @@ void generate(const module& mod, std::ostream& str) {
 
     cppgen gen(mod);
     gen.generate(str);
-
-    for (auto& service : mod.services) {
-        auto name = local_name(*mod.symbols->definition_lookup(&service));
-        str << "namespace lidl {\n";
-        generate_service_descriptor(mod, name, service, str);
-        str << '\n';
-        str << "}\n";
-    }
 }
 } // namespace lidl
