@@ -20,7 +20,8 @@ std::string generic_gen::full_name() {
 
 sections generic_gen::do_generate(const generic_structure& str) {
     module tmpmod;
-    tmpmod.symbols = mod().symbols->add_child_scope();
+    //TODO: Create an unrelated module here
+    tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.structs.emplace_back(str.instantiate(mod(), get()));
     reference_type_pass(tmpmod);
 
@@ -30,7 +31,8 @@ sections generic_gen::do_generate(const generic_structure& str) {
 
 sections generic_gen::do_generate(const generic_union& u) {
     module tmpmod;
-    tmpmod.symbols = mod().symbols->add_child_scope();
+    //TODO: Create an unrelated module here
+    tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.unions.emplace_back(u.instantiate(mod(), get()));
     reference_type_pass(tmpmod);
     union_enum_pass(tmpmod);
