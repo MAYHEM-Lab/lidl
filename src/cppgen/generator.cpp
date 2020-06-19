@@ -7,7 +7,7 @@ std::string section_key_t::to_string(const module& mod) {
     std::string sym;
 
     if (auto str = std::get_if<std::string>(&symbol); str) {
-        sym = *str;
+        sym = "\"" + *str + "\"";
     } else if (auto sh = std::get_if<symbol_handle>(&symbol); sh) {
         sym = get_identifier(mod, {*sh});
     } else {
