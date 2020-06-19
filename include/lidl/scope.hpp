@@ -17,13 +17,27 @@ inline bool operator==(forward_decl, forward_decl) {
     return false;
 }
 
-using symbol = std::variant<const type*, const generic*, const service*, forward_decl>;
+class scope;
+
+using symbol = std::variant<const type*,
+                            const generic*,
+                            const service*,
+                            forward_decl,
+                            const scope*>;
 
 class scope : public std::enable_shared_from_this<scope> {
 public:
-    scope() = default;
+    scope() {
+        auto handle = declare("");
+        define(handle, this);
+        m_aliases.emplace("", handle);
+    }
+
     explicit scope(std::weak_ptr<const scope> parent)
-        : m_parent(parent) {
+        : m_parent(std::move(parent)) {
+        auto handle = declare("");
+        define(handle, this);
+        m_aliases.emplace("", handle);
     }
 
     symbol_handle declare(std::string_view name);
@@ -31,25 +45,60 @@ public:
     void define(symbol_handle sym, symbol def);
     void redefine(symbol_handle sym, symbol def);
 
+    /**
+     * Returns the declared name of the given symbol handle.
+     */
     std::string_view nameof(symbol_handle sym) const;
 
-    symbol lookup(symbol_handle handle) const {
+    symbol lookup(const symbol_handle& handle) const {
         return m_syms.at(handle.m_id - 1);
     }
 
-    std::shared_ptr<scope> add_child_scope() const {
-        m_children.emplace_back(std::make_shared<scope>(weak_from_this()));
+    std::shared_ptr<scope> add_child_scope(std::string name,
+                                           std::shared_ptr<scope> child = nullptr) {
+        if (!child) {
+            child = std::make_shared<scope>(weak_from_this());
+        } else {
+            child->set_parent(weak_from_this());
+        }
+
+        m_children.emplace_back(child);
+
+        if (name.empty()) {
+            child->m_sibling = m_sibling;
+            m_sibling        = child.get();
+        } else {
+            auto handle = declare(name);
+            define(handle, m_children.back().get());
+            m_aliases.emplace(std::move(name), handle);
+        }
+
         return m_children.back();
     }
 
+    /**
+     * Finds a symbol by it's name.
+     */
     std::optional<symbol_handle> name_lookup(std::string_view) const;
+
+    /**
+     * Finds a symbol by it's definition.
+     */
     std::optional<symbol_handle> definition_lookup(symbol def) const;
 
     const scope* parent() const {
         return m_parent.lock().get();
     }
 
+    const std::vector<std::shared_ptr<scope>> children() const {
+        return m_children;
+    }
+
 private:
+    void set_parent(std::weak_ptr<scope> parent) {
+        m_parent = std::move(parent);
+    }
+
     symbol& mutable_lookup(const symbol_handle& handle) {
         return m_syms.at(handle.m_id - 1);
     }
@@ -57,19 +106,36 @@ private:
     std::vector<symbol> m_syms;
     std::vector<std::vector<std::string>> m_names;
 
-    std::unordered_map<std::string, symbol_handle> m_aliases;
+    /**
+     * Siblings store scopes with the same name under the same parent
+     */
+    const scope* m_sibling = nullptr;
 
+    std::unordered_map<std::string, symbol_handle> m_aliases;
     std::weak_ptr<const scope> m_parent;
     mutable std::vector<std::shared_ptr<scope>> m_children;
+    //    mutable std::vector<std::shared_ptr<scope>> m_children;
 };
 
 bool is_defined(const symbol_handle& handle);
 symbol_handle define(scope& s, std::string_view name, symbol sym);
 
-std::string_view nameof(const symbol_handle&);
+std::string_view local_name(const symbol_handle& sym);
+
+std::vector<std::string_view> absolute_name(const symbol_handle& sym);
+
+/**
+ * Returns a list of names that reach the given symbol from the given scope in the
+ * shortest manner.
+ */
+std::vector<std::string_view> relative_name(const symbol_handle& sym, const scope& from);
 
 std::optional<symbol_handle> recursive_name_lookup(const scope& s, std::string_view name);
+
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name);
+
+std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
+                                                        std::string_view name);
 
 symbol get_symbol(const symbol_handle&);
 } // namespace lidl

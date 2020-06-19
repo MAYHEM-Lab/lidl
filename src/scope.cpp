@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 
-
 namespace lidl {
 symbol_handle::symbol_handle(scope& s, int id)
     : m_id(id)
@@ -18,7 +17,7 @@ scope* symbol_handle::get_scope() const {
 
 symbol_handle scope::declare(std::string_view name) {
     m_syms.emplace_back(forward_decl{});
-    auto res = symbol_handle(*this, m_syms.size());
+    auto res         = symbol_handle(*this, m_syms.size());
     auto [it, emres] = m_aliases.emplace(std::string(name), res);
     m_names.emplace_back();
     m_names.back().push_back(it->first);
@@ -41,6 +40,9 @@ void scope::redefine(symbol_handle sym, symbol def) {
 std::optional<symbol_handle> scope::name_lookup(std::string_view name) const {
     auto it = m_aliases.find(std::string(name));
     if (it == m_aliases.end()) {
+        if (m_sibling) {
+            return m_sibling->name_lookup(name);
+        }
         return std::nullopt;
     }
     return it->second;
@@ -50,6 +52,9 @@ std::optional<symbol_handle> scope::definition_lookup(symbol def) const {
     auto it = std::find(m_syms.begin(), m_syms.end(), def);
 
     if (it == m_syms.end()) {
+        if (m_sibling) {
+            return m_sibling->definition_lookup(def);
+        }
         return std::nullopt;
     }
 
@@ -84,8 +89,30 @@ symbol_handle define(scope& s, std::string_view name, symbol def) {
     return decl;
 }
 
-std::string_view nameof(const symbol_handle& handle) {
+std::string_view local_name(const symbol_handle& handle) {
     return handle.get_scope()->nameof(handle);
+}
+
+std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
+    std::vector<const scope*> path;
+    path.push_back(sym.get_scope());
+    while (path.back()->parent()) {
+        path.push_back(path.back()->parent());
+    }
+
+    std::vector<std::string_view> names;
+    for (auto it = path.rbegin(); it + 1 != path.rend(); ++it) {
+        auto handle = *(*it)->definition_lookup(*(it + 1));
+        auto name = (*it)->nameof(handle);
+        if (name.empty()) {
+            continue;
+        }
+        names.push_back(name);
+    }
+
+    names.push_back(local_name(sym));
+
+    return names;
 }
 
 std::optional<symbol_handle> recursive_name_lookup(const scope& s,
@@ -99,13 +126,65 @@ std::optional<symbol_handle> recursive_name_lookup(const scope& s,
     return std::nullopt;
 }
 
-std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name) {
+const scope& root_scope(const scope& s) {
+    auto ptr = &s;
+    for (; ptr->parent(); ptr = ptr->parent());
+    return *ptr;
+}
+namespace {
+std::optional<symbol_handle> do_recursive_definition_lookup(const scope& s, symbol name) {
     if (auto sym = s.definition_lookup(name); sym) {
         return sym;
     }
-    if (s.parent()) {
-        return recursive_definition_lookup(*s.parent(), name);
+    for (auto& child : s.children()) {
+        if (auto res = do_recursive_definition_lookup(*child, name)) {
+            return res;
+        }
     }
     return std::nullopt;
+}
+}
+
+std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name) {
+    return do_recursive_definition_lookup(root_scope(s), name);
+}
+
+namespace {
+template<class OutIt>
+void split(std::string_view sv, std::string_view delim, OutIt it) {
+    while (true) {
+        if (sv.empty())
+            break;
+        auto i = sv.find(delim);
+        *it++  = sv.substr(0, i);
+        if (i == sv.npos) {
+            break;
+        }
+        sv = sv.substr(i + delim.size());
+    }
+}
+
+inline std::vector<std::string_view> split(std::string_view sv, std::string_view delim) {
+    std::vector<std::string_view> splitted;
+    split(sv, delim, std::back_inserter(splitted));
+    return splitted;
+}
+} // namespace
+
+std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
+                                                        std::string_view name) {
+    auto parts      = split(name, ".");
+    auto cur_lookup = recursive_name_lookup(s, parts[0]);
+    if (!cur_lookup) {
+        return std::nullopt;
+    }
+    if (parts.size() == 1) {
+        return cur_lookup;
+    }
+    for (auto it = parts.begin() + 1; it != parts.end(); ++it) {
+        auto cur_scope = std::get<const scope*>(get_symbol(*cur_lookup));
+        cur_lookup     = cur_scope->name_lookup(*it);
+    }
+    return cur_lookup;
 }
 } // namespace lidl
