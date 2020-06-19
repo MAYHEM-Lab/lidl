@@ -23,6 +23,7 @@
 #include <string_view>
 #include <unordered_map>
 
+
 namespace lidl::cpp {
 namespace {
 bool is_anonymous(const module& mod, symbol t) {
@@ -127,7 +128,7 @@ generate_service(const module& mod, std::string_view name, const service& servic
     str << "};";
     str << '\n';
 
-    auto serv_handle = *recursive_definition_lookup(*mod.symbols, &service);
+    auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
     auto serv_full_name = get_identifier(mod, {serv_handle});
 
     def_sec.key        = {serv_full_name, section_type::definition};
@@ -231,9 +232,9 @@ struct cppgen {
         // TODO: fix module traits
         //        m_sections.merge_before(generate_module_traits());
 
-//        str << forward_decls.str() << '\n';
+        //        str << forward_decls.str() << '\n';
 
-        emitter e(mod(), m_sections);
+        emitter e(*mod().parent, mod(), m_sections);
 
         str << e.emit() << '\n';
     }
@@ -278,7 +279,7 @@ void generate_service_descriptor(const module& mod,
                                  std::string_view,
                                  const service& service,
                                  std::ostream& str) {
-    auto serv_handle = *recursive_definition_lookup(*mod.symbols, &service);
+    auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
     auto serv_full_name = get_identifier(mod, {serv_handle});
 
 
