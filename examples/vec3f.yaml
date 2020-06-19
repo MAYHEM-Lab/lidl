@@ -1,3 +1,6 @@
+$lidlmeta:
+  name: gfx
+
 vec3:
   type: generic<structure>
   parameters:
@@ -6,7 +9,7 @@ vec3:
     x: T
     y: T
     z: T
-      
+
 vec3f:
   type: structure
   members:
