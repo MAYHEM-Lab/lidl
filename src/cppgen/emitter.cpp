@@ -54,19 +54,23 @@ std::string emitter::emit() {
 emitter::emitter(const module& mod, sections all)
     : m_module{&mod}
     , m_not_generated(std::move(all.m_sections)) {
-    //    mark_satisfied("int8_t_def");
-    for (auto mod_ptr = &mod; mod_ptr; mod_ptr = mod_ptr->parent) {
-        if (mod_ptr->basic_types.empty()) {
+
+    const module* root = &mod;
+    for (; root->parent; root = root->parent);
+
+
+    for (auto& [name, child] : root->children) {
+        if (child->basic_types.empty()) {
             continue;
         }
 
-        for (auto& t : mod_ptr->basic_types) {
-            auto sym = recursive_definition_lookup(*mod_ptr->symbols, t.get()).value();
+        for (auto& t : child->basic_types) {
+            auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
             mark_satisfied({sym, section_type::definition});
         }
 
-        for (auto& t : mod_ptr->basic_generics) {
-            auto sym = recursive_definition_lookup(*mod_ptr->symbols, t.get()).value();
+        for (auto& t : child->basic_generics) {
+            auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
             mark_satisfied({sym, section_type::definition});
         }
     }
