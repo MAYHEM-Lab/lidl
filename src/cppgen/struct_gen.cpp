@@ -9,6 +9,7 @@
 
 #include <lidl/service.hpp>
 
+
 namespace lidl::cpp {
 sections struct_gen::do_generate() {
     constexpr auto format = R"__(class {0} : public ::lidl::struct_base<{0}> {{
@@ -117,7 +118,7 @@ sections struct_gen::generate_traits() {
         rpc_traits_sect.definition = fmt::format(
             rpc_trait_format, absolute_name(), serv_full_name, attr->proc_name);
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 

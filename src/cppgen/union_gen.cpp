@@ -8,6 +8,7 @@
 #include "enum_gen.hpp"
 #include "struct_bodygen.hpp"
 
+
 namespace lidl::cpp {
 std::string union_gen::generate_getter(std::string_view member_name,
                                        const member& mem,
@@ -148,8 +149,8 @@ sections union_gen::do_generate() {
 sections union_gen::generate_traits() {
     std::vector<std::string> members;
     for (auto& [memname, member] : get().members) {
-        members.push_back(
-            fmt::format("member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
+        members.push_back(fmt::format(
+            "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
     }
 
     std::vector<std::string> names;
@@ -179,8 +180,8 @@ sections union_gen::generate_traits() {
                 return ::lidl::create<{0}>(builder, {3});
             }})__";
 
-        ctors.push_back(
-            fmt::format(format, absolute_name(), member_name, arg_names, initializer_list));
+        ctors.push_back(fmt::format(
+            format, absolute_name(), member_name, arg_names, initializer_list));
         ctor_names.push_back("&union_traits::ctor_" + member_name);
     }
 
@@ -222,7 +223,7 @@ sections union_gen::generate_traits() {
         rpc_traits_sect.definition =
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -240,7 +241,7 @@ sections union_gen::generate_traits() {
         rpc_traits_sect.definition =
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 
