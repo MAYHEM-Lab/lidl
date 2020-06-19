@@ -39,6 +39,10 @@ std::string emitter::emit() {
         for (auto& sect : m_not_generated) {
             std::cerr << sect.key.to_string(*m_module) << ":\n";
             for (auto& dep : sect.depends_on) {
+                if (std::find(m_satisfied.begin(), m_satisfied.end(), dep) !=
+                    m_satisfied.end()) {
+                    continue;
+                }
                 std::cerr << " + " << dep.to_string(*m_module) << '\n';
             }
         }
