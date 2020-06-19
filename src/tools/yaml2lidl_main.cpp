@@ -31,14 +31,18 @@ struct ostream_writer : lidl::ibinary_writer {
 int main(int argc, char** argv) {
     using namespace lidl;
 
+    auto root_mod = std::make_unique<module>();
+    root_mod->add_child("", basic_module());
+
     std::ifstream schema(argv[1]);
-    auto& mod = yaml::load_module(schema);
+    auto& mod = yaml::load_module(*root_mod, schema);
 
     service_pass(mod);
     reference_type_pass(mod);
     union_enum_pass(mod);
 
-    auto root = std::get<const type*>(get_symbol(*recursive_name_lookup(*mod.symbols, argv[2])));
+    auto root =
+        std::get<const type*>(get_symbol(*recursive_name_lookup(*mod.symbols, argv[2])));
 
     std::ifstream datafile(argv[3]);
     YAML::Node yaml_root = YAML::Load(datafile);
