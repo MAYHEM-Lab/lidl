@@ -30,17 +30,18 @@ void run(const lidlc_args& args) {
         std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
         return;
     }
-        auto& ym = yaml::load_module(*args.input_stream);
-        service_pass(ym);
-        reference_type_pass(ym);
-        union_enum_pass(ym);
-        backend->second(ym, *args.output_stream);
-
+    auto root_mod = std::make_unique<module>();
+    root_mod->add_child("", basic_module());
+    auto& ym = yaml::load_module(*root_mod, *args.input_stream);
+    service_pass(ym);
+    reference_type_pass(ym);
+    union_enum_pass(ym);
+    backend->second(ym, *args.output_stream);
 }
 } // namespace lidl
 
 int main(int argc, char** argv) {
-    bool help = false;
+    bool help            = false;
     bool read_from_stdin = false;
     std::string input_path;
     std::string out_path;
@@ -76,7 +77,7 @@ int main(int argc, char** argv) {
     }
 
     lidl::lidlc_args args;
-    args.input_stream = &std::cin;
+    args.input_stream  = &std::cin;
     args.output_stream = &std::cout;
 
     if (!input_path.empty()) {

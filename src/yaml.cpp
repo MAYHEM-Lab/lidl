@@ -80,7 +80,7 @@ std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const s
 name read_type(const YAML::Node& type_node, const scope& s) {
     if (type_node.IsScalar()) {
         auto type_name = type_node.as<std::string>();
-        auto lookup = recursive_name_lookup(s, type_name);
+        auto lookup    = recursive_name_lookup(s, type_name);
         if (!lookup) {
             throw std::runtime_error("no such type: " + type_name);
         }
@@ -128,58 +128,53 @@ member read_member(const YAML::Node& node, const scope& s) {
     return m;
 }
 
-structure read_structure(const YAML::Node& node, const scope& scop) {
+structure read_structure(const YAML::Node& node, scope& scop) {
     structure s;
-    s.scope_ = scop.add_child_scope();
+    //    s.scope_ = scop.add_child_scope();
 
     auto members = node["members"];
     Expects(members);
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        s.members.emplace_back(key.as<std::string>(), read_member(val, *s.scope_.lock()));
+        s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
     }
 
     s.attributes = read_attributes(node["attributes"]);
     return s;
 }
 
-union_type read_union(const YAML::Node& node, const scope& scop) {
+union_type read_union(const YAML::Node& node, scope& scop) {
     union_type u;
-    auto child_scope = scop.add_child_scope();
 
     auto members = node["variants"];
     Expects(members);
     for (auto e : members) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        u.members.emplace_back(key.as<std::string>(), read_member(val, *child_scope));
+        u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
     }
 
     u.attributes = read_attributes(node["attributes"]);
     return u;
 }
 
-generic_structure read_generic_structure(const YAML::Node& node, const scope& scop) {
-    auto gen_scope = scop.add_child_scope();
-
+generic_structure read_generic_structure(const YAML::Node& node, scope& gen_scope) {
     auto params = parse_parameters(node["parameters"]);
     for (auto& [name, param] : params) {
-        gen_scope->declare(name);
+        gen_scope.declare(name);
     }
 
-    auto str = read_structure(node, *gen_scope);
+    auto str = read_structure(node, gen_scope);
 
     return generic_structure{std::move(params), std::move(str)};
 }
 
-generic_union read_generic_union(const YAML::Node& node, const scope& scop) {
-    auto gen_scope = scop.add_child_scope();
-
+generic_union read_generic_union(const YAML::Node& node, scope& scop) {
     auto params = parse_parameters(node["parameters"]);
     for (auto& [name, param] : params) {
-        gen_scope->declare(name);
+        scop.declare(name);
     }
 
-    auto str = read_union(node, *gen_scope);
+    auto str = read_union(node, scop);
 
     return generic_union{std::move(params), std::move(str)};
 }
@@ -226,20 +221,25 @@ enumeration read_enum(const YAML::Node& node, const scope& scop) {
     return e;
 }
 } // namespace
-module& load_module(std::istream& file) {
+module& load_module(module& root, std::istream& file) {
     auto node = YAML::Load(file);
 
-    module& m = get_root_module().get_child("mod");
+    std::string module_name = "default_module";
+    auto metadata = node["$lidlmeta"];
+    if (metadata) {
+        if (auto ns = metadata["name"]; ns) {
+            module_name = ns.as<std::string>();
+        }
+    }
+
+    auto& m = root.get_child(module_name);
 
     for (auto e : node) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         Expects(key);
         Expects(val);
 
-        if (key.as<std::string>() == "metadata") {
-            if (val["name"]) {
-                m.module_name = val["name"].as<std::string>();
-            }
+        if (key.as<std::string>() == "$lidlmeta") {
             continue;
         }
 
@@ -264,31 +264,35 @@ module& load_module(std::istream& file) {
         auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
         Expects(key);
 
-        if (key.as<std::string>() == "metadata") {
+        auto name = key.as<std::string>();
+
+        if (name == "$lidlmeta") {
             continue;
         }
 
         Expects(val);
         Expects(val["type"]);
 
+        auto scope = m.symbols->add_child_scope(name);
+
         if (val["type"].as<std::string>() == "structure") {
-            m.structs.emplace_back(read_structure(val, *m.symbols));
-            define(*m.symbols, key.as<std::string>(), &m.structs.back());
+            m.structs.emplace_back(read_structure(val, *scope));
+            define(*m.symbols, name, &m.structs.back());
         } else if (val["type"].as<std::string>() == "union") {
-            m.unions.emplace_back(read_union(val, *m.symbols));
-            define(*m.symbols, key.as<std::string>(), &m.unions.back());
+            m.unions.emplace_back(read_union(val, *scope));
+            define(*m.symbols, name, &m.unions.back());
         } else if (val["type"].as<std::string>() == "enumeration") {
-            m.enums.emplace_back(read_enum(val, *m.symbols));
-            define(*m.symbols, key.as<std::string>(), &m.enums.back());
+            m.enums.emplace_back(read_enum(val, *scope));
+            define(*m.symbols, name, &m.enums.back());
         } else if (val["type"].as<std::string>() == "generic<structure>") {
-            m.generic_structs.emplace_back(read_generic_structure(val, *m.symbols));
-            define(*m.symbols, key.as<std::string>(), &m.generic_structs.back());
+            m.generic_structs.emplace_back(read_generic_structure(val, *scope));
+            define(*m.symbols, name, &m.generic_structs.back());
         } else if (val["type"].as<std::string>() == "generic<union>") {
-            m.generic_unions.emplace_back(read_generic_union(val, *m.symbols));
-            define(*m.symbols, key.as<std::string>(), &m.generic_unions.back());
+            m.generic_unions.emplace_back(read_generic_union(val, *scope));
+            define(*m.symbols, name, &m.generic_unions.back());
         } else if (val["type"].as<std::string>() == "service") {
             m.services.emplace_back(parse_service(val, m));
-            define(*m.symbols, key.as<std::string>(), &m.services.back());
+            define(*m.symbols, name, &m.services.back());
         }
     }
 

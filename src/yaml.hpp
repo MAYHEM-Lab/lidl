@@ -5,5 +5,5 @@
 #include <string_view>
 
 namespace lidl::yaml {
-module& load_module(std::istream& str);
+module& load_module(module& root, std::istream& str);
 }
