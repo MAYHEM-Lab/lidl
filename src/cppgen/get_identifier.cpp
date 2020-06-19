@@ -18,14 +18,14 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"u16", "uint16_t"},
         {"u32", "uint32_t"},
         {"u64", "uint64_t"},
-        {"array", "::lidl::array"},
-        {"optional", "::lidl::optional"},
-        {"string", "::lidl::string"},
+        {"array", "lidl::array"},
+        {"optional", "lidl::optional"},
+        {"string", "lidl::string"},
         {"string_view", "std::string_view"},
         {"span", "tos::span"},
-        {"vector", "::lidl::vector"},
-        {"ptr", "::lidl::ptr"},
-        {"expected", "::lidl::expected"}};
+        {"vector", "lidl::vector"},
+        {"ptr", "lidl::ptr"},
+        {"expected", "lidl::expected"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
         return std::string(it->second);
@@ -36,11 +36,19 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
 } // namespace
 
 std::string get_identifier(const module& mod, const symbol_handle& handle) {
-    auto base_name = std::string(nameof(handle));
-    if (auto known = known_type_conversion(base_name); known) {
-        base_name = *known;
-    }
-    return base_name;
+    auto full_path = absolute_name(handle);
+    std::vector<std::string> converted_parts(full_path.size());
+    std::transform(full_path.begin(),
+                   full_path.end(),
+                   converted_parts.begin(),
+                   [](auto part) -> std::string {
+                       if (auto known = known_type_conversion(part); known) {
+                           return *known;
+                       }
+                       return std::string(part);
+                   });
+
+    return fmt::format("{}", fmt::join(converted_parts, "::"));
 }
 
 std::string get_identifier(const module& mod, int64_t i) {
