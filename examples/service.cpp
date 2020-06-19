@@ -7,7 +7,7 @@
 #include <iterator>
 #include <unordered_map>
 
-class calculator_impl : public scientific_calculator {
+class calculator_impl : public lidl_example::scientific_calculator {
 public:
     double add(const double& left, const double& right) override {
         return left + right;
@@ -22,7 +22,7 @@ public:
     }
 };
 
-class repeat_impl : public repeat {
+class repeat_impl : public lidl_example::repeat {
 public:
     std::string_view echo(std::string_view str,
                           lidl::message_builder& response) override {
@@ -34,7 +34,7 @@ public:
 std::vector<uint8_t> get_request() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<calculator_call>(builder, calculator_multiply_params(3, 5));
+    lidl::create<lidl_example::calculator_call>(builder, lidl_example::calculator_multiply_params(3, 5));
     buf.resize(builder.size());
     return buf;
 }
@@ -42,8 +42,8 @@ std::vector<uint8_t> get_request() {
 std::vector<uint8_t> get_echo_req() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<repeat_call>(builder,
-                              lidl::create<repeat_echo_params>(
+    lidl::create<lidl_example::repeat_call>(builder,
+                              lidl::create<lidl_example::repeat_echo_params>(
                                   builder, lidl::create_string(builder, "foobar")));
     buf.resize(builder.size());
     return buf;
@@ -167,7 +167,7 @@ auto make_request_handler() {
     };
 }
 
-static_assert(lidl::procedure_traits<decltype(&repeat::echo)>::takes_response_builder());
+static_assert(lidl::procedure_traits<decltype(&lidl_example::repeat::echo)>::takes_response_builder());
 int main(int argc, char** argv) {
     // std::ifstream file(argv[1]);
     // std::vector<uint8_t> req(std::istream_iterator<uint8_t>(file),
@@ -175,20 +175,20 @@ int main(int argc, char** argv) {
     auto req = get_request();
     auto buf = lidl::buffer(req);
     //    std::cout.write((const char*)req.data(), req.size());
-    std::cout << lidl::nameof(lidl::get_root<calculator_call>(buf).alternative()) << '\n';
+    std::cout << lidl::nameof(lidl::get_root<lidl_example::calculator_call>(buf).alternative()) << '\n';
 
     calculator_impl c;
-    auto handler = make_request_handler<calculator>();
+    auto handler = make_request_handler<lidl_example::calculator>();
 
     repeat_impl r;
-    auto rep_handler = make_request_handler<repeat>();
+    auto rep_handler = make_request_handler<lidl_example::repeat>();
 
     std::array<uint8_t, 256> resp;
     auto resp_builder = lidl::message_builder(resp);
     handler(c, buf, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& res = lidl::get_root<calculator_return>(resp_builder.get_buffer()).multiply();
+    auto& res = lidl::get_root<lidl_example::calculator_return>(resp_builder.get_buffer()).multiply();
     std::cout << res.ret0() << '\n';
 
     resp_builder = lidl::message_builder(resp);
@@ -196,6 +196,6 @@ int main(int argc, char** argv) {
     rep_handler(r, lidl::buffer(req), resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& rep_res = lidl::get_root<repeat_return>(resp_builder.get_buffer()).echo();
+    auto& rep_res = lidl::get_root<lidl_example::repeat_return>(resp_builder.get_buffer()).echo();
     std::cout << rep_res.ret0().string_view() << '\n';
 }

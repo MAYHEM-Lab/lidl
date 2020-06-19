@@ -1,3 +1,6 @@
+$lidlmeta:
+  name: lidl_example
+
 my_struct:
   type: structure
   members:
