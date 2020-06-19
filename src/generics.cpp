@@ -13,7 +13,6 @@ namespace lidl {
 structure generic_structure::instantiate(const module& mod,
                                          const generic_instantiation& ins) const {
     structure newstr;
-    newstr.scope_ = mod.symbols->add_child_scope();
 
     auto& genstr = dynamic_cast<const generic_structure&>(ins.generic_type());
 
@@ -37,7 +36,7 @@ structure generic_structure::instantiate(const module& mod,
             continue;
         }
 
-        auto generic_param_name = nameof(mem.type_.base);
+        auto generic_param_name = local_name(mem.type_.base);
         auto it = actual.find(generic_param_name);
 
         if (it == actual.end()) {
@@ -80,7 +79,7 @@ union_type generic_union::instantiate(const module& mod,
             continue;
         }
 
-        auto generic_param_name = nameof(mem.type_.base);
+        auto generic_param_name = local_name(mem.type_.base);
         auto it = actual.find(generic_param_name);
 
         if (it == actual.end()) {
