@@ -72,9 +72,14 @@ std::string emitter::emit() {
 
 void emitter::mark_module(const module& decl_mod) {
     if (&decl_mod != m_module) {
-        for (auto& sym : decl_mod.symbols->all_handles()) {
-            std::cerr << fmt::format("Marking {}\n", fmt::join(absolute_name(sym), "::"));
-            mark_satisfied({sym, section_type::definition});
+        for (auto& sym_handle : decl_mod.symbols->all_handles()) {
+            auto sym = get_symbol(sym_handle);
+            if (std::get_if<const scope*>(&sym) || std::get_if<forward_decl>(&sym)) {
+                continue;
+            }
+
+            std::cerr << fmt::format("Marking {}\n", fmt::join(absolute_name(sym_handle), "::"));
+            mark_satisfied({sym_handle, section_type::definition});
         }
     }
     for (auto& [name, child] : decl_mod.children) {
