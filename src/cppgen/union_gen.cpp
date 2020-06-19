@@ -115,10 +115,16 @@ sections union_gen::do_generate() {
         accessors << generate_getter(mem_name, mem, false) << '\n';
     }
 
-    enum_gen en(mod(), {}, enum_name, get().get_enum());
+
+    enum_gen en(mod(),
+                {},
+                enum_name,
+                std::string(absolute_name()) + "_alternatives",
+                get().get_enum());
 
     section s;
     s.key        = def_key();
+    s.name_space = mod().name_space;
     s.definition = fmt::format(
         format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str());
     s.add_dependency({enum_name, section_type::definition});
@@ -143,7 +149,7 @@ sections union_gen::generate_traits() {
     std::vector<std::string> members;
     for (auto& [memname, member] : get().members) {
         members.push_back(
-            fmt::format("member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", name(), memname));
+            fmt::format("member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
     }
 
     std::vector<std::string> names;
@@ -174,7 +180,7 @@ sections union_gen::generate_traits() {
             }})__";
 
         ctors.push_back(
-            fmt::format(format, ctor_name(), member_name, arg_names, initializer_list));
+            fmt::format(format, absolute_name(), member_name, arg_names, initializer_list));
         ctor_names.push_back("&union_traits::ctor_" + member_name);
     }
 
@@ -192,7 +198,7 @@ sections union_gen::generate_traits() {
     section trait_sect;
     trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
-                                        name(),
+                                        absolute_name(),
                                         fmt::join(names, ", "),
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
@@ -207,27 +213,34 @@ sections union_gen::generate_traits() {
             R"__(template <> struct service_call_union<{}> : {} {{
         }};)__";
 
+
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_full_name = get_identifier(mod(), {serv_handle});
+
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";
         rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, attr->serv_name, name());
+            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 
-    if (auto attr =
-        get().attributes.get<service_return_union_attribute>("service_return_union")) {
+    if (auto attr = get().attributes.get<service_return_union_attribute>(
+            "service_return_union")) {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_return_union<{}> : {} {{
         }};)__";
 
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_full_name = get_identifier(mod(), {serv_handle});
+
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";
         rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, attr->serv_name, name());
+            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 

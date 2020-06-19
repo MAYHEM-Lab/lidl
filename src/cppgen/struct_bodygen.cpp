@@ -65,7 +65,7 @@ sections struct_body_gen::generate() {
         generate_struct_field(name, member);
     }
 
-    raw_struct_gen raw_gen(mod(), {}, "raw_t", str());
+    raw_struct_gen raw_gen(mod(), {}, "raw_t", "", str());
     auto sects = raw_gen.generate();
     m_sections.priv << sects.m_sections[0].definition << '\n';
 

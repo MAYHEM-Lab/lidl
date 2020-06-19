@@ -15,19 +15,22 @@ public:
                    symbol_handle sym,
                    std::string_view name,
                    std::string_view ctor_name,
+                   std::string_view abs_name,
                    const Type& elem)
         : m_module{&mod}
         , m_symbol(std::move(sym))
         , m_name{name}
         , m_ctor_name(ctor_name)
+        , m_abs_name(abs_name)
         , m_elem{&elem} {
     }
 
     generator_base(const module& mod,
                    symbol_handle sym,
                    std::string_view name,
+                   std::string_view abs_name,
                    const Type& elem)
-        : generator_base(mod, std::move(sym), name, name, elem) {
+        : generator_base(mod, std::move(sym), name, name, abs_name, elem) {
     }
 
 protected:
@@ -45,6 +48,10 @@ protected:
 
     std::string_view ctor_name() {
         return m_ctor_name;
+    }
+
+    std::string_view absolute_name() {
+        return m_abs_name;
     }
 
     const symbol_handle& symbol() const {
@@ -72,6 +79,7 @@ private:
     const module* m_module;
     std::string m_name;
     std::string m_ctor_name;
+    std::string m_abs_name;
     const Type* m_elem;
 };
 } // namespace lidl::cpp

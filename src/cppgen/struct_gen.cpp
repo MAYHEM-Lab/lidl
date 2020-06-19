@@ -22,6 +22,7 @@ sections struct_gen::do_generate() {
     s.key.type   = section_type::definition;
     s.definition = fmt::format(format, name(), body.m_sections[0].definition);
     s.depends_on = body.m_sections[0].depends_on;
+    s.name_space = mod().name_space;
 
     auto result = generate_traits();
     result.add(std::move(s));
@@ -37,8 +38,8 @@ sections struct_gen::generate_traits() {
 
     std::vector<std::string> members;
     for (auto& [memname, member] : get().members) {
-        members.push_back(
-            fmt::format("member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", name(), memname));
+        members.push_back(fmt::format(
+            "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
     }
 
     std::vector<std::string> ctor_types{""};
@@ -71,7 +72,7 @@ sections struct_gen::generate_traits() {
     section trait_sect;
     trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
-                                        name(),
+                                        absolute_name(),
                                         fmt::join(members, ", "),
                                         fmt::join(ctor_types, ", "),
                                         fmt::join(ctor_args, ", "),
@@ -90,14 +91,13 @@ sections struct_gen::generate_traits() {
         tuple_elements.push_back(fmt::format(
             "template <> struct tuple_element<{}, {}> {{ using type = {}; }};",
             idx++,
-            name(),
+            absolute_name(),
             get_user_identifier(mod(), member.type_)));
     }
 
-
     section std_trait_sect;
     std_trait_sect.name_space = "std";
-    std_trait_sect.definition = fmt::format(std_format, name(), members.size()) +
+    std_trait_sect.definition = fmt::format(std_format, absolute_name(), members.size()) +
                                 fmt::format("{}", fmt::join(tuple_elements, "\n"));
     std_trait_sect.add_dependency(def_key());
 
@@ -109,12 +109,15 @@ sections struct_gen::generate_traits() {
             static constexpr auto params_for = &{}::{};
         }};)__";
 
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_full_name = get_identifier(mod(), {serv_handle});
+
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";
-        rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, name(), attr->serv_name, attr->proc_name);
+        rpc_traits_sect.definition = fmt::format(
+            rpc_trait_format, absolute_name(), serv_full_name, attr->proc_name);
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({attr->serv_name, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_full_name, section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 

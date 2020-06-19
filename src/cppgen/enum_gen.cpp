@@ -19,6 +19,7 @@ sections enum_gen::do_generate() {
 
     section s;
     s.key = def_key();
+    s.name_space = mod().name_space;
 
     s.definition = fmt::format(
         format, name(), get_identifier(mod(), get().underlying_type), pub.str());
@@ -45,7 +46,7 @@ sections enum_gen::generate_traits() {
     section trait_sect;
     trait_sect.name_space = "lidl";
     trait_sect.definition =
-        fmt::format(format, name(), names.size(), fmt::join(names, ", "));
+        fmt::format(format, absolute_name(), names.size(), fmt::join(names, ", "));
     trait_sect.add_dependency(def_key());
 
     return sections{{std::move(trait_sect)}};
