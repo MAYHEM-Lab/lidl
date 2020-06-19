@@ -6,10 +6,11 @@
 #include <sstream>
 #include <string>
 
+
 namespace lidl::cpp {
 struct emitter {
 public:
-    explicit emitter(const module& mod, sections all);
+    explicit emitter(const module& root, const module& mod, sections all);
 
     std::string emit();
 
@@ -18,6 +19,8 @@ public:
     }
 
 private:
+    void mark_module(const module& decl_mod);
+
     bool pass();
 
     bool is_satisfied(const section& sect) {

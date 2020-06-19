@@ -1,8 +1,11 @@
 #include "emitter.hpp"
 
+#include "lidl/scope.hpp"
+
 #include <fmt/format.h>
 #include <iostream>
 #include <lidl/module.hpp>
+
 
 namespace lidl::cpp {
 
@@ -51,28 +54,38 @@ std::string emitter::emit() {
     return m_stream.str();
 }
 
-emitter::emitter(const module& mod, sections all)
-    : m_module{&mod}
-    , m_not_generated(std::move(all.m_sections)) {
-
-    const module* root = &mod;
-    for (; root->parent; root = root->parent);
-
-
-    for (auto& [name, child] : root->children) {
-        if (child->basic_types.empty()) {
-            continue;
-        }
-
-        for (auto& t : child->basic_types) {
-            auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
-            mark_satisfied({sym, section_type::definition});
-        }
-
-        for (auto& t : child->basic_generics) {
-            auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
+void emitter::mark_module(const module& decl_mod) {
+    if (&decl_mod != m_module) {
+        for (auto& sym : decl_mod.symbols->all_handles()) {
+            std::cerr << fmt::format("Marking {}\n", fmt::join(absolute_name(sym), "::"));
             mark_satisfied({sym, section_type::definition});
         }
     }
+    for (auto& [name, child] : decl_mod.children) {
+        mark_module(*child);
+    }
+}
+
+emitter::emitter(const module& root_mod, const module& mod, sections all)
+    : m_module{&mod}
+    , m_not_generated(std::move(all.m_sections)) {
+
+    mark_module(root_mod);
+
+    // for (auto& [name, child] : root_mod.children) {
+    //     if (child->basic_types.empty()) {
+    //         continue;
+    //     }
+
+    //     for (auto& t : child->basic_types) {
+    //         auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
+    //         mark_satisfied({sym, section_type::definition});
+    //     }
+
+    //     for (auto& t : child->basic_generics) {
+    //         auto sym = recursive_definition_lookup(*child->symbols, t.get()).value();
+    //         mark_satisfied({sym, section_type::definition});
+    //     }
+    // }
 }
 } // namespace lidl::cpp
