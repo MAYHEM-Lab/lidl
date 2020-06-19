@@ -19,11 +19,8 @@ inline bool operator==(forward_decl, forward_decl) {
 
 class scope;
 
-using symbol = std::variant<const type*,
-                            const generic*,
-                            const service*,
-                            forward_decl,
-                            const scope*>;
+using symbol =
+    std::variant<const type*, const generic*, const service*, forward_decl, const scope*>;
 
 class scope : public std::enable_shared_from_this<scope> {
 public:
@@ -92,6 +89,14 @@ public:
 
     const std::vector<std::shared_ptr<scope>> children() const {
         return m_children;
+    }
+
+    std::vector<symbol_handle> all_handles() {
+        std::vector<symbol_handle> res;
+        for (int i = 0; i < m_syms.size(); ++i) {
+            res.push_back(symbol_handle{*this, i + 1});
+        }
+        return res;
     }
 
 private:
