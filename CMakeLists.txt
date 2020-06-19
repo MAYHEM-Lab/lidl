@@ -33,7 +33,8 @@ add_library(lidl_core
         src/layout.cpp
         include/lidl/binary_writer.hpp
         include/lidl/types/pointer.hpp
-        include/lidl/view_types.hpp)
+        include/lidl/view_types.hpp
+        src/types.cpp)
 target_compile_features(lidl_core PUBLIC cxx_std_17)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
