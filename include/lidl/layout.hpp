@@ -4,7 +4,9 @@
 #include <cstdint>
 #include <fmt/format.h>
 #include <numeric>
+#include <optional>
 #include <unordered_map>
+
 
 namespace lidl {
 struct raw_layout {
@@ -72,7 +74,8 @@ private:
 
 class compound_layout {
 public:
-    compound_layout& add_member(std::string_view member_name, const raw_layout& member_layout);
+    compound_layout& add_member(std::string_view member_name,
+                                const raw_layout& member_layout);
 
     [[nodiscard]] std::optional<size_t> offset_of(std::string_view name) const;
 
