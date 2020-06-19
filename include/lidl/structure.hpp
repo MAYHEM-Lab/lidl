@@ -11,7 +11,6 @@ namespace lidl {
 struct structure : public value_type {
     std::deque<std::tuple<std::string, member>> members;
     attribute_holder attributes;
-    std::weak_ptr<scope> scope_;
 
     bool is_reference_type(const module& mod) const override;
 
