@@ -3,13 +3,13 @@
 #include <cmath>
 #include <iostream>
 #include <lidl/basic.hpp>
+#include <lidl/basic_types.hpp>
 #include <lidl/generics.hpp>
 #include <lidl/module.hpp>
 #include <lidl/types.hpp>
-#include <lidl/basic_types.hpp>
+#include <lidl/view_types.hpp>
 #include <string_view>
 #include <unordered_map>
-#include <lidl/view_types.hpp>
 
 namespace lidl {
 pointer_type::pointer_type()
@@ -47,7 +47,7 @@ int pointer_type::yaml2bin(const module& mod,
         auto pointee_pos = node.as<int>();
         writer.align(2);
         uint16_t diff = writer.tell() - pointee_pos;
-        auto pos = writer.tell();
+        auto pos      = writer.tell();
         writer.write(diff);
         return pos;
     }
@@ -55,16 +55,17 @@ int pointer_type::yaml2bin(const module& mod,
 }
 
 
-namespace {
-void add_basic_types(module& m) {
+std::unique_ptr<module> basic_module() {
+    auto basic_mod = std::make_unique<module>();
+
     auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
-        m.basic_types.emplace_back(std::move(t));
-        return define(*m.symbols, name, m.basic_types.back().get());
+        basic_mod->basic_types.emplace_back(std::move(t));
+        return define(*basic_mod->symbols, name, basic_mod->basic_types.back().get());
     };
 
     auto add_generic = [&](std::string_view name, std::unique_ptr<generic> t) {
-        m.basic_generics.emplace_back(std::move(t));
-        define(*m.symbols, name, m.basic_generics.back().get());
+        basic_mod->basic_generics.emplace_back(std::move(t));
+        define(*basic_mod->symbols, name, basic_mod->basic_generics.back().get());
     };
 
     add_type("bool", std::make_unique<integral_type>(1, false));
@@ -89,22 +90,12 @@ void add_basic_types(module& m) {
     add_generic("ptr", std::make_unique<pointer_type>());
     add_generic("vector", std::make_unique<vector_type>());
     add_generic("array", std::make_unique<array_type>());
-}
-}
-
-const module& get_root_module() {
-    static auto m = [] {
-        module m;
-        add_basic_types(m);
-        return m;
-    }();
-    return m;
+    return basic_mod;
 }
 
 const generic_instantiation& module::create_or_get_instantiation(const name& ins) const {
-    auto it = std::find_if(name_ins.begin(), name_ins.end(), [&](auto& p) {
-      return p.first == ins;
-    });
+    auto it = std::find_if(
+        name_ins.begin(), name_ins.end(), [&](auto& p) { return p.first == ins; });
     if (it != name_ins.end()) {
         return *it->second;
     }
@@ -127,7 +118,7 @@ int vector_type::yaml2bin(const module& mod,
                           const generic_instantiation& instantiation,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
-    auto& arg = std::get<name>(instantiation.arguments()[0]);
+    auto& arg    = std::get<name>(instantiation.arguments()[0]);
     auto pointee = get_type(mod, arg);
     Expects(pointee != nullptr);
 
@@ -157,7 +148,7 @@ int vector_type::yaml2bin(const module& mod,
     }
 
     writer.align(2);
-    auto pos = writer.tell();
+    auto pos      = writer.tell();
     uint16_t diff = writer.tell() - init_pos;
     writer.write(diff);
     return pos;
@@ -188,13 +179,13 @@ int string_type::yaml2bin(const module& module,
      *
      * This way, the length is 5 as expected.
      */
-    auto str = node.as<std::string>();
+    auto str     = node.as<std::string>();
     auto pre_pad = (writer.tell() + str.size()) % 2;
     std::vector<char> pad(pre_pad);
     writer.write_raw(pad);
     writer.write_raw(str);
     writer.align(2); // Unnecessary, but kept for completeness
-    auto pos = writer.tell();
+    auto pos     = writer.tell();
     uint16_t len = str.size();
     writer.write(len);
     return pos;

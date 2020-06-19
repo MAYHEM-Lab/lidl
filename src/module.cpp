@@ -1,7 +1,7 @@
 #include <lidl/module.hpp>
 
 namespace lidl {
-module& module::get_child(std::string_view child_name) const {
+module& module::get_child(std::string_view child_name) {
     auto it = std::find_if(children.begin(), children.end(), [&](auto& child) {
         return child.first == child_name;
     });
@@ -9,11 +9,16 @@ module& module::get_child(std::string_view child_name) const {
         return *(it->second);
     }
 
-    children.emplace_back(std::string(child_name), std::make_unique<module>());
-    auto& res = *children.back().second;
-    res.parent = this;
-    res.symbols = symbols->add_child_scope();
-    res.module_name = child_name;
-    return res;
+    return add_child(child_name, std::make_unique<module>());
+}
+
+module& module::add_child(std::string_view child_name, std::unique_ptr<module> child) {
+    children.emplace_back(std::string(child_name), std::move(child));
+    auto& mod = *children.back().second;
+    symbols->add_child_scope(std::string(child_name), mod.symbols);
+    mod.parent = this;
+    mod.name_space = child_name;
+    mod.module_name = child_name;
+    return mod;
 }
 } // namespace lidl
