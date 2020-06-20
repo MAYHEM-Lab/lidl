@@ -43,7 +43,7 @@ sections union_gen::do_generate() {
     }
 
     std::stringstream ctor;
-    auto enum_name   = fmt::format("{}_alternatives", ctor_name());
+    auto enum_name   = fmt::format("alternatives", ctor_name());
     int member_index = 0;
     for (auto& [member_name, member] : get().members) {
         std::string arg_names;
@@ -93,6 +93,8 @@ sections union_gen::do_generate() {
     constexpr auto format = R"__(
         class {0} : ::lidl::union_base<{0}> {{
         public:
+            {6}
+
             {1} alternative() const noexcept {{
                 return discriminator;
             }}
@@ -119,16 +121,22 @@ sections union_gen::do_generate() {
 
     enum_gen en(mod(),
                 {},
-                enum_name,
-                std::string(absolute_name()) + "_alternatives",
+                "alternatives",
+                std::string(absolute_name()) + "::alternatives",
                 get().get_enum());
+    auto enum_res = en.generate();
+    std::vector<section> defs;
+    std::copy_if(std::make_move_iterator(enum_res.m_sections.begin()), std::make_move_iterator(enum_res.m_sections.end()), std::back_inserter(defs),
+		    [](const auto& sec) {
+		    	return sec.key.type == section_type::definition;
+		    });
 
     section s;
     s.key        = def_key();
     s.name_space = mod().name_space;
     s.definition = fmt::format(
-        format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str());
-    s.add_dependency({enum_name, section_type::definition});
+        format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str(), enum_res.m_sections[0].definition);
+    //s.add_dependency({enum_name, section_type::definition});
 
     // Member types must be defined before us
     for (auto& [name, member] : get().members) {
@@ -140,7 +148,6 @@ sections union_gen::do_generate() {
 
     auto result = generate_traits();
 
-    result.merge_before(en.generate());
     result.add(std::move(s));
 
     return result;
