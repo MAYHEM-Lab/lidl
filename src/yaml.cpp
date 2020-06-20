@@ -247,7 +247,7 @@ public:
 
     module& start() {
         auto meta = parse_metadata();
-        m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("default"));
+        m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("module"));
 
         for (auto& import : meta.imports) {
             std::cerr << "Import " << import << '\n';
