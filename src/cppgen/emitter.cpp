@@ -40,6 +40,9 @@ bool emitter::pass() {
             m_stream << sect.definition << '\n';
 
             m_satisfied.emplace_back(sect.key);
+            for (auto& key : sect.keys) {
+                m_satisfied.emplace_back(key);
+            }
             m_generated.emplace_back(std::move(sect));
         }
 

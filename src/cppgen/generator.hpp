@@ -62,6 +62,7 @@ struct section {
      * This member is used as the key for the definition in dependency resolution.
      */
     section_key_t key;
+    std::vector<section_key_t> keys;
 
     std::string definition;
 
