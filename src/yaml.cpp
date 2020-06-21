@@ -70,10 +70,10 @@ std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const s
     for (auto& arg : arg_strs) {
         auto arg_lookup = recursive_full_name_lookup(s, arg);
         if (!arg_lookup) {
-            args.push_back(std::stoll(arg));
+            args.emplace_back(std::stoll(arg));
             continue;
         }
-        args.push_back(name{*arg_lookup});
+        args.emplace_back(name{*arg_lookup});
     }
 
     return args;
