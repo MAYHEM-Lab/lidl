@@ -36,13 +36,13 @@ std::string union_gen::generate_getter(std::string_view member_name,
 }
 
 sections union_gen::do_generate() {
-    std::stringstream pub;
+    std::vector<std::string> members;
     for (auto& [name, member] : get().members) {
-        raw_struct_gen::generate_field(
-            "m_" + name, get_identifier(mod(), member.type_), pub);
+        members.push_back(raw_struct_gen::generate_field(
+            "m_" + name, get_identifier(mod(), member.type_)));
     }
 
-    std::stringstream ctor;
+    std::vector<std::string> ctors;
     auto enum_name   = fmt::format("alternatives", ctor_name());
     int member_index = 0;
     for (auto& [member_name, member] : get().members) {
@@ -62,36 +62,31 @@ sections union_gen::do_generate() {
                 member_name);
         }
 
-        ctor << fmt::format("{}({}) : {}, discriminator{{{}::{}}} {{}}\n",
-                            ctor_name(),
-                            arg_names,
-                            initializer_list,
-                            enum_name,
-                            enum_val);
+        ctors.push_back(fmt::format("{}({}) : {}, discriminator{{{}::{}}} {{}}",
+                                    ctor_name(),
+                                    arg_names,
+                                    initializer_list,
+                                    enum_name,
+                                    enum_val));
     }
 
-    constexpr auto case_format = R"__(
-            case {0}::{1}: return fn(val.{1}());
-        )__";
+    constexpr auto case_format = R"__(case {0}::{1}: return fn(val.{1}());)__";
 
     std::vector<std::string> cases;
     for (auto& [name, mem] : get().members) {
         cases.push_back(fmt::format(case_format, enum_name, name));
     }
 
-    constexpr auto visitor_format = R"__(
-            template <class FunT>
+    constexpr auto visitor_format = R"__(template <class FunT>
             friend decltype(auto) visit(const FunT& fn, const {0}& val) {{
                 switch (val.alternative()) {{
                     {1}
                 }}
-            }}
-        )__";
+            }})__";
 
     auto visitor = fmt::format(visitor_format, name(), fmt::join(cases, "\n"));
 
-    constexpr auto format = R"__(
-        class {0} : ::lidl::union_base<{0}> {{
+    constexpr auto format = R"__(class {0} : ::lidl::union_base<{0}> {{
         public:
             {6}
 
@@ -112,10 +107,10 @@ sections union_gen::do_generate() {
             {4}
         }};)__";
 
-    std::stringstream accessors;
+    std::vector<std::string> accessors;
     for (auto& [mem_name, mem] : get().members) {
-        accessors << generate_getter(mem_name, mem, true) << '\n';
-        accessors << generate_getter(mem_name, mem, false) << '\n';
+        accessors.push_back(generate_getter(mem_name, mem, true));
+        accessors.push_back(generate_getter(mem_name, mem, false));
     }
 
 
@@ -134,9 +129,15 @@ sections union_gen::do_generate() {
     section s;
     s.key        = def_key();
     s.name_space = mod().name_space;
-    s.definition = fmt::format(
-        format, name(), enum_name, ctor.str(), pub.str(), visitor, accessors.str(), enum_res.m_sections[0].definition);
-    //s.add_dependency({enum_name, section_type::definition});
+    s.definition = fmt::format(format,
+                               name(),
+                               enum_name,
+                               fmt::join(ctors, "\n"),
+                               fmt::join(members, "\n"),
+                               visitor,
+                               fmt::join(accessors, "\n"),
+                               bodies);
+    // s.add_dependency({enum_name, section_type::definition});
 
     // Member types must be defined before us
     for (auto& [name, member] : get().members) {
@@ -192,16 +193,14 @@ sections union_gen::generate_traits() {
         ctor_names.push_back("&union_traits::ctor_" + member_name);
     }
 
-    constexpr auto format = R"__(
-            template <>
+    constexpr auto format = R"__(template <>
             struct union_traits<{0}> {{
                 static constexpr auto members = std::make_tuple({4});
                 using types = meta::list<{1}>;
                 static constexpr const char* name = "{0}";
                 {2}
                 static constexpr auto ctors = std::make_tuple({3});
-            }};
-        )__";
+            }};)__";
 
     section trait_sect;
     trait_sect.name_space = "lidl";
@@ -220,7 +219,6 @@ sections union_gen::generate_traits() {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_call_union<{}> : {} {{
         }};)__";
-
 
         auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
