@@ -121,13 +121,30 @@ sections union_gen::do_generate() {
                 get().get_enum());
     auto enum_res = en.generate();
     std::vector<section> defs;
-    std::copy_if(std::make_move_iterator(enum_res.m_sections.begin()), std::make_move_iterator(enum_res.m_sections.end()), std::back_inserter(defs),
-		    [](const auto& sec) {
-		    	return sec.key.type == section_type::definition;
-		    });
+    std::copy_if(
+        std::make_move_iterator(enum_res.m_sections.begin()),
+        std::make_move_iterator(enum_res.m_sections.end()),
+        std::back_inserter(defs),
+        [](const auto& sec) { return sec.key.type == section_type::definition; });
+
+    std::vector<section> misc;
+    std::copy_if(std::make_move_iterator(enum_res.m_sections.begin()),
+                 std::make_move_iterator(enum_res.m_sections.end()),
+                 std::back_inserter(misc),
+                 [](const auto& sec) { return sec.key.type == section_type::misc; });
+
+    auto bodies = std::accumulate(
+        defs.begin(), defs.end(), std::string(), [](auto all, auto& part) {
+            return all + "\n" + part.definition;
+        });
 
     section s;
-    s.key        = def_key();
+    s.keys.push_back(def_key());
+    for (auto& sec : defs) {
+        s.keys.push_back(std::move(sec.key));
+        s.keys.insert(s.keys.begin(), sec.keys.begin(), sec.keys.end());
+    }
+
     s.name_space = mod().name_space;
     s.definition = fmt::format(format,
                                name(),
@@ -150,6 +167,9 @@ sections union_gen::do_generate() {
     auto result = generate_traits();
 
     result.add(std::move(s));
+    for (auto& sec : misc) {
+        result.add(std::move(sec));
+    }
 
     return result;
 }
