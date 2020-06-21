@@ -184,10 +184,12 @@ generic_union read_generic_union(const YAML::Node& node, scope& scop) {
 procedure parse_procedure(const YAML::Node& node, const module& mod) {
     procedure result;
     if (auto returns = node["returns"]; returns) {
-        result.return_types.push_back(read_type(returns[0], *mod.symbols));
+        for (auto&& ret : returns) {
+            result.return_types.push_back(read_type(ret, *mod.symbols));
+        }
     }
     if (auto params = node["parameters"]; params) {
-        for (auto param : params) {
+        for (auto&& param : params) {
             auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(param);
             if (!val) {
                 std::cerr << param << '\n';
