@@ -19,8 +19,7 @@ sections struct_gen::do_generate() {
     auto body = struct_body_gen(mod(), symbol(), name(), get()).generate();
 
     section s;
-    s.key.symbol = symbol();
-    s.key.type   = section_type::definition;
+    s.keys.push_back(def_key());
     s.definition = fmt::format(format, name(), body.m_sections[0].definition);
     s.depends_on = body.m_sections[0].depends_on;
     s.name_space = mod().name_space;
@@ -57,8 +56,7 @@ sections struct_gen::generate_traits() {
         ctor_types.push_back(fmt::format("const {}* p_{}", identifier, member_name));
     }
 
-    constexpr auto format = R"__(
-            template <>
+    constexpr auto format = R"__(template <>
             struct struct_traits<{0}> {{
                 using raw_members = meta::list<{4}>;
                 static constexpr auto members = std::make_tuple({1});
@@ -67,8 +65,7 @@ sections struct_gen::generate_traits() {
                 static {0}& ctor(::lidl::message_builder& builder{2}) {{
                     return ::lidl::create<{0}>(builder{3});
                 }}
-            }};
-        )__";
+            }};)__";
 
     section trait_sect;
     trait_sect.name_space = "lidl";
@@ -80,11 +77,9 @@ sections struct_gen::generate_traits() {
                                         fmt::join(member_types, ", "));
     trait_sect.add_dependency(def_key());
 
-    constexpr auto std_format = R"__(
-            template <>
+    constexpr auto std_format = R"__(template <>
             struct tuple_size<{}> : std::integral_constant<std::size_t, {}> {{
-            }};
-        )__";
+            }};)__";
 
     std::vector<std::string> tuple_elements;
     int idx = 0;
