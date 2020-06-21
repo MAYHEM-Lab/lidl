@@ -27,15 +27,15 @@ bool emitter::pass() {
         }
     }
 
-    std::cerr << "Pass\n";
+    std::cerr << "== Pass ==\n";
     for (auto& [ns, sects] : m_this_pass) {
         if (!ns.empty()) {
-            std::cerr << fmt::format("Start namespace {}\n", ns);
+            std::cerr << fmt::format("== namespace {} ==\n", ns);
             m_stream << fmt::format("namespace {} {{\n", ns);
         }
 
         for (auto& sect : sects) {
-            std::cerr << "Emitting " << sect.key.to_string(*m_module) << '\n';
+            std::cerr << "Emitting " << sect.key.to_string(*m_module) << "\n";
 
             m_stream << sect.definition << '\n';
 
@@ -47,7 +47,7 @@ bool emitter::pass() {
         }
 
         if (!ns.empty()) {
-            m_stream << fmt::format("}} // {} \n", ns);
+            m_stream << fmt::format("}} // namespace {} \n", ns);
         }
     }
 
