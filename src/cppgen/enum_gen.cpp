@@ -8,9 +8,9 @@ sections enum_gen::generate() {
     return do_generate();
 }
 sections enum_gen::do_generate() {
-    std::stringstream pub;
+    std::vector<std::string> members;
     for (auto& [name, member] : get().members) {
-        pub << fmt::format("{} = {},\n", name, member.value);
+        members.push_back(fmt::format("{} = {}", name, member.value));
     }
 
     constexpr auto format = R"__(enum class {} : {} {{
@@ -22,7 +22,7 @@ sections enum_gen::do_generate() {
     s.name_space = mod().name_space;
 
     s.definition = fmt::format(
-        format, name(), get_identifier(mod(), get().underlying_type), pub.str());
+        format, name(), get_identifier(mod(), get().underlying_type), fmt::join(members, ",\n"));
 
     auto res = generate_traits();
     res.add(s);
