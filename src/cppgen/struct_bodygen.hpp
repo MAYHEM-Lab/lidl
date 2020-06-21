@@ -23,16 +23,13 @@ public:
 
     sections generate() override;
 
-    static void
-    generate_field(std::string_view name, std::string_view type_name, std::ostream& str) {
-        str << fmt::format("{} {};\n", type_name, name);
+    static std::string
+    generate_field(std::string_view name, std::string_view type_name) {
+        return fmt::format("{} {};", type_name, name);
     }
 
 private:
-    void generate_raw_constructor();
-    struct {
-        std::stringstream pub, ctor;
-    } raw_sections;
+    std::vector<std::string> generate_raw_constructor();
 };
 
 class struct_body_gen {
@@ -50,12 +47,7 @@ public:
     sections generate();
 
 private:
-    void generate_constructor();
-
-    void generate_struct_field(std::string_view name, const member& mem) {
-        m_sections.pub << generate_getter(name, mem, true) << '\n';
-        m_sections.pub << generate_getter(name, mem, false) << '\n';
-    }
+    std::vector<std::string> generate_constructor();
 
     std::string
     generate_getter(std::string_view member_name, const member& mem, bool is_const);
@@ -67,11 +59,6 @@ private:
     const structure& str() {
         return *m_struct;
     }
-
-    struct {
-        std::stringstream pub, priv, ctor;
-        std::stringstream traits;
-    } m_sections;
 
     const module* m_module;
     symbol_handle m_symbol;

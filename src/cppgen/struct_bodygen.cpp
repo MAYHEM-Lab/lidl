@@ -3,11 +3,12 @@
 namespace lidl::cpp {
 
 sections raw_struct_gen::generate() {
+    std::vector<std::string> members;
     for (auto& [name, member] : get().members) {
-        generate_field(name, get_identifier(mod(), member.type_), raw_sections.pub);
+        members.push_back(generate_field(name, get_identifier(mod(), member.type_)));
     }
 
-    generate_raw_constructor();
+    auto ctor = generate_raw_constructor();
 
     constexpr auto format = R"__(struct {} {{
             {}
@@ -17,7 +18,7 @@ sections raw_struct_gen::generate() {
     section def_sect;
     def_sect.key = def_key();
     def_sect.definition =
-        fmt::format(format, name(), raw_sections.ctor.str(), raw_sections.pub.str());
+        fmt::format(format, name(), fmt::join(ctor, "\n"), fmt::join(members, "\n"));
 
     // Member types must be defined before us
     for (auto& [name, member] : get().members) {
@@ -32,10 +33,11 @@ sections raw_struct_gen::generate() {
     return res;
 }
 
-void raw_struct_gen::generate_raw_constructor() {
+std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
     if (get().members.empty()) {
-        return;
+        return {};
     }
+
     std::vector<std::string> arg_names;
     std::vector<std::string> initializer_list;
 
@@ -54,41 +56,42 @@ void raw_struct_gen::generate_raw_constructor() {
                         member_name));
     }
 
-    raw_sections.ctor << fmt::format("{}({}) : {} {{}}",
-                                     ctor_name(),
-                                     fmt::join(arg_names, ", "),
-                                     fmt::join(initializer_list, ", "));
+    return {fmt::format("{}({}) : {} {{}}",
+                        ctor_name(),
+                        fmt::join(arg_names, ", "),
+                        fmt::join(initializer_list, ", "))};
 }
 
 sections struct_body_gen::generate() {
+    std::vector<std::string> accessors;
     for (auto& [name, member] : str().members) {
-        generate_struct_field(name, member);
+        accessors.push_back(generate_getter(name, member, true));
+        accessors.push_back(generate_getter(name, member, false));
     }
 
     raw_struct_gen raw_gen(mod(), {}, "raw_t", "", str());
     auto sects = raw_gen.generate();
-    m_sections.priv << sects.m_sections[0].definition << '\n';
 
-    generate_constructor();
+    auto ctor = generate_constructor();
 
-    constexpr auto format = R"__(
-        public:
+    constexpr auto format = R"__(public:
             {}
             {}
         private:
             {}
-            raw_t raw;
-        )__";
+            raw_t raw;)__";
 
     section def;
     def.key        = {m_symbol, section_type::definition};
-    def.definition = fmt::format(
-        format, m_sections.ctor.str(), m_sections.pub.str(), m_sections.priv.str());
+    def.definition = fmt::format(format,
+                                 fmt::join(ctor, "\n"),
+                                 fmt::join(accessors, "\n"),
+                                 sects.m_sections[0].definition);
     def.depends_on = sects.m_sections[0].depends_on;
     return {{std::move(def)}};
 }
 
-void struct_body_gen::generate_constructor() {
+std::vector<std::string> struct_body_gen::generate_constructor() {
     std::vector<std::string> arg_names;
     std::vector<std::string> initializer_list;
 
@@ -104,10 +107,10 @@ void struct_body_gen::generate_constructor() {
         arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
     }
 
-    m_sections.ctor << fmt::format("{}({}) : raw{{{}}} {{}}",
-                                   m_name,
-                                   fmt::join(arg_names, ", "),
-                                   fmt::join(initializer_list, ", "));
+    return {fmt::format("{}({}) : raw{{{}}} {{}}",
+                        m_name,
+                        fmt::join(arg_names, ", "),
+                        fmt::join(initializer_list, ", "))};
 }
 
 std::string struct_body_gen::generate_getter(std::string_view member_name,
