@@ -154,6 +154,37 @@ int vector_type::yaml2bin(const module& mod,
     return pos;
 }
 
+std::pair<YAML::Node, size_t>
+vector_type::bin2yaml(const module& mod,
+                      const generic_instantiation& instantiation,
+                      gsl::span<const uint8_t> span) const {
+    auto ptr_span = span.subspan(span.size() - 2, 2);
+    uint16_t off{0};
+    memcpy(&off, ptr_span.data(), ptr_span.size());
+
+    YAML::Node arr;
+    if (off == 0) {
+        return {arr, 2};
+    }
+
+    auto& arg = std::get<name>(instantiation.arguments()[0]);
+    if (auto pointee = get_type(mod, arg); pointee) {
+        auto layout = pointee->wire_layout(mod);
+        auto len = off / layout.size();
+
+        for (int i = 0; i < len; ++i) {
+            auto obj_span =
+                span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
+            auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
+            arr.push_back(std::move(yaml));
+        }
+
+        return {std::move(arr), layout.size() * len};
+    }
+
+    throw std::runtime_error("pointee must be a regular type");
+}
+
 int string_type::yaml2bin(const module& module,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
@@ -189,5 +220,19 @@ int string_type::yaml2bin(const module& module,
     uint16_t len = str.size();
     writer.write(len);
     return pos;
+}
+
+std::pair<YAML::Node, size_t> string_type::bin2yaml(const module&,
+                                                    gsl::span<const uint8_t> span) const {
+    auto ptr_span = span.subspan(span.size() - 2, 2);
+    uint16_t off{0};
+    memcpy(&off, ptr_span.data(), ptr_span.size());
+    std::string s(off, 0);
+    auto str_span = span.subspan(span.size() - 2 - off, off);
+    memcpy(s.data(), str_span.data(), str_span.size());
+    while (s.back() == 0) {
+        s.pop_back();
+    }
+    return {YAML::Node(s), off + 2};
 }
 } // namespace lidl

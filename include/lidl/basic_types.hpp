@@ -184,18 +184,7 @@ struct double_type : basic_type {
 
 struct string_type : reference_type {
     std::pair<YAML::Node, size_t> bin2yaml(const module&,
-                                           gsl::span<const uint8_t> span) const override {
-        auto ptr_span = span.subspan(span.size() - 2, 2);
-        uint16_t off{0};
-        memcpy(&off, ptr_span.data(), ptr_span.size());
-        std::string s(off, 0);
-        auto str_span = span.subspan(span.size() - 2 - off, off);
-        memcpy(s.data(), str_span.data(), str_span.size());
-        while (s.back() == 0) {
-            s.pop_back();
-        }
-        return {YAML::Node(s), off + 2};
-    }
+                                           gsl::span<const uint8_t> span) const override;
 
     int yaml2bin(const module& module,
                  const YAML::Node& node,
@@ -219,33 +208,7 @@ struct vector_type : generic {
 
     std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
                                            const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
-        auto ptr_span = span.subspan(span.size() - 2, 2);
-        uint16_t off{0};
-        memcpy(&off, ptr_span.data(), ptr_span.size());
-
-        YAML::Node arr;
-        if (off == 0) {
-            return {arr, 2};
-        }
-
-        auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto pointee = get_type(mod, arg); pointee) {
-            auto layout = pointee->wire_layout(mod);
-            auto len = off / layout.size();
-
-            for (int i = 0; i < len; ++i) {
-                auto obj_span =
-                    span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
-                auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
-                arr.push_back(std::move(yaml));
-            }
-
-            return {std::move(arr), layout.size() * len};
-        }
-
-        throw std::runtime_error("pointee must be a regular type");
-    }
+                                           gsl::span<const uint8_t> span) const override;
 
     int yaml2bin(const module& mod,
                  const generic_instantiation& instantiation,
