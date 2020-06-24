@@ -1,5 +1,6 @@
 #include "lidl/builder.hpp"
 #include "service_generated.hpp"
+#include <lidl/find_extent.hpp>
 
 #include <cmath>
 #include <fstream>
@@ -169,6 +170,20 @@ auto make_request_handler() {
 
 static_assert(lidl::procedure_traits<decltype(&lidl_example::repeat::echo)>::takes_response_builder());
 int main(int argc, char** argv) {
+    std::array<uint8_t, 128> buff;
+    lidl::message_builder mb(buff);
+    auto& s = lidl::create<lidl_example::string_struct>(mb, lidl::create_string(mb, "hello"));
+    auto sp = lidl::meta::detail::find_extent(s);
+    std::cerr << sp.size() << '\n';
+    auto all = mb.get_buffer().get_buffer();
+    std::cerr << all.size() << '\n';
+
+    auto& deep = lidl::create<lidl_example::deep_struct>(mb, lidl::create_vector_sized<uint8_t>(mb, 0x2), s);
+    sp = lidl::meta::detail::find_extent(deep);
+    std::cerr << sp.size() << '\n';
+    all = mb.get_buffer().get_buffer();
+    std::cerr << all.size() << '\n';
+
     // std::ifstream file(argv[1]);
     // std::vector<uint8_t> req(std::istream_iterator<uint8_t>(file),
     // std::istream_iterator<uint8_t>{});

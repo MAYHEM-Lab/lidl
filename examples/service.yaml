@@ -6,6 +6,21 @@ my_struct:
   members:
     i: i8
 
+string_struct:
+  type: structure
+  members:
+    str: string
+
+deep_struct:
+  type: structure
+  members:
+    vec:
+      type:
+        name: vector
+        parameters:
+          - u8
+    base: string_struct
+
 complex_struct:
   type: structure
   members:
