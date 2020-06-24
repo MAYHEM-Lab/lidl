@@ -317,10 +317,9 @@ struct cppgen {
 
 private:
     sections generate_module_traits() {
-        static constexpr auto format = R"__(template<>
-            struct module_traits<{0}> {{
-                static constexpr const char* name = "{0}";
-                using symbols = meta::list<{1}>;
+        static constexpr auto format = R"__(struct module_traits {{
+                inline static constexpr const char* name = "{0}";
+                using symbols = ::lidl::meta::list<{1}>;
             }};)__";
 
         std::vector<std::string> symbol_names;
@@ -329,10 +328,20 @@ private:
             //            symbol_names.emplace_back(s.name.name);
         }
 
-        section s;
-        s.name_space = "lidl";
-        s.definition = fmt::format(format, name(), fmt::join(symbol_names, ", "));
-        return sections{{std::move(s)}};
+        section sec;
+        for (auto& s : mod().symbols->all_handles()) {
+            auto sym = get_symbol(s);
+            using std::get_if;
+            if (get_if<const type*>(&sym) || get_if<const generic*>(&sym) ||
+                get_if<const service*>(&sym)) {
+                symbol_names.push_back(get_identifier(mod(), {s}));
+                sec.add_dependency({s, section_type::definition});
+            }
+        }
+
+        sec.name_space = mod().name_space;
+        sec.definition = fmt::format(format, name(), fmt::join(symbol_names, ", "));
+        return sections{{std::move(sec)}};
     }
 
     sections m_sections;
