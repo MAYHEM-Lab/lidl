@@ -6,6 +6,7 @@
 #include "generic_gen.hpp"
 #include "lidl/enumeration.hpp"
 #include "lidl/union.hpp"
+#include "service_stub_gen.hpp"
 #include "struct_bodygen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
@@ -295,8 +296,13 @@ struct cppgen {
 
         for (auto& service : mod().services) {
             Expects(!is_anonymous(mod(), &service));
-            auto name = local_name(*mod().symbols->definition_lookup(&service));
+            auto sym  = *mod().symbols->definition_lookup(&service);
+            auto name = local_name(sym);
             m_sections.merge_before(generate_service(mod(), name, service));
+
+            auto generator = remote_stub_generator(
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+            //m_sections.merge_before(generator.generate());
         }
 
         // TODO: fix module traits
