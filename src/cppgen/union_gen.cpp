@@ -72,12 +72,12 @@ sections union_gen::do_generate() {
                 member_name);
         }
 
-        ctors.push_back(fmt::format("{}({}) : {}, discriminator{{{}::{}}} {{}}",
+        ctors.push_back(fmt::format("{}({}) : discriminator{{{}::{}}}, {} {{}}",
                                     ctor_name(),
                                     arg_names,
-                                    initializer_list,
                                     enum_name,
-                                    enum_val));
+                                    enum_val,
+                                    initializer_list));
     }
 
     constexpr auto case_format = R"__(case {0}::{1}: return fn(val.{1}());)__";
