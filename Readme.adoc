@@ -1,0 +1,29 @@
+= **lidl**
+
+**lidl** is an efficient interface description language (IDL). It is designed to work
+effectively on resource constrained devices such as microcontrollers.
+
+**Notable features:**
+
+. **{cpp} Struct Layouts:** for primitive types, lidl will generate types that
+are literally C structs. This means that for such types, it's literally zero
+overhead.
+. **Support for view types:** as far as I know, lidl is the only IDL that
+has a notion of view types. This allows you to make local calls extremely
+efficiently.
+. **Rich compile time reflection support:** the generated code includes
+extensive compile time reflection information. This makes auto-generation
+of higher level functionality possible in language. For instance, using
+this information, you can automatically synthesize python bindings from
+{cpp} with no further code generation. Things like human readable names,
+access to members by their names etc. are all possible.
+
+== Supported languages
+
+Right now, lidl can generate C++ code.
+
+However, it also emits a significant amount of static reflection data.
+
+Using this reflection information, it is easy to generate bindings to
+dynamic languages. For instance, there's an example of generating python
+bindings with pybind11 in the examples directory.
