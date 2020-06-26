@@ -21,19 +21,14 @@ raw_layout pointer_type::wire_layout(const module& mod,
     return raw_layout{2, 2};
 }
 
-std::pair<YAML::Node, size_t>
-pointer_type::bin2yaml(const module& mod,
-                       const generic_instantiation& instantiation,
-                       gsl::span<const uint8_t> span) const {
+YAML::Node pointer_type::bin2yaml(const module& mod,
+                                  const generic_instantiation& instantiation,
+                                  ibinary_reader& reader) const {
     auto& arg = std::get<name>(instantiation.arguments()[0]);
     if (auto pointee = get_type(mod, arg); pointee) {
-        auto ptr_span = span.subspan(span.size() - 2, 2);
-        int16_t off{0};
-        memcpy(&off, ptr_span.data(), ptr_span.size());
-        auto obj_span =
-            span.subspan(0, span.size() - 2 - off + pointee->wire_layout(mod).size());
-        auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
-        return {std::move(yaml), consumed + 2};
+        auto off = reader.read_object<int16_t>();
+        reader.seek(-off);
+        return pointee->bin2yaml(mod, reader);
     }
     throw std::runtime_error("pointee must be a regular type");
 }
@@ -68,7 +63,7 @@ std::unique_ptr<module> basic_module() {
         define(*basic_mod->symbols, name, basic_mod->basic_generics.back().get());
     };
 
-    add_type("bool", std::make_unique<integral_type>(1, false));
+    add_type("bool", std::make_unique<bool_type>());
 
     add_type("i8", std::make_unique<integral_type>(8, false));
     add_type("i16", std::make_unique<integral_type>(16, false));
@@ -122,7 +117,6 @@ int vector_type::yaml2bin(const module& mod,
     auto pointee = get_type(mod, arg);
     Expects(pointee != nullptr);
 
-    int init_pos = 0;
     if (pointee->is_reference_type(mod)) {
         auto actual_pointee = get_type(mod, std::get<name>(arg.args[0].get_variant()));
 
@@ -132,54 +126,56 @@ int vector_type::yaml2bin(const module& mod,
             positions.push_back(actual_pointee->yaml2bin(mod, elem, writer));
         }
 
+        auto pos = writer.tell();
         writer.align(2);
-        init_pos = writer.tell();
+        writer.write<int16_t>(node.size());
+
         for (auto pos : positions) {
             YAML::Node ptr_node(pos);
             writer.align(pointee->wire_layout(mod).alignment());
             pointee->yaml2bin(mod, ptr_node, writer);
         }
+
+        return pos;
     } else {
-        init_pos = writer.tell();
+        auto pos = writer.tell();
+        writer.align(2);
+        writer.write<int16_t>(node.size());
+
         for (auto& elem : node) {
             writer.align(pointee->wire_layout(mod).alignment());
             pointee->yaml2bin(mod, elem, writer);
         }
+        return pos;
     }
-
-    writer.align(2);
-    auto pos      = writer.tell();
-    uint16_t diff = writer.tell() - init_pos;
-    writer.write(diff);
-    return pos;
 }
 
-std::pair<YAML::Node, size_t>
-vector_type::bin2yaml(const module& mod,
-                      const generic_instantiation& instantiation,
-                      gsl::span<const uint8_t> span) const {
-    auto ptr_span = span.subspan(span.size() - 2, 2);
-    uint16_t off{0};
-    memcpy(&off, ptr_span.data(), ptr_span.size());
+raw_layout vector_type::wire_layout(const module& mod,
+                                    const generic_instantiation& ins) const {
+    return {2, 2};
+}
 
-    YAML::Node arr;
-    if (off == 0) {
-        return {arr, 2};
-    }
-
+YAML::Node vector_type::bin2yaml(const module& mod,
+                                 const generic_instantiation& instantiation,
+                                 ibinary_reader& reader) const {
     auto& arg = std::get<name>(instantiation.arguments()[0]);
     if (auto pointee = get_type(mod, arg); pointee) {
-        auto layout = pointee->wire_layout(mod);
-        auto len = off / layout.size();
+        auto size = reader.read_object<int16_t>();
+        reader.seek(2);
 
-        for (int i = 0; i < len; ++i) {
-            auto obj_span =
-                span.subspan(0, span.size() - 2 - off + (i + 1) * layout.size());
-            auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
-            arr.push_back(std::move(yaml));
+        auto layout = pointee->wire_layout(mod);
+        reader.align(layout.alignment());
+
+        auto begin = reader.tell();
+
+        auto arr = YAML::Node();
+        for (int i = 0; i < size; ++i) {
+            reader.seek(begin + i * layout.size(), std::ios::beg);
+            auto yaml = pointee->bin2yaml(mod, reader);
+            arr.push_back(yaml);
         }
 
-        return {std::move(arr), layout.size() * len};
+        return arr;
     }
 
     throw std::runtime_error("pointee must be a regular type");
@@ -188,51 +184,42 @@ vector_type::bin2yaml(const module& mod,
 int string_type::yaml2bin(const module& module,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
-    /**
-     * A string is encoded as the contents of the string, plus a pointer for length.
-     * We need to pre-align the string so that the pointer ends up on a 2 byte boundary,
-     * and is well-aligned.
-     * If we don't do the pre-alignment, the buffer ends up looking like this for odd
-     * length strings, for instance "hello":
-     *
-     * |h|e|l|l|o|0|6|0|
-     *
-     * That 0 byte was inserted due to aligning the pointer to a 2 byte boundary. This
-     * causes to pointer to be 1 byte away from the beginning of the string, and will
-     * place 6 into the pointer. Since the size of a string is equal to it's pointer's
-     * offset, any lidl runtime will think this is a 6 element string, whereas the user
-     * probably intended it to be a 5 element string.
-     *
-     * Therefore, to put the pointer on a 2 byte address, we need to _pre-align_ the
-     * string so that it looks like this:
-     *
-     * |0|h|e|l|l|o|5|0|
-     *
-     * This way, the length is 5 as expected.
-     */
-    auto str     = node.as<std::string>();
-    auto pre_pad = (writer.tell() + str.size()) % 2;
-    std::vector<char> pad(pre_pad);
-    writer.write_raw(pad);
-    writer.write_raw(str);
-    writer.align(2); // Unnecessary, but kept for completeness
-    auto pos     = writer.tell();
-    uint16_t len = str.size();
-    writer.write(len);
+    auto str = node.as<std::string>();
+    writer.align(2);
+    auto pos = writer.tell();
+    writer.write<int16_t>(str.size());
+    writer.write_raw_string(str);
     return pos;
 }
 
-std::pair<YAML::Node, size_t> string_type::bin2yaml(const module&,
-                                                    gsl::span<const uint8_t> span) const {
-    auto ptr_span = span.subspan(span.size() - 2, 2);
-    uint16_t off{0};
-    memcpy(&off, ptr_span.data(), ptr_span.size());
-    std::string s(off, 0);
-    auto str_span = span.subspan(span.size() - 2 - off, off);
-    memcpy(s.data(), str_span.data(), str_span.size());
-    while (s.back() == 0) {
-        s.pop_back();
-    }
-    return {YAML::Node(s), off + 2};
+YAML::Node string_type::bin2yaml(const module&, ibinary_reader& reader) const {
+    /**
+     * 2 bytes length + lenght many chars
+     */
+
+    auto len = reader.read_object<int16_t>();
+    reader.seek(2);
+    auto raw_str = reader.read_bytes(len);
+    return YAML::Node(
+        std::string(reinterpret_cast<const char*>(raw_str.data()), raw_str.size()));
+}
+
+raw_layout string_type::wire_layout(const module& mod) const {
+    //    throw std::runtime_error("Don't ask for a string's layout!");
+    return {2, 2};
+}
+
+bool string_type::is_reference_type(const module& mod) const {
+    return true;
+}
+
+YAML::Node bool_type::bin2yaml(const module& module, ibinary_reader& reader) const {
+    return YAML::Node(reader.read_object<bool>());
+}
+
+int bool_type::yaml2bin(const module& mod,
+                        const YAML::Node& node,
+                        ibinary_writer& writer) const {
+    return 0;
 }
 } // namespace lidl

@@ -1,5 +1,5 @@
-#include <lidl/structure.hpp>
 #include <cassert>
+#include <lidl/structure.hpp>
 
 namespace lidl {
 bool structure::is_reference_type(const module& mod) const {
@@ -25,33 +25,29 @@ compound_layout structure::layout(const module& mod) const {
     return computer;
 }
 
-std::pair<YAML::Node, size_t> structure::bin2yaml(const module& mod,
-                                                  gsl::span<const uint8_t> span) const {
+YAML::Node structure::bin2yaml(const module& mod, ibinary_reader& reader) const {
     YAML::Node node;
 
     auto l = layout(mod);
 
-    auto span_size = span.size();
-    std::cerr << span_size << '\n';
-    auto struct_begin = span.size() - l.get().size();
+    auto struct_begin = reader.tell();
 
     for (auto it = members.rbegin(); it != members.rend(); ++it) {
         auto& [name, member] = *it;
 
         /**
-         * We have to compute the exact end of the member here due to possible padding.
+         * We have to compute the exact end of the member here due to possible
+         padding.
          * Our layout keeps track of the offsets of our members.
          */
-        auto member_layout = get_type(mod, member.type_)->wire_layout(mod);
 
         auto member_begin_offset = l.offset_of(name).value();
-        auto actual_end = member_begin_offset + member_layout.size();
-        auto cur_span = span.subspan(0, struct_begin + actual_end);
+        reader.seek(struct_begin + member_begin_offset, std::ios::beg);
 
-        node[name] = get_type(mod, member.type_)->bin2yaml(mod, cur_span).first;
+        node[name] = get_type(mod, member.type_)->bin2yaml(mod, reader);
     }
 
-    return {node, wire_layout(mod).size()};
+    return node;
 }
 
 int structure::yaml2bin(const module& mod,
@@ -70,7 +66,7 @@ int structure::yaml2bin(const module& mod,
 
     writer.align(wire_layout(mod).alignment());
     auto struct_pos = writer.tell(); // Struct beginning
-    auto l = layout(mod);
+    auto l          = layout(mod);
     for (auto& [mem_name, mem] : members) {
         auto t = get_type(mod, mem.type_);
         if (t->is_reference_type(mod)) {
@@ -79,7 +75,7 @@ int structure::yaml2bin(const module& mod,
             writer.align(t->wire_layout(mod).alignment());
 
             auto expected_offset = l.offset_of(mem_name).value();
-            auto cur_offset = writer.tell() - struct_pos;
+            auto cur_offset      = writer.tell() - struct_pos;
             assert(expected_offset == cur_offset);
 
             t->yaml2bin(mod, ptr_node, writer);
@@ -88,7 +84,7 @@ int structure::yaml2bin(const module& mod,
             writer.align(t->wire_layout(mod).alignment());
 
             auto expected_offset = l.offset_of(mem_name).value();
-            auto cur_offset = writer.tell() - struct_pos;
+            auto cur_offset      = writer.tell() - struct_pos;
             assert(expected_offset == cur_offset);
 
             t->yaml2bin(mod, elem, writer);
