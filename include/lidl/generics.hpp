@@ -73,9 +73,8 @@ struct generic {
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const = 0;
 
-    virtual std::pair<YAML::Node, size_t> bin2yaml(const module&,
-                                                   const generic_instantiation&,
-                                                   gsl::span<const uint8_t>) const = 0;
+    virtual YAML::Node
+    bin2yaml(const module&, const generic_instantiation&, ibinary_reader&) const = 0;
 
     virtual int yaml2bin(const module& mod,
                          const generic_instantiation&,
@@ -104,9 +103,9 @@ struct generic_structure : generic {
         return instantiate(mod, instantiation).is_reference_type(mod);
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& mod,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override {
         return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
 
@@ -138,9 +137,9 @@ struct generic_union : generic {
         return instantiate(mod, instantiation).is_reference_type(mod);
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& mod,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override {
         return instantiate(mod, instantiation).bin2yaml(mod, span);
     }
 
@@ -158,9 +157,9 @@ class generic_instantiation : public type {
 public:
     explicit generic_instantiation(name n)
         : m_name(std::move(n)) {
-        auto base = get_symbol(m_name.base);
+        auto base      = get_symbol(m_name.base);
         auto base_type = std::get<const generic*>(base);
-        m_actual = base_type;
+        m_actual       = base_type;
     }
 
     bool is_reference_type(const module& mod) const override {
@@ -171,8 +170,7 @@ public:
         return m_actual->wire_layout(mod, *this);
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& module, ibinary_reader& span) const override {
         return m_actual->bin2yaml(module, *this, span);
     }
 
@@ -219,9 +217,9 @@ struct forward_decl : generic {
             "Is reference shouldn't be called on a forward declaration!");
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& module,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override {
         throw std::runtime_error(
             "bin2yaml shouldn't be called on a forward declaration!");
     }
@@ -252,8 +250,8 @@ struct pointer_type : generic {
                  const YAML::Node& node,
                  ibinary_writer& writer) const override;
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override;
+    YAML::Node bin2yaml(const module& mod,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override;
 };
 } // namespace lidl

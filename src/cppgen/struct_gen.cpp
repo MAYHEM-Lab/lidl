@@ -16,7 +16,7 @@ sections struct_gen::do_generate() {
             {1}
         }};)__";
 
-    auto body = struct_body_gen(mod(), symbol(), name(), get()).generate();
+    auto body = struct_body_gen(mod(), symbol(), name(), ctor_name(), get()).generate();
 
     section s;
     s.keys.push_back(def_key());

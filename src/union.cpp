@@ -18,22 +18,23 @@ raw_layout union_type::wire_layout(const lidl::module& mod) const {
     return overall_computer.get();
 }
 
-std::pair<YAML::Node, size_t> union_type::bin2yaml(const module& mod,
-                                                   gsl::span<const uint8_t> span) const {
+YAML::Node union_type::bin2yaml(const module& mod, ibinary_reader& reader) const {
     YAML::Node node;
 
     auto& enumerator = get_enum();
-    auto my_layout = wire_layout(mod);
     auto enum_layout = enumerator.wire_layout(mod);
-    auto enum_span = span.subspan(0, span.size() - my_layout.size() + enum_layout.size());
 
-    auto alternative_node = enumerator.bin2yaml(mod, enum_span);
-    int alternative = alternative_node.first.as<uint64_t>();
+    auto alternative_node = enumerator.bin2yaml(mod, reader);
+    int alternative       = enumerator.find_by_name(alternative_node.as<std::string>());
+
+    reader.seek(enum_layout.size());
 
     auto& [name, member] = members[alternative];
-    node[name] = get_type(mod, member.type_)->bin2yaml(mod, span).first;
+    auto member_type     = get_type(mod, member.type_);
+    reader.align(member_type->wire_layout(mod).alignment());
+    node[name] = member_type->bin2yaml(mod, reader);
 
-    return {node, my_layout.size()};
+    return node;
 }
 
 bool union_type::is_reference_type(const module& mod) const {
@@ -53,15 +54,15 @@ int union_type::yaml2bin(const module& mod,
         throw std::runtime_error("Union has not exactly 1 member!");
     }
 
-    auto active_member = node.begin()->first.as<std::string>();
-    auto& enumerator = get_enum();
-    auto enum_index = enumerator.find_by_name(active_member);
+    auto active_member    = node.begin()->first.as<std::string>();
+    auto& enumerator      = get_enum();
+    auto enum_index       = enumerator.find_by_name(active_member);
     auto& [mem_name, mem] = members[enum_index];
-    auto t = get_type(mod, mem.type_);
+    auto t                = get_type(mod, mem.type_);
 
     int pointee_pos = 0;
     if (t->is_reference_type(mod)) {
-        auto pointee = std::get<name>(mem.type_.args[0].get_variant());
+        auto pointee      = std::get<name>(mem.type_.args[0].get_variant());
         auto pointee_type = get_type(mod, pointee);
         writer.align(pointee_type->wire_layout(mod).alignment());
         pointee_pos = pointee_type->yaml2bin(mod, node.begin()->second, writer);

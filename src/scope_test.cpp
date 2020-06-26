@@ -21,9 +21,9 @@ struct mock_type : type {
         return {1, 1};
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           gsl::span<const uint8_t> span) const override {
-        return std::pair<YAML::Node, size_t>();
+    YAML::Node bin2yaml(const module& module,
+                                           ibinary_reader& span) const override {
+        return YAML::Node(0);
     }
     int yaml2bin(const module& mod,
                  const YAML::Node& node,
@@ -50,9 +50,9 @@ struct mock_type2 : type {
         return {2, 2};
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           gsl::span<const uint8_t> span) const override {
-        return std::pair<YAML::Node, size_t>();
+    YAML::Node bin2yaml(const module& module,
+                                           ibinary_reader& span) const override {
+        return YAML::Node();
     }
     int yaml2bin(const module& mod,
                  const YAML::Node& node,

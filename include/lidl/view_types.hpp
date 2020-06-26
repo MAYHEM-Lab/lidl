@@ -16,8 +16,8 @@ struct view_type : type {
         return false;
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& module,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& module,
+                                           ibinary_reader& span) const override {
         throw std::runtime_error("View type");
     }
 

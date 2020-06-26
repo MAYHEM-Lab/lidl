@@ -19,33 +19,36 @@ struct array_type : generic {
         auto& arg = std::get<name>(instantiation.arguments()[0]);
         if (auto regular = get_type(mod, arg); regular) {
             auto layout = regular->wire_layout(mod);
-            auto len = std::get<int64_t>(instantiation.arguments()[1]);
+            auto len    = std::get<int64_t>(instantiation.arguments()[1]);
             return raw_layout(static_cast<int16_t>(layout.size() * len),
                               layout.alignment());
         }
         throw std::runtime_error("Array type is not regular!");
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override {
-        YAML::Node arr;
-        auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto pointee = get_type(mod, arg); pointee) {
-            auto layout = pointee->wire_layout(mod);
-            auto len = std::get<int64_t>(instantiation.arguments()[1]);
-
-            for (int i = 0; i < len; ++i) {
-                auto obj_span =
-                    span.subspan(0, span.size() - (len - i - 1) * layout.size());
-                auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
-                arr.push_back(std::move(yaml));
-            }
-
-            return {std::move(arr), layout.size() * len};
-        }
-
-        throw std::runtime_error("pointee must be a regular type");
+    YAML::Node bin2yaml(const module& mod,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override {
+        throw std::runtime_error("Not implemented!");
+        //
+        //        YAML::Node arr;
+        //        auto& arg = std::get<name>(instantiation.arguments()[0]);
+        //        if (auto pointee = get_type(mod, arg); pointee) {
+        //            auto layout = pointee->wire_layout(mod);
+        //            auto len    = std::get<int64_t>(instantiation.arguments()[1]);
+        //
+        //            for (int i = 0; i < len; ++i) {
+        //                auto obj_span =
+        //                    span.subspan(0, span.size() - (len - i - 1) *
+        //                    layout.size());
+        //                auto [yaml, consumed] = pointee->bin2yaml(mod, obj_span);
+        //                arr.push_back(std::move(yaml));
+        //            }
+        //
+        //            return {std::move(arr), layout.size() * len};
+        //        }
+        //
+        //        throw std::runtime_error("pointee must be a regular type");
     }
 
     int yaml2bin(const module& mod,
@@ -58,7 +61,7 @@ struct array_type : generic {
         }
 
         writer.align(wire_layout(mod, instantiation).alignment());
-        auto pos = writer.tell();
+        auto pos  = writer.tell();
         auto& arg = std::get<name>(instantiation.arguments()[0]);
         if (auto pointee = get_type(mod, arg); pointee) {
             for (auto& elem : node) {
@@ -86,24 +89,34 @@ struct basic_type : value_type {
     int32_t size_in_bits;
 };
 
+struct bool_type : basic_type {
+    bool_type()
+        : basic_type(1) {
+    }
+
+    YAML::Node bin2yaml(const module& module, ibinary_reader& reader) const override;
+    int yaml2bin(const module& mod,
+                 const YAML::Node& node,
+                 ibinary_writer& writer) const override;
+};
+
 struct integral_type : basic_type {
     explicit integral_type(int bits, bool unsigned_)
         : basic_type(bits)
         , is_unsigned(unsigned_) {
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           gsl::span<const uint8_t> span) const override {
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override {
         auto layout = wire_layout(mod);
-        auto s = span.subspan(span.size() - layout.size(), layout.size());
+        auto data   = reader.read_bytes(layout.size());
         if (is_unsigned) {
             uint64_t x{0};
-            memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
-            return {YAML::Node(x), s.size()};
+            memcpy(reinterpret_cast<char*>(&x), data.data(), data.size());
+            return YAML::Node(x);
         } else {
             int64_t x{0};
-            memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
-            return {YAML::Node(x), s.size()};
+            memcpy(reinterpret_cast<char*>(&x), data.data(), data.size());
+            return YAML::Node(x);
         }
     }
 
@@ -111,7 +124,7 @@ struct integral_type : basic_type {
                  const YAML::Node& node,
                  ibinary_writer& writer) const override {
         if (is_unsigned) {
-            auto data = node.as<uint64_t>();
+            auto data   = node.as<uint64_t>();
             auto layout = wire_layout(mod);
             std::vector<char> buf(layout.size());
             memcpy(buf.data(), &data, layout.size());
@@ -120,7 +133,7 @@ struct integral_type : basic_type {
             writer.write_raw(buf);
             return pos;
         } else {
-            auto data = node.as<int64_t>();
+            auto data   = node.as<int64_t>();
             auto layout = wire_layout(mod);
             std::vector<char> buf(layout.size());
             memcpy(buf.data(), &data, layout.size());
@@ -139,13 +152,8 @@ struct float_type : basic_type {
         : basic_type(32) {
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           gsl::span<const uint8_t> span) const override {
-        auto layout = wire_layout(mod);
-        auto s = span.subspan(span.size() - layout.size(), layout.size());
-        float x{0};
-        memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
-        return {YAML::Node(x), s.size()};
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override {
+        return YAML::Node(reader.read_object<float>());
     }
 
     int yaml2bin(const module& module,
@@ -163,13 +171,8 @@ struct double_type : basic_type {
         : basic_type(64) {
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           gsl::span<const uint8_t> span) const override {
-        auto layout = wire_layout(mod);
-        auto s = span.subspan(span.size() - layout.size(), layout.size());
-        double x{0};
-        memcpy(reinterpret_cast<char*>(&x), s.data(), s.size());
-        return {YAML::Node(x), s.size()};
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override {
+        return YAML::Node(reader.read_object<double>());
     }
 
     int yaml2bin(const module& module,
@@ -182,9 +185,11 @@ struct double_type : basic_type {
     }
 };
 
-struct string_type : reference_type {
-    std::pair<YAML::Node, size_t> bin2yaml(const module&,
-                                           gsl::span<const uint8_t> span) const override;
+struct string_type : type {
+    YAML::Node bin2yaml(const module&, ibinary_reader& span) const override;
+
+    raw_layout wire_layout(const module& mod) const override;
+    bool is_reference_type(const module& mod) const override;
 
     int yaml2bin(const module& module,
                  const YAML::Node& node,
@@ -197,22 +202,20 @@ struct vector_type : generic {
     }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation&) const override {
-        return raw_layout{2, 2};
-    }
+                                   const generic_instantiation& ins) const override;
 
     bool is_reference(const module& mod,
                       const generic_instantiation& instantiation) const override {
         return true;
     }
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           const generic_instantiation& instantiation,
-                                           gsl::span<const uint8_t> span) const override;
+    YAML::Node bin2yaml(const module& mod,
+                        const generic_instantiation& instantiation,
+                        ibinary_reader& span) const override;
 
     int yaml2bin(const module& mod,
                  const generic_instantiation& instantiation,
                  const YAML::Node& node,
                  ibinary_writer& writer) const override;
 };
-}
+} // namespace lidl

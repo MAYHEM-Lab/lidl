@@ -5,8 +5,8 @@ namespace lidl {
 void reference_type_pass(module&);
 namespace {
 TEST_CASE("reference type pass works with a string") {
-    module m;
-    add_basic_types(m);
+    auto basic_module = lidl::basic_module();
+    auto& m = *basic_module;
 
     auto ptr_sym = *m.symbols->name_lookup("ptr");
     auto str_sym = *m.symbols->name_lookup("string");
@@ -28,8 +28,8 @@ TEST_CASE("reference type pass works with a string") {
 }
 
 TEST_CASE("reference type pass works with a vector of strings") {
-    module m;
-    add_basic_types(m);
+    auto basic_module = lidl::basic_module();
+    auto& m = *basic_module;
 
     auto ptr_sym = *m.symbols->name_lookup("ptr");
     auto str_sym = *m.symbols->name_lookup("string");

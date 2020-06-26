@@ -1,6 +1,6 @@
 add_subdirectory(cppgen)
 add_subdirectory(tools)
-add_subdirectory(pybindgen)
+#   add_subdirectory(pybindgen)
 
 add_library(lidl_yaml yaml.cpp yaml.hpp)
 target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)
@@ -19,18 +19,24 @@ if (BUILD_TESTS)
     target_link_libraries(scope_test PUBLIC lidl_core test_main)
     add_test(scope_test scope_test)
 
-    add_executable(module_test module_test.cpp)
-    target_link_libraries(module_test PUBLIC lidl_core test_main)
-    add_test(module_test module_test)
-
     add_executable(reference_type_pass_test reference_type_pass_test.cpp)
     target_link_libraries(reference_type_pass_test PUBLIC lidl_core test_main)
     add_test(reference_type_pass_test reference_type_pass_test)
+
+    add_executable(bin2yaml_test bin2yaml_test.cpp)
+    target_link_libraries(bin2yaml_test PUBLIC lidl_core test_main)
+    add_test(bin2yaml_test bin2yaml_test)
+
+    add_executable(yaml2bin_test yaml2bin_test.cpp)
+    target_link_libraries(yaml2bin_test PUBLIC lidl_core test_main)
+    add_test(yaml2bin_test yaml2bin_test)
 
     add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                     DEPENDS 
                     layout_test
                     scope_test
-                    module_test
+                    reference_type_pass_test
+                    bin2yaml_test
+                    yaml2bin_test
                     )
 endif()

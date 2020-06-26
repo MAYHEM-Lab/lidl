@@ -14,46 +14,97 @@ void union_enum_pass(module& m);
 } // namespace lidl
 
 namespace lidl::cpp {
+std::string generic_gen::local_full_name() {
+    return get_local_identifier(mod(), get().get_name());
+}
 std::string generic_gen::full_name() {
     return get_identifier(mod(), get().get_name());
 }
 
 sections generic_gen::do_generate(const generic_structure& str) {
     module tmpmod;
-    //TODO: Create an unrelated module here
+    tmpmod.name_space = mod().name_space;
+    // TODO: Create an unrelated module here
     tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.structs.emplace_back(str.instantiate(mod(), get()));
     reference_type_pass(tmpmod);
 
-    struct_gen gen(tmpmod, symbol(), full_name(), name(), tmpmod.structs.back());
+    struct_gen gen(
+        tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.structs.back());
     return std::move(gen.generate());
 }
 
 sections generic_gen::do_generate(const generic_union& u) {
     module tmpmod;
-    //TODO: Create an unrelated module here
+    tmpmod.name_space = mod().name_space;
+    // TODO: Create an unrelated module here
     tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.unions.emplace_back(u.instantiate(mod(), get()));
     reference_type_pass(tmpmod);
     union_enum_pass(tmpmod);
 
-    union_gen gen(tmpmod, symbol(), full_name(), name(), tmpmod.unions.back());
+    union_gen gen(
+        tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.unions.back());
 
     return std::move(gen.generate());
 }
 
+namespace {
+std::string declare_template(const module& mod,
+                             std::string_view generic_name,
+                             const generic& generic) {
+    std::vector<std::string> params;
+    for (auto& [name, param] : generic.declaration) {
+        std::string type_name;
+        if (dynamic_cast<type_parameter*>(param.get())) {
+            type_name = "typename";
+        } else {
+            type_name = "int32_t";
+        }
+        params.emplace_back(fmt::format("{} {}", type_name, name));
+    }
+
+    return fmt::format(
+        "template <{}>\nclass {};\n", fmt::join(params, ", "), generic_name);
+}
+
+} // namespace
+
 sections generic_gen::do_generate() {
-    //TODO
+    sections common;
+
+    section decl;
+    decl.name_space = mod().name_space;
+    decl.key        = decl_key();
+    decl.definition = declare_template(mod(), name(), get().generic_type());
+    common.add(std::move(decl));
+
     if (auto genstr = dynamic_cast<const generic_structure*>(&get().generic_type())) {
         auto res = do_generate(*genstr);
-//        res.m_body[full_name()] = "template <>\n" + res.m_body[full_name()];
-        return res;
+        for (auto& sec : res.m_sections) {
+            if (sec.key.type == section_type::definition ||
+                std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+                    return key.type == section_type::definition;
+                })) {
+                sec.definition = "template <>\n" + sec.definition;
+                sec.add_dependency(decl_key());
+            }
+        }
+        common.merge_before(res);
     }
     if (auto genun = dynamic_cast<const generic_union*>(&get().generic_type())) {
         auto res = do_generate(*genun);
-//        res.m_body[full_name()] = "template <>\n" + res.m_body[full_name()];
-        return res;
+        for (auto& sec : res.m_sections) {
+            if (sec.key.type == section_type::definition ||
+                std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+                    return key.type == section_type::definition;
+                })) {
+                sec.definition = "template <>\n" + sec.definition;
+                sec.add_dependency(decl_key());
+            }
+        }
+        common.merge_before(res);
     }
-    return sections();
+    return common;
 }
-}
+} // namespace lidl::cpp

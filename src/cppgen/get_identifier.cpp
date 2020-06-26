@@ -51,6 +51,22 @@ std::string get_identifier(const module& mod, const symbol_handle& handle) {
     return fmt::format("{}", fmt::join(converted_parts, "::"));
 }
 
+std::string get_local_identifier(const module& mod, const symbol_handle& handle) {
+    auto full_path = std::vector<std::string_view>{local_name(handle)};
+    std::vector<std::string> converted_parts(full_path.size());
+    std::transform(full_path.begin(),
+                   full_path.end(),
+                   converted_parts.begin(),
+                   [](auto part) -> std::string {
+                     if (auto known = known_type_conversion(part); known) {
+                         return *known;
+                     }
+                     return std::string(part);
+                   });
+
+    return fmt::format("{}", fmt::join(converted_parts, "::"));
+}
+
 std::string get_identifier(const module& mod, int64_t i) {
     return std::to_string(i);
 }
@@ -73,6 +89,25 @@ std::string get_identifier(const module& mod, const name& n) {
                        return std::visit(
                            [&](auto& arg) { return get_identifier(mod, arg); },
                            arg.get_variant());
+                   });
+
+    return fmt::format("{}<{}>", base_name, fmt::join(generic_args, ", "));
+}
+
+std::string get_local_identifier(const module& mod, const name& n) {
+    auto base_name = get_local_identifier(mod, n.base);
+    if (n.args.empty()) {
+        return std::string(base_name);
+    }
+
+    std::vector<std::string> generic_args(n.args.size());
+    std::transform(n.args.begin(),
+                   n.args.end(),
+                   generic_args.begin(),
+                   [&](const generic_argument& arg) {
+                     return std::visit(
+                         [&](auto& arg) { return get_identifier(mod, arg); },
+                         arg.get_variant());
                    });
 
     return fmt::format("{}<{}>", base_name, fmt::join(generic_args, ", "));

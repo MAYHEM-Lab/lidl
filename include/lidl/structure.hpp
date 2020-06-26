@@ -16,8 +16,8 @@ struct structure : public value_type {
 
     raw_layout wire_layout(const module& mod) const override;
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           gsl::span<const uint8_t> span) const override;
+    YAML::Node bin2yaml(const module& mod,
+                                           ibinary_reader& span) const override;
 
     int yaml2bin(const module& mod,
                   const YAML::Node& node,

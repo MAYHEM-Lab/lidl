@@ -2,6 +2,7 @@
 
 #include <gsl/span>
 #include <iostream>
+#include <lidl/binary_writer.hpp>
 #include <lidl/layout.hpp>
 #include <memory>
 #include <optional>
@@ -9,7 +10,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
-#include <lidl/binary_writer.hpp>
 
 namespace lidl {
 struct module;
@@ -19,8 +19,7 @@ public:
 
     virtual bool is_reference_type(const module& mod) const = 0;
 
-    virtual std::pair<YAML::Node, size_t> bin2yaml(const module&,
-                                                   gsl::span<const uint8_t>) const = 0;
+    virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const = 0;
 
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
 

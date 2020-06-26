@@ -18,20 +18,19 @@ struct union_type : public value_type {
 
     const enumeration& get_enum() const;
 
-    union_type() = default;
+    union_type()                  = default;
     union_type(const union_type&) = delete;
-    union_type(union_type&&) = default;
+    union_type(union_type&&)      = default;
     union_type& operator=(union_type&&) = default;
 
     bool is_reference_type(const module& mod) const override;
 
     virtual raw_layout wire_layout(const module& mod) const override;
 
-    std::pair<YAML::Node, size_t> bin2yaml(const module& mod,
-                                           gsl::span<const uint8_t> span) const override;
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override;
 
     int yaml2bin(const module& mod,
-                  const YAML::Node& node,
-                  ibinary_writer& writer) const override;
+                 const YAML::Node& node,
+                 ibinary_writer& writer) const override;
 };
 } // namespace lidl
