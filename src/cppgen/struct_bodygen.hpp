@@ -37,10 +37,12 @@ public:
     struct_body_gen(const module& mod,
                     const symbol_handle& sym,
                     std::string_view name,
+                    std::string_view ctor_name,
                     const structure& str)
         : m_module{&mod}
         , m_symbol{sym}
         , m_name{name}
+        , m_ctor_name{ctor_name}
         , m_struct{&str} {
     }
 
@@ -63,6 +65,7 @@ private:
     const module* m_module;
     symbol_handle m_symbol;
     std::string_view m_name;
+    std::string_view m_ctor_name;
     const structure* m_struct;
 };
 } // namespace lidl::cpp

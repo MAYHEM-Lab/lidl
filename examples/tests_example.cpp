@@ -9,10 +9,11 @@
 int main() {
     std::array<uint8_t, 64> x;
     lidl::message_builder builder(x);
-    auto& p = lidl::create<complex_vector>(
+    auto& p = lidl::create<module::complex_vector>(
         builder,
         lidl::create_vector(builder,
-            lidl::create_string(builder, "foo")));
+                            lidl::create_string(builder, "foo"),
+                            lidl::create_string(builder, "bar")));
 
     for (auto& str : p.vec()) {
         std::cout << str.string_view() << '\n';

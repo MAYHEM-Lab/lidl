@@ -108,7 +108,7 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
     }
 
     return {fmt::format("{}({}) : raw{{{}}} {{}}",
-                        m_name,
+                        m_ctor_name,
                         fmt::join(arg_names, ", "),
                         fmt::join(initializer_list, ", "))};
 }

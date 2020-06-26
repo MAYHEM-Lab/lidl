@@ -54,6 +54,16 @@ private:
         //        return m_ptr.get_offset() / sizeof(T);
     }
 
+    T* data()  {
+        auto potential_begin = reinterpret_cast<char*>(
+            (&m_len) + 1); // the string begins after the length.
+        // Align the begin pointer for the type.
+        while (reinterpret_cast<uintptr_t>(potential_begin) % alignof(T) != 0) {
+            ++potential_begin;
+        }
+        return reinterpret_cast<T*>(potential_begin);
+    }
+
     const T* data() const {
         auto potential_begin = reinterpret_cast<const char*>(
             (&m_len) + 1); // the string begins after the length.
@@ -108,7 +118,7 @@ private:
 template<class T>
 class vector<ptr<T>, true> {
 public:
-    explicit vector(ptr<T>* base)
+    explicit vector(int16_t base)
         : m_under{base} {
     }
 
@@ -145,6 +155,13 @@ class vector<T, true> : vector<ptr<T>, true> {
     using vector<ptr<T>, true>::vector;
 };
 
+template<class T, std::enable_if_t<is_ptr<T>{}>* = nullptr>
+vector<T>& create_vector_sized(message_builder& builder, int size) {
+    auto& vec = emplace_raw<vector<T>>(builder, int16_t(size));
+    builder.allocate(size * sizeof(T), alignof(T));
+    return vec;
+}
+
 template<class T, std::enable_if_t<!is_ptr<T>{} && !is_reference_type<T>{}>* = nullptr>
 vector<T>& create_vector_sized(message_builder& builder, int size) {
     auto& vec = emplace_raw<vector<T>>(builder, int16_t(size));
@@ -179,5 +196,10 @@ vector<T>& create_vector(message_builder& builder,
 template<class T, std::enable_if_t<is_reference_type<T>{}>* = nullptr>
 vector<ptr<T>>& create_vector(message_builder& builder, T& elem) {
     return create_vector<ptr<T>>(builder, elem);
+}
+
+template<class T, std::enable_if_t<is_reference_type<T>{}>* = nullptr>
+vector<ptr<T>>& create_vector(message_builder& builder, T& elem, T& elem2) {
+return create_vector<ptr<T>>(builder, elem, elem2);
 }
 } // namespace lidl

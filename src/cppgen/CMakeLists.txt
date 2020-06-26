@@ -8,10 +8,6 @@ if (BUILD_TESTS)
     add_test(lidl_cppgen_get_identifier_test lidl_cppgen_get_identifier_test)
 
     add_executable(lidl_cppgen_emitter_test emitter_test.cpp)
-    target_link_libraries(lidl_cppgen_emitter_test PUBLIC test_main)
+    target_link_libraries(lidl_cppgen_emitter_test PUBLIC test_main lidl_core lidl_cppgen)
     add_test(lidl_cppgen_emitter_test lidl_cppgen_emitter_test)
-
-    add_executable(lidl_cppgen_struct_bodygen_test struct_bodygen_test.cpp get_identifier.cpp)
-    target_link_libraries(lidl_cppgen_struct_bodygen_test PUBLIC test_main lidl_core)
-    add_test(lidl_cppgen_struct_bodygen_test lidl_cppgen_struct_bodygen_test)
 endif()

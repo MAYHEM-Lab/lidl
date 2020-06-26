@@ -42,6 +42,10 @@ target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations -Werror=ret
 
 add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
 
+if (BUILD_TESTS)
+    include(CTest)
+endif()
+
 add_subdirectory(runtime/cpp)
 add_subdirectory(examples)
 add_subdirectory(src)

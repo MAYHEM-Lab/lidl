@@ -14,6 +14,7 @@ struct generic_gen : generator_base<generic_instantiation> {
 
 private:
     std::string full_name();
+    std::string local_full_name();
 
     sections do_generate(const generic_structure& str);
 
