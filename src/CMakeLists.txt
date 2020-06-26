@@ -27,6 +27,14 @@ if (BUILD_TESTS)
     target_link_libraries(reference_type_pass_test PUBLIC lidl_core test_main)
     add_test(reference_type_pass_test reference_type_pass_test)
 
+    add_executable(bin2yaml_test bin2yaml_test.cpp)
+    target_link_libraries(bin2yaml_test PUBLIC lidl_core test_main)
+    add_test(bin2yaml_test bin2yaml_test)
+
+    add_executable(yaml2bin_test yaml2bin_test.cpp)
+    target_link_libraries(yaml2bin_test PUBLIC lidl_core test_main)
+    add_test(yaml2bin_test yaml2bin_test)
+
     add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
                     DEPENDS 
                     layout_test
