@@ -132,7 +132,6 @@ member read_member(const YAML::Node& node, const scope& s) {
 
 structure read_structure(const YAML::Node& node, scope& scop) {
     structure s;
-    //    s.scope_ = scop.add_child_scope();
 
     auto members = node["members"];
     Expects(members);
