@@ -40,6 +40,10 @@ private:
     // char data[];
 };
 
+inline bool operator==(const string& left, const string& right) {
+    return left.string_view() == right.string_view();
+}
+
 static_assert(sizeof(string) == 2);
 static_assert(alignof(string) == 2);
 
