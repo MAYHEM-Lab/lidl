@@ -27,21 +27,22 @@ bool emitter::pass() {
         }
     }
 
-    std::cerr << "== Pass ==\n";
+    std::cerr << "Pass\n";
     for (auto& [ns, sects] : m_this_pass) {
         if (!ns.empty()) {
-            std::cerr << fmt::format("== namespace {} ==\n", ns);
+            std::cerr << fmt::format("  Namespace {}\n", ns);
             m_stream << fmt::format("namespace {} {{\n", ns);
         }
 
         for (auto& sect : sects) {
-            std::cerr << "Emitting " << sect.key.to_string(*m_module) << "\n";
+            std::cerr << "    Emitting " << sect.key.to_string(*m_module) << "\n";
 
             m_stream << sect.definition << '\n';
 
             m_satisfied.emplace_back(sect.key);
             for (auto& key : sect.keys) {
                 m_satisfied.emplace_back(key);
+                std::cerr << "      Marking " << key.to_string(*m_module) << "\n";
             }
             m_generated.emplace_back(std::move(sect));
         }
@@ -53,6 +54,7 @@ bool emitter::pass() {
 
     return changed;
 }
+
 std::string emitter::emit() {
     while (pass())
         ;
