@@ -62,7 +62,7 @@ protected:
         if (symbol().is_valid()) {
             return section_key_t{symbol(), section_type::definition};
         } else {
-            return section_key_t{std::string(name()), section_type::definition};
+            return section_key_t{std::string(absolute_name()), section_type::definition};
         }
     }
 
@@ -70,7 +70,15 @@ protected:
         if (symbol().is_valid()) {
             return section_key_t{symbol(), section_type::declaration};
         } else {
-            return section_key_t{std::string(name()), section_type::declaration};
+            return section_key_t{std::string(absolute_name()), section_type::declaration};
+        }
+    }
+
+    section_key_t misc_key() {
+        if (symbol().is_valid()) {
+            return section_key_t{symbol(), section_type::misc};
+        } else {
+            return section_key_t{std::string(absolute_name()), section_type::misc};
         }
     }
 
