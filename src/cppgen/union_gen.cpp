@@ -174,11 +174,37 @@ sections union_gen::do_generate() {
         }
     }
 
+    section operator_eq;
+    operator_eq.keys.push_back(misc_key());
+    operator_eq.add_dependency(def_key());
+    operator_eq.name_space = mod().name_space;
+    auto eq_format         = R"__(bool operator==(const {0}& left, const {0}& right) {{
+        if (left.alternative() != right.alternative()) {{ return false; }}
+        switch (left.alternative()) {{
+            {1}
+        }}
+        return false; // Unreachable.
+    }})__";
+
+    std::vector<std::string> eq_members;
+    for (auto& [memname, member] : get().members) {
+        eq_members.push_back(
+            fmt::format("case {3}::alternatives::{2}: return {0}.{2}() == {1}.{2}();",
+                        "left",
+                        "right",
+                        memname,
+                        name()));
+    }
+    operator_eq.definition = fmt::format(eq_format, name(), fmt::join(eq_members, "\n"));
+
     auto result = generate_traits();
 
     result.add(std::move(s));
     for (auto& sec : misc) {
         result.add(std::move(sec));
+    }
+    if (!eq_members.empty()) {
+        result.add(std::move(operator_eq));
     }
 
     return result;
@@ -240,6 +266,7 @@ sections union_gen::generate_traits() {
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
+    trait_sect.key        = misc_key();
     trait_sect.add_dependency(def_key());
 
     auto res = sections{{std::move(trait_sect)}};

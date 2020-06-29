@@ -45,6 +45,7 @@ sections enum_gen::generate_traits() {
 
     section trait_sect;
     trait_sect.name_space = "lidl";
+    trait_sect.key        = misc_key();
     trait_sect.definition =
         fmt::format(format, absolute_name(), names.size(), fmt::join(names, ", "));
     trait_sect.add_dependency(def_key());

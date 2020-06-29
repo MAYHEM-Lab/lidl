@@ -24,8 +24,26 @@ sections struct_gen::do_generate() {
     s.depends_on = body.m_sections[0].depends_on;
     s.name_space = mod().name_space;
 
+    section operator_eq;
+    operator_eq.keys.push_back(misc_key());
+    operator_eq.add_dependency(def_key());
+    operator_eq.name_space = mod().name_space;
+    auto eq_format         = R"__(bool operator==(const {0}& left, const {0}& right) {{
+        return {1};
+    }})__";
+
+    std::vector<std::string> members;
+    for (auto& [memname, member] : get().members) {
+        members.push_back(
+            fmt::format("{0}.{2}() == {1}.{2}()", "left", "right", memname));
+    }
+    operator_eq.definition = fmt::format(eq_format, name(), fmt::join(members, " &&\n"));
+
     auto result = generate_traits();
     result.add(std::move(s));
+    if (!members.empty()) {
+        result.add(std::move(operator_eq));
+    }
     return result;
 }
 
