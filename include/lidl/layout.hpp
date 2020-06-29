@@ -6,7 +6,7 @@
 #include <numeric>
 #include <optional>
 #include <unordered_map>
-
+#include <ostream>
 
 namespace lidl {
 struct raw_layout {

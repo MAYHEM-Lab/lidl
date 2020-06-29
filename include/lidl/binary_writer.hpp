@@ -3,6 +3,7 @@
 #include <gsl/span>
 #include <vector>
 #include <cstdint>
+#include <cstddef>
 
 namespace lidl {
 struct ibinary_writer {
@@ -12,7 +13,7 @@ struct ibinary_writer {
     }
 
     void write_raw_string(std::string_view str) {
-        write_raw({str.data(), ssize_t(str.size())});
+        write_raw({str.data(), ptrdiff_t(str.size())});
     }
 
     void align(int alignment) {
