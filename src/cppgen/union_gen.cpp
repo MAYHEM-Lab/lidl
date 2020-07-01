@@ -178,7 +178,7 @@ sections union_gen::do_generate() {
     operator_eq.keys.push_back(misc_key());
     operator_eq.add_dependency(def_key());
     operator_eq.name_space = mod().name_space;
-    auto eq_format         = R"__(bool operator==(const {0}& left, const {0}& right) {{
+    auto eq_format         = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
         if (left.alternative() != right.alternative()) {{ return false; }}
         switch (left.alternative()) {{
             {1}
