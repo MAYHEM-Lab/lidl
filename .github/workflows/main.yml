@@ -27,12 +27,16 @@ jobs:
     
     - name: build lidlc
       run: cmake --build . -t lidlc
+      working-directory: ${{ github.workspace }}/../../_temp
     
     - name: regenerate with lidlc
       run: cmake ..
+      working-directory: ${{ github.workspace }}/../../_temp
     
     - name: build everything
       run: cmake --build .
+      working-directory: ${{ github.workspace }}/../../_temp
     
     - name: test
       run: ctest
+      working-directory: ${{ github.workspace }}/../../_temp
