@@ -48,6 +48,8 @@ if (BUILD_TESTS)
     include(CTest)
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/runtime/cpp")
+
 add_subdirectory(runtime/cpp)
 add_subdirectory(examples)
 add_subdirectory(src)
