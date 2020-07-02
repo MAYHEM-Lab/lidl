@@ -22,19 +22,19 @@ public:
     }
 
     ptr_iterator<T> begin() {
-        return ptr_iterator<T>(m_private.begin());
+        return ptr_iterator<T>(m_private.data());
     }
 
     ptr_iterator<T> begin() const {
-        return ptr_iterator<T>(m_private.begin());
+        return ptr_iterator<T>(m_private.data());
     }
 
     ptr_iterator<T> end() {
-        return ptr_iterator<T>(m_private.end());
+        return ptr_iterator<T>(m_private.data() + m_private.size());
     }
 
     ptr_iterator<T> end() const {
-        return ptr_iterator<T>(m_private.end());
+        return ptr_iterator<T>(m_private.data() + m_private.size());
     }
 
     auto& get_raw() {
