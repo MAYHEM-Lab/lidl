@@ -92,6 +92,7 @@ sections union_gen::do_generate() {
                 switch (val.alternative()) {{
                     {1}
                 }}
+                LIDL_UNREACHABLE();
             }})__";
 
     auto visitor = fmt::format(visitor_format, name(), fmt::join(cases, "\n"));
