@@ -1,4 +1,4 @@
-add_library(lidl_cppgen cppgen.cpp get_identifier.cpp generator_base.hpp generator.hpp struct_gen.hpp emitter.hpp struct_bodygen.hpp enum_gen.hpp enum_gen.cpp union_gen.cpp union_gen.hpp struct_gen.cpp struct_gen.hpp generic_gen.cpp generic_gen.hpp struct_bodygen.cpp emitter.cpp generator.cpp service_stub_gen.cpp service_stub_gen.hpp)
+add_library(lidl_cppgen cppgen.cpp get_identifier.cpp generator_base.hpp generator.hpp struct_gen.hpp emitter.hpp struct_bodygen.hpp enum_gen.hpp enum_gen.cpp union_gen.cpp union_gen.hpp struct_gen.cpp struct_gen.hpp generic_gen.cpp generic_gen.hpp struct_bodygen.cpp emitter.cpp generator.cpp service_stub_gen.cpp service_stub_gen.hpp raw_union_gen.cpp raw_union_gen.hpp)
 target_link_libraries(lidl_cppgen PUBLIC lidl_core)
 
 if (BUILD_TESTS)

@@ -13,7 +13,9 @@ raw_layout union_type::wire_layout(const lidl::module& mod) const {
     }
 
     compound_layout overall_computer;
-    overall_computer.add_member("discriminator", get_enum().wire_layout(mod));
+    if (!raw) {
+        overall_computer.add_member("discriminator", get_enum().wire_layout(mod));
+    }
     overall_computer.add_member("val", computer.get());
     return overall_computer.get();
 }
@@ -47,6 +49,7 @@ bool union_type::is_reference_type(const module& mod) const {
 const enumeration& union_type::get_enum() const {
     return *attributes.get<union_enum_attribute>("union_enum")->union_enum;
 }
+
 int union_type::yaml2bin(const module& mod,
                          const YAML::Node& node,
                          ibinary_writer& writer) const {

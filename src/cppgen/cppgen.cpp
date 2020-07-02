@@ -10,6 +10,7 @@
 #include "struct_bodygen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
+#include "raw_union_gen.hpp"
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -278,9 +279,15 @@ struct cppgen {
         for (auto& u : mod().unions) {
             auto sym  = *mod().symbols->definition_lookup(&u);
             auto name = local_name(sym);
-            auto generator =
-                union_gen(mod(), sym, name, get_identifier(mod(), lidl::name{sym}), u);
-            m_sections.merge_before(generator.generate());
+            if (u.raw) {
+                auto generator = raw_union_gen(
+                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), u);
+                m_sections.merge_before(generator.generate());
+            } else {
+                auto generator = union_gen(
+                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), u);
+                m_sections.merge_before(generator.generate());
+            }
         }
 
         for (auto& s : mod().structs) {
@@ -302,7 +309,7 @@ struct cppgen {
 
             auto generator = remote_stub_generator(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
-            //m_sections.merge_before(generator.generate());
+            // m_sections.merge_before(generator.generate());
         }
 
         // TODO: fix module traits

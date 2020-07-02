@@ -10,4 +10,8 @@ int main() {
         lidl::create<module::procedures>(builder, lidl::create_string(builder, "foo"));
     std::cout << lidl::nameof(p.alternative()) << '\n';
     std::cout << lidl::nameof(p_str.alternative()) << '\n';
+
+    builder = lidl::message_builder(buf);
+    auto& raw = lidl::create<module::raw>(builder, 42);
+    std::cout << raw.x();
 }

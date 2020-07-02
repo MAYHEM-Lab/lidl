@@ -3,3 +3,10 @@ procedures:
   variants:
     x: i32
     y: string
+
+raw:
+  type: union
+  raw: True
+  variants:
+    x: i32
+    y: string

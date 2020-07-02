@@ -15,6 +15,7 @@ namespace lidl {
 struct union_type : public value_type {
     std::deque<std::tuple<std::string, member>> members;
     attribute_holder attributes;
+    bool raw = false;
 
     const enumeration& get_enum() const;
 

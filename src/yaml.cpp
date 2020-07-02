@@ -154,6 +154,9 @@ union_type read_union(const YAML::Node& node, scope& scop) {
         u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
     }
 
+    auto raw = node["raw"];
+    u.raw = raw && raw.as<bool>();
+
     u.attributes = read_attributes(node["attributes"]);
     return u;
 }
