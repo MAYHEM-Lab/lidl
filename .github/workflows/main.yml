@@ -22,3 +22,17 @@ jobs:
 
     - name: run-cmake
       uses: lukka/run-cmake@v2.5
+      with:
+        buildWithCMake: false
+    
+    - name: build lidlc
+      run: ninja lidlc
+    
+    - name: regenerate with lidlc
+      run: cmake ..
+    
+    - name: build everything
+      run: ninja
+    
+    - name: test
+      run: ctest
