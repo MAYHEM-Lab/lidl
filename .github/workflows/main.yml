@@ -22,7 +22,16 @@ jobs:
 
     - name: run-cmake
       uses: lukka/run-cmake@v2.5
+      if: "!contains( matrix.os, 'windows')"
       with:
+        buildWithCMake: false
+    
+    - name: run-cmake
+      uses: lukka/run-cmake@v2.5
+      if: "contains( matrix.os, 'windows')"
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeAppendedArgs: '-G "Visual Studio 16 2019"'
         buildWithCMake: false
     
     - name: build lidlc
