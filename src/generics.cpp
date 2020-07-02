@@ -20,7 +20,7 @@ structure generic_structure::instantiate(const module& mod,
     int index = 0;
     for (auto& arg : ins.arguments()) {
         if (auto n = std::get_if<name>(&arg)) {
-            auto paramname = (genstr.declaration.begin() + index)->first;
+            auto& paramname = (genstr.declaration.begin() + index)->first;
             actual.emplace(paramname, *n);
         }
         ++index;
@@ -63,7 +63,7 @@ union_type generic_union::instantiate(const module& mod,
     int index = 0;
     for (auto& arg : ins.arguments()) {
         if (auto n = std::get_if<name>(&arg)) {
-            auto paramname = (genstr.declaration.begin() + index)->first;
+            auto& paramname = (genstr.declaration.begin() + index)->first;
             actual.emplace(paramname, *n);
         }
         ++index;
@@ -83,6 +83,11 @@ union_type generic_union::instantiate(const module& mod,
         auto it = actual.find(generic_param_name);
 
         if (it == actual.end()) {
+            std::cerr << fmt::format("Could not find name: {}\n", generic_param_name);
+            std::cerr << "The following names were provided:\n";
+            for (auto& [name, _] : actual) {
+                std::cerr << '"' << name << '"' << '\n';
+            }
             throw std::runtime_error("shouldn't happen");
         }
 
