@@ -30,7 +30,7 @@ jobs:
       working-directory: ${{ github.workspace }}/../../_temp
     
     - name: regenerate with lidlc
-      run: cmake ..
+      run: cmake ${{ github.workspace }}/lidl/lidl
       working-directory: ${{ github.workspace }}/../../_temp
     
     - name: build everything
