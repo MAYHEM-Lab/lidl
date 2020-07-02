@@ -26,13 +26,13 @@ jobs:
         buildWithCMake: false
     
     - name: build lidlc
-      run: ninja lidlc
+      run: cmake --build . -t lidlc
     
     - name: regenerate with lidlc
       run: cmake ..
     
     - name: build everything
-      run: ninja
+      run: cmake --build .
     
     - name: test
       run: ctest
