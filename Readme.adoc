@@ -1,5 +1,7 @@
 = **lidl**
 
+image::https://github.com/FatihBAKIR/lidl/workflows/CI/badge.svg[]
+
 **lidl** is an efficient interface description language (IDL). It is designed to work
 effectively on resource constrained devices such as microcontrollers.
 
