@@ -13,6 +13,9 @@ public:
 private:
     std::string copy_proc_param(std::string_view param_name,
                                 const lidl::name& param_type);
+
+    std::string copy_and_return(const procedure& proc);
+
     std::string make_procedure_stub(std::string_view proc_name, const procedure& proc);
 };
 } // namespace lidl::cpp

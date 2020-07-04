@@ -6,11 +6,11 @@
 #include "generic_gen.hpp"
 #include "lidl/enumeration.hpp"
 #include "lidl/union.hpp"
+#include "raw_union_gen.hpp"
 #include "service_stub_gen.hpp"
 #include "struct_bodygen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
-#include "raw_union_gen.hpp"
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -309,7 +309,7 @@ struct cppgen {
 
             auto generator = remote_stub_generator(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
-            // m_sections.merge_before(generator.generate());
+            m_sections.merge_before(generator.generate());
         }
 
         // TODO: fix module traits
