@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(lidl VERSION 0.1.0)
+project(lidl VERSION 0.1.1)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -38,6 +38,7 @@ add_library(lidl_core
 target_compile_features(lidl_core PUBLIC cxx_std_17)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
+target_compile_definitions(lidl_core PUBLIC LIDL_VERSION_STRING=\"${PROJECT_VERSION}\")
 if (UNIX AND NOT APPLE)
     target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations -Werror=return-type)
 endif()

@@ -9,7 +9,6 @@
 #include <string_view>
 #include <yaml.hpp>
 
-
 namespace lidl {
 void generate(const module& mod, std::ostream& str);
 std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
@@ -41,6 +40,7 @@ void run(const lidlc_args& args) {
 } // namespace lidl
 
 int main(int argc, char** argv) {
+    bool version         = false;
     bool help            = false;
     bool read_from_stdin = false;
     std::string input_path;
@@ -57,8 +57,14 @@ int main(int argc, char** argv) {
                   "output file")["-o"]["--output-file"]("Output file to write to.")
             .optional() |
         lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.").required() |
+        lyra::opt(version)["--version"]("Print lidl version") |
         lyra::help(help);
     auto res = cli.parse({argc, argv});
+
+    if (version) {
+        std::cerr << "Lidl version: " << LIDL_VERSION_STRING << '\n';
+        return 0;
+    }
 
     if (!res) {
         std::cerr << res.errorMessage() << '\n';
