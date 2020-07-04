@@ -1,0 +1,8 @@
+= Version history
+
+== 0.1.1
+
+. Stub generation for services.
+.. Only supports simple and view types in procedures. If a reference type exists, stub generation for that class is
+omitted.
+. Everything builds with MSVC, GCC and LLVM.
