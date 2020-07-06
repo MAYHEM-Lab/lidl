@@ -10,6 +10,16 @@ std::string section_key_t::to_string(const module& mod) {
         sym = "\"" + *str + "\"";
     } else if (auto sh = std::get_if<symbol_handle>(&symbol); sh) {
         sym = get_identifier(mod, {*sh});
+
+        try {
+            auto t = get_type(mod, name{*sh});
+            if (t->src_info) {
+                auto loc = lidl::to_string(*t->src_info);
+                sym = fmt::format("{} (defined at {})", sym, loc);
+            }
+        } catch (std::exception&) {
+            // We don't care
+        }
     } else {
         sym = "Nothing";
     }

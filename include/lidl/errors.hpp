@@ -12,11 +12,7 @@ public:
         : m_message(std::move(message))
         , m_src_info(std::move(source)) {
         if (m_src_info) {
-            m_message = fmt::format("{} at {}:{} in {}",
-                                    m_message,
-                                    m_src_info->line + 1,
-                                    m_src_info->column + 1,
-                                    m_src_info->origin ? *m_src_info->origin : std::string(""));
+            m_message = fmt::format("{} at {}", m_message, to_string(*m_src_info));
         }
     }
 

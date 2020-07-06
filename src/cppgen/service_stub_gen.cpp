@@ -38,7 +38,8 @@ sections remote_stub_generator::generate() {
     return {{std::move(sect)}};
 }
 
-std::string remote_stub_generator::copy_proc_param(std::string_view param_name,
+std::string remote_stub_generator::copy_proc_param(const procedure& proc,
+                                                   std::string_view param_name,
                                                    const lidl::name& param_type_name) {
     auto param_type = get_type(mod(), param_type_name);
     if (param_type->is_reference_type(mod())) {
@@ -54,7 +55,10 @@ std::string remote_stub_generator::copy_proc_param(std::string_view param_name,
 
             return fmt::format("lidl::create_string(mb, {})", param_name);
         }
-        throw std::runtime_error("Unknown view type!");
+
+        throw std::runtime_error(fmt::format("Unknown view type {} at {}",
+                                             get_identifier(mod(), param_type_name),
+                                             lidl::to_string(*proc.src_info)));
     } else {
         return fmt::format("{}", param_name);
     }
@@ -136,11 +140,12 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
     }
 
     std::vector<std::string> param_names(proc.parameters.size());
-    std::transform(
-        proc.parameters.begin(),
-        proc.parameters.end(),
-        param_names.begin(),
-        [this](auto& param) { return copy_proc_param(param.first, param.second); });
+    std::transform(proc.parameters.begin(),
+                   proc.parameters.end(),
+                   param_names.begin(),
+                   [this, &proc](auto& param) {
+                       return copy_proc_param(proc, param.first, param.second);
+                   });
     if (proc.params_struct->is_reference_type(mod())) {
         param_names.emplace(param_names.begin(), "mb");
     }
@@ -151,7 +156,8 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
             recursive_definition_lookup(*mod().symbols, proc.params_struct).value()});
 
     if (proc.params_struct->is_reference_type(mod())) {
-        params_struct_identifier = fmt::format("lidl::create<{}>", params_struct_identifier);
+        params_struct_identifier =
+            fmt::format("lidl::create<{}>", params_struct_identifier);
     }
 
     return fmt::format(def_format,

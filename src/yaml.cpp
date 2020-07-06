@@ -18,6 +18,13 @@
 
 namespace lidl::yaml {
 namespace {
+class missing_node_error : public error {
+public:
+    missing_node_error(std::string_view missing_key, std::optional<source_info> inf)
+        : error(fmt::format("Missing key \"{}\"", missing_key), std::move(inf)) {
+    }
+};
+
 class yaml_loader {
     std::optional<source_info> make_source_info(const YAML::Node& node) {
         auto&& mark = node.Mark();
@@ -80,7 +87,12 @@ class yaml_loader {
             }
             return name{*lookup};
         } else {
-            auto base_name = type_node["name"].as<std::string>();
+            auto name_node = type_node["name"];
+            if (!name_node) {
+                throw missing_node_error("name", make_source_info(type_node));
+            }
+
+            auto base_name = name_node.as<std::string>();
 
             auto lookup = recursive_full_name_lookup(s, base_name);
             if (!lookup) {
@@ -115,7 +127,11 @@ class yaml_loader {
         read_member_attributes(node["attributes"], m);
 
         auto type_name = node["type"];
-        Expects(type_name);
+
+        if (!type_name) {
+            throw missing_node_error("type", make_source_info(node));
+        }
+
         m.type_ = read_type(type_name, s);
         return m;
     }
@@ -125,7 +141,9 @@ class yaml_loader {
         s.src_info = make_source_info(node);
 
         auto members = node["members"];
-        Expects(members);
+        if (!members) {
+            throw missing_node_error("members", make_source_info(node));
+        }
         for (auto e : members) {
             auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
             s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
@@ -138,9 +156,11 @@ class yaml_loader {
         union_type u;
         u.src_info = make_source_info(node);
 
-        auto members = node["variants"];
-        Expects(members);
-        for (auto e : members) {
+        auto variants = node["variants"];
+        if (!variants) {
+            throw missing_node_error("variants", make_source_info(node));
+        }
+        for (auto e : variants) {
             auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
             u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
         }

@@ -11,7 +11,8 @@ public:
     sections generate() override;
 
 private:
-    std::string copy_proc_param(std::string_view param_name,
+    std::string copy_proc_param(const procedure& proc,
+                                std::string_view param_name,
                                 const lidl::name& param_type);
 
     std::string copy_and_return(const procedure& proc);
