@@ -5,6 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(ENABLE_PYBINDGEN "Enable the experimental pybindgen backend" OFF)
+option(BUILD_TOOLS "Enable the build of accompanying tools. Disable to only get lidl as a library" ON)
 
 add_library(lidl_core
         src/basic_types.cpp

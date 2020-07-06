@@ -1,5 +1,8 @@
 add_subdirectory(cppgen)
-add_subdirectory(tools)
+
+if (BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if (ENABLE_PYBINDGEN)
     add_subdirectory(pybindgen)
