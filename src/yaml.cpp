@@ -84,7 +84,11 @@ name read_type(const YAML::Node& type_node, const scope& s) {
         auto type_name = type_node.as<std::string>();
         auto lookup    = recursive_full_name_lookup(s, type_name);
         if (!lookup) {
-            throw std::runtime_error("no such type: " + type_name);
+            throw std::runtime_error(
+                fmt::format("Unknown type \"{}\" while reading in line {}, column {}",
+                            type_name,
+                            type_node.Mark().line + 1,
+                            type_node.Mark().column + 1));
         }
         return name{*lookup};
     } else {
@@ -92,7 +96,11 @@ name read_type(const YAML::Node& type_node, const scope& s) {
 
         auto lookup = recursive_full_name_lookup(s, base_name);
         if (!lookup) {
-            throw std::runtime_error("no such type: " + base_name);
+            throw std::runtime_error(
+                fmt::format("Unknown type \"{}\" while reading in line {}, column {}",
+                            base_name,
+                            type_node.Mark().line + 1,
+                            type_node.Mark().column + 1));
         }
 
         auto args = parse_generic_args(type_node["parameters"], s);
@@ -155,7 +163,7 @@ union_type read_union(const YAML::Node& node, scope& scop) {
     }
 
     auto raw = node["raw"];
-    u.raw = raw && raw.as<bool>();
+    u.raw    = raw && raw.as<bool>();
 
     u.attributes = read_attributes(node["attributes"]);
     return u;
