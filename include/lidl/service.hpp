@@ -26,8 +26,8 @@ struct service {
     std::vector<name> extends;
     std::deque<std::pair<std::string, property>> properties;
     std::deque<std::pair<std::string, procedure>> procedures;
-    const union_type* procedure_params_union;
-    const union_type* procedure_results_union;
+    const union_type* procedure_params_union = nullptr;
+    const union_type* procedure_results_union = nullptr;
 
     std::optional<source_info> src_info;
 };
