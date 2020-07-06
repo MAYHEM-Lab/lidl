@@ -8,6 +8,7 @@
 #include <lyra/lyra.hpp>
 #include <string_view>
 #include <yaml.hpp>
+#include "passes.hpp"
 
 namespace lidl {
 void generate(const module& mod, std::ostream& str);
@@ -21,9 +22,6 @@ struct lidlc_args {
     std::optional<std::string> origin;
 };
 
-void union_enum_pass(module& m);
-void reference_type_pass(module& m);
-void service_pass(module& m);
 void run(const lidlc_args& args) {
     auto backend = backends.find(args.backend);
     if (backend == backends.end()) {
@@ -33,9 +31,7 @@ void run(const lidlc_args& args) {
     auto root_mod = std::make_unique<module>();
     root_mod->add_child("", basic_module());
     auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
-    service_pass(ym);
-    reference_type_pass(ym);
-    union_enum_pass(ym);
+    run_passes_until_stable(ym);
     backend->second(ym, *args.output_stream);
 }
 } // namespace lidl

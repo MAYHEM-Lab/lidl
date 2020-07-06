@@ -1,9 +1,10 @@
+#include "passes.hpp"
+
 #include <doctest.h>
 #include <lidl/module.hpp>
 #include <lidl/types.hpp>
 
 namespace lidl {
-void union_enum_pass(module& m);
 namespace {
 class memory_reader : public ibinary_reader {
 public:

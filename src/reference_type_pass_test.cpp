@@ -1,8 +1,8 @@
 #include <doctest.h>
 #include <lidl/module.hpp>
+#include "passes.hpp"
 
 namespace lidl {
-void reference_type_pass(module&);
 namespace {
 TEST_CASE("reference type pass works with a string") {
     auto basic_module = lidl::basic_module();

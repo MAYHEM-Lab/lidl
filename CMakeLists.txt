@@ -38,6 +38,7 @@ add_library(
   include/lidl/view_types.hpp
   src/types.cpp
   include/lidl/source_info.hpp
+  src/passes.hpp
 )
 target_compile_features(lidl_core PUBLIC cxx_std_17)
 target_include_directories(lidl_core PUBLIC include)

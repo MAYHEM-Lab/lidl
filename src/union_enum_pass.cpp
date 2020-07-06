@@ -12,10 +12,16 @@ enumeration enum_for_union(const union_type& u, const module& m) {
     return e;
 }
 
-void union_enum_pass(module& m) {
+bool union_enum_pass(module& m) {
+    bool changed = false;
     for (auto& u : m.unions) {
+        if (u.alternatives_enum) {
+            continue;
+        }
         m.enums.emplace_back(enum_for_union(u, m));
         u.alternatives_enum = &m.enums.back();
+        changed             = true;
     }
+    return changed;
 }
 } // namespace lidl

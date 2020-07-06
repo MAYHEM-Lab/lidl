@@ -1,9 +1,9 @@
 #include <doctest.h>
 #include <gsl/span>
 #include <lidl/module.hpp>
+#include "passes.hpp"
 
 namespace lidl {
-void union_enum_pass(module& m);
 namespace {
 class memory_writer : public ibinary_writer {
 public:

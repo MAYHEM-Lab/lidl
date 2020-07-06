@@ -2,6 +2,8 @@
 // Created by fatih on 1/31/20.
 //
 
+#include "passes.hpp"
+
 #include <fstream>
 #include <lidl/buffer.hpp>
 #include <lidl/module.hpp>
@@ -9,10 +11,6 @@
 #include <yaml.hpp>
 
 namespace lidl {
-void service_pass(module& m);
-void reference_type_pass(module& m);
-void union_enum_pass(module& m);
-
 class memory_reader : public ibinary_reader {
 public:
     explicit memory_reader(gsl::span<uint8_t> data)
@@ -51,9 +49,7 @@ int main(int argc, char** argv) {
     root_mod->add_child("", basic_module());
     std::ifstream schema(argv[1]);
     auto& mod = yaml::load_module(*root_mod, schema);
-    service_pass(mod);
-    reference_type_pass(mod);
-    union_enum_pass(mod);
+    run_passes_until_stable(mod);
     auto root = std::get<const type*>(
         get_symbol(recursive_name_lookup(*mod.symbols, argv[2]).value()));
 

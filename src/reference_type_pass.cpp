@@ -16,17 +16,17 @@ name pointerify(const symbol_handle& ptr_sym, const name& n) {
     return ptr_to_name;
 }
 
-void reference_type_pass(const module& mod, name& n) {
+bool reference_type_pass(const module& mod, name& n) {
     auto ptr_sym     = recursive_name_lookup(*mod.symbols, "ptr").value();
     auto member_type = get_type(mod, n);
     if (!member_type->is_reference_type(mod)) {
-        return;
+        return false;
     }
 
     if (auto gen = dynamic_cast<const generic_instantiation*>(member_type); gen) {
         if (auto ptr = dynamic_cast<const pointer_type*>(&gen->generic_type()); ptr) {
             // The member is already a pointer
-            return;
+            return false;
         }
 
         if (dynamic_cast<const generic_structure*>(&gen->generic_type()) ||
@@ -38,7 +38,7 @@ void reference_type_pass(const module& mod, name& n) {
              * i.e. we return ptr<my_gen<string>> rather than ptr<my_gen<ptr<string>>>
              */
             n = pointerify(ptr_sym, n);
-            return;
+            return true;
         }
 
         for (auto& arg : n.args) {
@@ -49,29 +49,34 @@ void reference_type_pass(const module& mod, name& n) {
     }
 
     n = pointerify(ptr_sym, n);
+    return true;
 }
 } // namespace
 
-void reference_type_pass(module& m) {
+bool reference_type_pass(module& m) {
+    bool changed = false;
+
     for (auto& s : m.structs) {
         for (auto& [_, member] : s.members) {
-            reference_type_pass(m, member.type_);
+            changed |= reference_type_pass(m, member.type_);
         }
     }
     for (auto& s : m.unions) {
         for (auto& [_, member] : s.members) {
-            reference_type_pass(m, member.type_);
+            changed |= reference_type_pass(m, member.type_);
         }
     }
     for (auto& s : m.services) {
         for (auto& [_, proc] : s.procedures) {
             for (auto& ret_type : proc.return_types) {
-                reference_type_pass(m, ret_type);
+                changed |= reference_type_pass(m, ret_type);
             }
             for (auto& [_, param_type] : proc.parameters) {
-                reference_type_pass(m, param_type);
+                changed |= reference_type_pass(m, param_type);
             }
         }
     }
+
+    return changed;
 }
 } // namespace lidl

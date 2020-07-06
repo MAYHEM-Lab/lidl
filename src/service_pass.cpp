@@ -58,8 +58,13 @@ structure procedure_results_struct(const module& mod,
     return s;
 }
 
-void service_pass(module& mod) {
+bool service_pass(module& mod) {
+    bool changed = false;
     for (auto& service : mod.services) {
+        if (service.procedure_params_union) {
+            continue;
+        }
+
         std::string service_name(local_name(*mod.symbols->definition_lookup(&service)));
         union_type procedure_params;
         union_type procedure_results;
@@ -93,6 +98,10 @@ void service_pass(module& mod) {
             define(*mod.symbols, service_name + "_return", &mod.unions.back());
         mod.unions.back().return_for    = &service;
         service.procedure_results_union = &mod.unions.back();
+
+        changed = true;
     }
+
+    return changed;
 }
 } // namespace lidl

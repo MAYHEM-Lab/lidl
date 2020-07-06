@@ -4,14 +4,10 @@
 
 #include "generic_gen.hpp"
 
+#include "../passes.hpp"
 #include "cppgen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
-
-namespace lidl {
-void reference_type_pass(module& m);
-void union_enum_pass(module& m);
-} // namespace lidl
 
 namespace lidl::cpp {
 std::string generic_gen::local_full_name() {
@@ -27,7 +23,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
     // TODO: Create an unrelated module here
     tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.structs.emplace_back(str.instantiate(mod(), get()));
-    reference_type_pass(tmpmod);
+    run_passes_until_stable(tmpmod);
 
     struct_gen gen(
         tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.structs.back());
@@ -40,7 +36,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     // TODO: Create an unrelated module here
     tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.unions.emplace_back(u.instantiate(mod(), get()));
-    reference_type_pass(tmpmod);
+    run_passes_until_stable(tmpmod);
     union_enum_pass(tmpmod);
 
     union_gen gen(
