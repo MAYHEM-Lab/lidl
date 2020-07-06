@@ -10,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
+#include <lidl/source_info.hpp>
 
 namespace lidl {
 struct module;
@@ -24,6 +25,8 @@ public:
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
 
     virtual ~type() = default;
+
+    std::optional<source_info> src_info;
 };
 
 struct value_type : type {

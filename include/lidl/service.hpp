@@ -15,7 +15,7 @@ struct procedure {
     const structure* params_struct;
     const structure* results_struct;
 
-    std::optional<source_info> source_information;
+    std::optional<source_info> src_info;
 };
 
 struct property : member {
@@ -28,5 +28,7 @@ struct service {
     std::deque<std::pair<std::string, procedure>> procedures;
     const union_type* procedure_params_union;
     const union_type* procedure_results_union;
+
+    std::optional<source_info> src_info;
 };
 } // namespace lidl

@@ -5,5 +5,6 @@
 #include <string_view>
 
 namespace lidl::yaml {
-module& load_module(module& root, std::istream& str);
+module&
+load_module(module& root, std::istream& str, std::optional<std::string> origin = {});
 }

@@ -16,208 +16,223 @@
 #include <string>
 #include <yaml-cpp/yaml.h>
 
-
 namespace lidl::yaml {
 namespace {
-generic_declaration parse_parameters(const YAML::Node& node) {
-    std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> params;
+class yaml_loader {
+    std::optional<source_info> make_source_info(const YAML::Node& node) {
+        auto&& mark = node.Mark();
+        if (mark.is_null()) {
+            return {};
+        }
+        return source_info{mark.line, mark.column, mark.pos, m_origin};
+    }
 
-    for (auto e : node) {
-        std::string name, type;
-        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        if (val.IsScalar()) {
-            name = key.as<std::string>();
-            type = val.as<std::string>();
+    generic_declaration parse_parameters(const YAML::Node& node) {
+        std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> params;
+
+        for (auto e : node) {
+            std::string name, type;
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            if (val.IsScalar()) {
+                name = key.as<std::string>();
+                type = val.as<std::string>();
+            } else {
+                name = e["name"].as<std::string>();
+                type = e["type"].as<std::string>();
+            }
+            auto param_type = get_generic_parameter_for_type(type);
+            if (!param_type) {
+                throw no_generic_type(type, make_source_info(node));
+            }
+            params.emplace_back(name, std::move(param_type));
+        }
+
+        return generic_declaration(std::move(params));
+    }
+
+    std::vector<generic_argument> parse_generic_args(const YAML::Node& node,
+                                                     const scope& s) {
+        std::vector<std::string> arg_strs;
+        if (node) {
+            arg_strs = node.as<std::vector<std::string>>();
+        }
+
+        std::vector<generic_argument> args;
+
+        for (auto& arg : arg_strs) {
+            auto arg_lookup = recursive_full_name_lookup(s, arg);
+            if (!arg_lookup) {
+                args.emplace_back(std::stoll(arg));
+                continue;
+            }
+            args.emplace_back(name{*arg_lookup});
+        }
+
+        return args;
+    }
+
+    name read_type(const YAML::Node& type_node, const scope& s) {
+        if (type_node.IsScalar()) {
+            auto type_name = type_node.as<std::string>();
+            auto lookup    = recursive_full_name_lookup(s, type_name);
+            if (!lookup) {
+                throw unknown_type_error(type_name, make_source_info(type_node));
+            }
+            return name{*lookup};
         } else {
-            name = e["name"].as<std::string>();
-            type = e["type"].as<std::string>();
+            auto base_name = type_node["name"].as<std::string>();
+
+            auto lookup = recursive_full_name_lookup(s, base_name);
+            if (!lookup) {
+                throw unknown_type_error(base_name, make_source_info(type_node));
+            }
+
+            auto args = parse_generic_args(type_node["parameters"], s);
+
+            return name{*lookup, args};
         }
-        auto param_type = get_generic_parameter_for_type(type);
-        if (!param_type) {
-            throw no_generic_type(type);
-        }
-        params.emplace_back(name, std::move(param_type));
+        throw std::runtime_error("shouldn't reach here");
     }
 
-    return generic_declaration(std::move(params));
-}
-
-std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const scope& s) {
-    std::vector<std::string> arg_strs;
-    if (node) {
-        arg_strs = node.as<std::vector<std::string>>();
+    static void read_member_attributes(const YAML::Node& attrib_node, member& mem) {
+        if (!attrib_node) {
+            return;
+        }
+        if (auto&& nullable = attrib_node["nullable"]) {
+            mem.nullable = nullable.as<bool>();
+        }
     }
 
-    std::vector<generic_argument> args;
+    member read_member(const YAML::Node& node, const scope& s) {
+        member m;
+        m.src_info = make_source_info(node);
 
-    for (auto& arg : arg_strs) {
-        auto arg_lookup = recursive_full_name_lookup(s, arg);
-        if (!arg_lookup) {
-            args.emplace_back(std::stoll(arg));
-            continue;
-        }
-        args.emplace_back(name{*arg_lookup});
-    }
-
-    return args;
-}
-
-name read_type(const YAML::Node& type_node, const scope& s) {
-    if (type_node.IsScalar()) {
-        auto type_name = type_node.as<std::string>();
-        auto lookup    = recursive_full_name_lookup(s, type_name);
-        if (!lookup) {
-            throw std::runtime_error(
-                fmt::format("Unknown type \"{}\" while reading in line {}, column {}",
-                            type_name,
-                            type_node.Mark().line + 1,
-                            type_node.Mark().column + 1));
-        }
-        return name{*lookup};
-    } else {
-        auto base_name = type_node["name"].as<std::string>();
-
-        auto lookup = recursive_full_name_lookup(s, base_name);
-        if (!lookup) {
-            throw std::runtime_error(
-                fmt::format("Unknown type \"{}\" while reading in line {}, column {}",
-                            base_name,
-                            type_node.Mark().line + 1,
-                            type_node.Mark().column + 1));
+        if (node.IsScalar()) {
+            m.type_ = read_type(node, s);
+            return m;
         }
 
-        auto args = parse_generic_args(type_node["parameters"], s);
+        read_member_attributes(node["attributes"], m);
 
-        return name{*lookup, args};
-    }
-    throw std::runtime_error("shouldn't reach here");
-}
-
-void read_member_attributes(const YAML::Node& attrib_node, member& mem) {
-    if (!attrib_node) {
-        return;
-    }
-    if (auto&& nullable = attrib_node["nullable"]) {
-        mem.nullable = nullable.as<bool>();
-    }
-}
-
-member read_member(const YAML::Node& node, const scope& s) {
-    member m;
-    if (node.IsScalar()) {
-        m.type_ = read_type(node, s);
+        auto type_name = node["type"];
+        Expects(type_name);
+        m.type_ = read_type(type_name, s);
         return m;
     }
 
-    read_member_attributes(node["attributes"], m);
+    structure read_structure(const YAML::Node& node, scope& scop) {
+        structure s;
+        s.src_info = make_source_info(node);
 
-    auto type_name = node["type"];
-    Expects(type_name);
-    m.type_ = read_type(type_name, s);
-    return m;
-}
-
-structure read_structure(const YAML::Node& node, scope& scop) {
-    structure s;
-
-    auto members = node["members"];
-    Expects(members);
-    for (auto e : members) {
-        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
-    }
-
-    return s;
-}
-
-union_type read_union(const YAML::Node& node, scope& scop) {
-    union_type u;
-
-    auto members = node["variants"];
-    Expects(members);
-    for (auto e : members) {
-        auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-        u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
-    }
-
-    auto raw = node["raw"];
-    u.raw    = raw && raw.as<bool>();
-
-    return u;
-}
-
-generic_structure read_generic_structure(const YAML::Node& node, scope& gen_scope) {
-    auto params = parse_parameters(node["parameters"]);
-    for (auto& [name, param] : params) {
-        gen_scope.declare(name);
-    }
-
-    auto str = read_structure(node, gen_scope);
-
-    return generic_structure{std::move(params), std::move(str)};
-}
-
-generic_union read_generic_union(const YAML::Node& node, scope& scop) {
-    auto params = parse_parameters(node["parameters"]);
-    for (auto& [name, param] : params) {
-        scop.declare(name);
-    }
-
-    auto str = read_union(node, scop);
-
-    return generic_union{std::move(params), std::move(str)};
-}
-
-procedure parse_procedure(const YAML::Node& node, const module& mod) {
-    procedure result;
-    if (auto returns = node["returns"]; returns) {
-        for (auto&& ret : returns) {
-            result.return_types.push_back(read_type(ret, *mod.symbols));
+        auto members = node["members"];
+        Expects(members);
+        for (auto e : members) {
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
         }
+
+        return s;
     }
-    if (auto params = node["parameters"]; params) {
-        for (auto&& param : params) {
-            auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(param);
-            if (!val) {
-                std::cerr << param << '\n';
-                throw std::runtime_error("wtf");
+
+    union_type read_union(const YAML::Node& node, scope& scop) {
+        union_type u;
+        u.src_info = make_source_info(node);
+
+        auto members = node["variants"];
+        Expects(members);
+        for (auto e : members) {
+            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+            u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
+        }
+
+        auto raw = node["raw"];
+        u.raw    = raw && raw.as<bool>();
+
+        return u;
+    }
+
+    generic_structure read_generic_structure(const YAML::Node& node, scope& gen_scope) {
+        auto params = parse_parameters(node["parameters"]);
+        for (auto& [name, param] : params) {
+            gen_scope.declare(name);
+        }
+
+        auto str = read_structure(node, gen_scope);
+
+        return generic_structure{std::move(params), std::move(str)};
+    }
+
+    generic_union read_generic_union(const YAML::Node& node, scope& scop) {
+        auto params = parse_parameters(node["parameters"]);
+        for (auto& [name, param] : params) {
+            scop.declare(name);
+        }
+
+        auto str = read_union(node, scop);
+
+        return generic_union{std::move(params), std::move(str)};
+    }
+
+    procedure parse_procedure(const YAML::Node& node, const module& mod) {
+        procedure result;
+        result.src_info = make_source_info(node);
+
+        if (auto returns = node["returns"]; returns) {
+            for (auto&& ret : returns) {
+                result.return_types.push_back(read_type(ret, *mod.symbols));
             }
-            result.parameters.emplace_back(name.as<std::string>(),
-                                           read_type(val, *mod.symbols));
         }
+        if (auto params = node["parameters"]; params) {
+            for (auto&& param : params) {
+                auto& [name, val] =
+                    static_cast<std::pair<YAML::Node, YAML::Node>&>(param);
+                if (!val) {
+                    std::cerr << param << '\n';
+                    throw std::runtime_error("wtf");
+                }
+                result.parameters.emplace_back(name.as<std::string>(),
+                                               read_type(val, *mod.symbols));
+            }
+        }
+        return result;
     }
-    return result;
-}
 
-service parse_service(const YAML::Node& node, const module& mod) {
-    service serv;
-    for (auto base : node["extends"]) {
-        serv.extends.push_back(read_type(base, *mod.symbols));
+    service parse_service(const YAML::Node& node, const module& mod) {
+        service serv;
+        serv.src_info = make_source_info(node);
+
+        for (auto base : node["extends"]) {
+            serv.extends.push_back(read_type(base, *mod.symbols));
+        }
+
+        for (auto procedure : node["procedures"]) {
+            auto& [name, val] =
+                static_cast<std::pair<YAML::Node, YAML::Node>&>(procedure);
+            serv.procedures.emplace_back(name.as<std::string>(),
+                                         parse_procedure(val, mod));
+        }
+        return serv;
     }
 
-    for (auto procedure : node["procedures"]) {
-        auto& [name, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(procedure);
-        serv.procedures.emplace_back(name.as<std::string>(), parse_procedure(val, mod));
-    }
-    return serv;
-}
+    enumeration read_enum(const YAML::Node& node, const scope& scop) {
+        enumeration e;
+        e.src_info = make_source_info(node);
 
-enumeration read_enum(const YAML::Node& node, const scope& scop) {
-    enumeration e;
-    e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
-    for (auto member : node["members"]) {
-        e.members.emplace_back(member.as<std::string>(),
-                               enum_member{static_cast<int>(e.members.size())});
+        e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
+        for (auto member : node["members"]) {
+            e.members.emplace_back(member.as<std::string>(),
+                                   enum_member{static_cast<int>(e.members.size())});
+        }
+        return e;
     }
-    return e;
-}
-} // namespace
 
-class yaml_loader {
 public:
-    yaml_loader(module& root, YAML::Node node)
+    yaml_loader(module& root,
+                const YAML::Node& node,
+                std::optional<std::string> origin = {})
         : m_root{&root}
-        , m_node{node} {
+        , m_node{node}
+        , m_origin{std::move(origin)} {
     }
 
     module_meta parse_metadata() {
@@ -341,13 +356,14 @@ private:
     YAML::Node m_node;
     module* m_root;
     module* m_mod;
+    std::optional<std::string> m_origin;
 };
+} // namespace
 
-
-module& load_module(module& root, std::istream& file) {
+module& load_module(module& root, std::istream& file, std::optional<std::string> origin) {
     auto node = YAML::Load(file);
 
-    yaml_loader loader(root, node);
+    yaml_loader loader(root, node, origin);
 
     auto& m = loader.start();
 

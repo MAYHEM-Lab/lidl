@@ -18,6 +18,7 @@ struct lidlc_args {
     std::istream* input_stream;
     std::ostream* output_stream;
     std::string backend;
+    std::optional<std::string> origin;
 };
 
 void union_enum_pass(module& m);
@@ -31,7 +32,7 @@ void run(const lidlc_args& args) {
     }
     auto root_mod = std::make_unique<module>();
     root_mod->add_child("", basic_module());
-    auto& ym = yaml::load_module(*root_mod, *args.input_stream);
+    auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
     service_pass(ym);
     reference_type_pass(ym);
     union_enum_pass(ym);
@@ -91,6 +92,7 @@ int main(int argc, char** argv) {
         if (!args.input_stream->good()) {
             throw std::runtime_error("File not found: " + input_path);
         }
+        args.origin = input_path;
     }
     if (!out_path.empty()) {
         args.output_stream = new std::ofstream{out_path};
