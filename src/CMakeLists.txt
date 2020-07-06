@@ -1,6 +1,9 @@
 add_subdirectory(cppgen)
 add_subdirectory(tools)
-#   add_subdirectory(pybindgen)
+
+if (ENABLE_PYBINDGEN)
+    add_subdirectory(pybindgen)
+endif()
 
 add_library(lidl_yaml yaml.cpp yaml.hpp)
 target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)

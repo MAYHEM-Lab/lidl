@@ -3,7 +3,8 @@ project(lidl VERSION 0.1.1)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(BUILD_TESTS ON)
+option(BUILD_TESTS "Build unit tests" ON)
+option(ENABLE_PYBINDGEN "Enable the experimental pybindgen backend" OFF)
 
 add_library(lidl_core
         src/basic_types.cpp
