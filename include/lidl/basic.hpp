@@ -3,6 +3,7 @@
 #include <memory>
 #include <variant>
 #include <vector>
+#include <string>
 
 namespace lidl {
 struct type;
@@ -11,6 +12,7 @@ struct enumeration;
 struct union_type;
 struct structure;
 struct service;
+struct procedure;
 
 class scope;
 
@@ -67,4 +69,11 @@ bool operator==(const name&, const name&);
 
 struct module;
 const type* get_type(const module& mod, const name&);
+
+
+struct procedure_params_info {
+    const service* serv;
+    std::string proc_name;
+    const procedure* proc;
+};
 } // namespace lidl

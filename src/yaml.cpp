@@ -1,6 +1,5 @@
 #include "yaml.hpp"
 
-#include "lidl/attributes.hpp"
 #include "lidl/basic.hpp"
 #include "lidl/module_meta.hpp"
 #include "lidl/scope.hpp"
@@ -41,22 +40,6 @@ generic_declaration parse_parameters(const YAML::Node& node) {
     }
 
     return generic_declaration(std::move(params));
-}
-
-std::unique_ptr<attribute> read_attribute(std::string_view name, const YAML::Node& node) {
-    if (name == "raw") {
-        return std::make_unique<detail::raw_attribute>(node.as<bool>());
-    }
-    if (name == "nullable") {
-        return std::make_unique<detail::nullable_attribute>(node.as<bool>());
-    }
-    if (name == "default") {
-        return std::make_unique<detail::default_numeric_value_attribute>(
-            node.as<double>());
-    } else {
-        throw unknown_attribute_error(name);
-    }
-    return nullptr;
 }
 
 std::vector<generic_argument> parse_generic_args(const YAML::Node& node, const scope& s) {
@@ -110,17 +93,13 @@ name read_type(const YAML::Node& type_node, const scope& s) {
     throw std::runtime_error("shouldn't reach here");
 }
 
-attribute_holder read_attributes(const YAML::Node& attrib_node) {
-    attribute_holder attrs;
-
-    if (attrib_node) {
-        for (auto e : attrib_node) {
-            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
-            attrs.add(read_attribute(key.as<std::string>(), val));
-        }
+void read_member_attributes(const YAML::Node& attrib_node, member& mem) {
+    if (!attrib_node) {
+        return;
     }
-
-    return attrs;
+    if (auto&& nullable = attrib_node["nullable"]) {
+        mem.nullable = nullable.as<bool>();
+    }
 }
 
 member read_member(const YAML::Node& node, const scope& s) {
@@ -130,7 +109,7 @@ member read_member(const YAML::Node& node, const scope& s) {
         return m;
     }
 
-    m.attributes = read_attributes(node["attributes"]);
+    read_member_attributes(node["attributes"], m);
 
     auto type_name = node["type"];
     Expects(type_name);
@@ -148,7 +127,6 @@ structure read_structure(const YAML::Node& node, scope& scop) {
         s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
     }
 
-    s.attributes = read_attributes(node["attributes"]);
     return s;
 }
 
@@ -165,7 +143,6 @@ union_type read_union(const YAML::Node& node, scope& scop) {
     auto raw = node["raw"];
     u.raw    = raw && raw.as<bool>();
 
-    u.attributes = read_attributes(node["attributes"]);
     return u;
 }
 

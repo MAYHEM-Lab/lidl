@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <deque>
-#include <lidl/attributes.hpp>
 #include <lidl/basic.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
@@ -14,8 +13,13 @@
 namespace lidl {
 struct union_type : public value_type {
     std::deque<std::tuple<std::string, member>> members;
-    attribute_holder attributes;
+
     bool raw = false;
+
+    const enumeration* alternatives_enum = nullptr;
+
+    const service* call_for = nullptr;
+    const service* return_for = nullptr;
 
     const enumeration& get_enum() const;
 

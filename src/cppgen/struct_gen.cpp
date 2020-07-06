@@ -28,7 +28,7 @@ sections struct_gen::do_generate() {
     operator_eq.keys.push_back(misc_key());
     operator_eq.add_dependency(def_key());
     operator_eq.name_space = mod().name_space;
-    auto eq_format         = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
+    auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
         return {1};
     }})__";
 
@@ -117,19 +117,19 @@ sections struct_gen::generate_traits() {
 
     auto res = sections{{std::move(trait_sect), std::move(std_trait_sect)}};
 
-    if (auto attr =
-            get().attributes.get<procedure_params_attribute>("procedure_params")) {
+    if (get().params_info) {
+        auto& info                      = *get().params_info;
         constexpr auto rpc_trait_format = R"__(template <> struct rpc_param_traits<{}> {{
             static constexpr auto params_for = &{}::{};
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, info.serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";
         rpc_traits_sect.definition = fmt::format(
-            rpc_trait_format, absolute_name(), serv_full_name, attr->proc_name);
+            rpc_trait_format, absolute_name(), serv_full_name, info.proc_name);
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         res.add(std::move(rpc_traits_sect));

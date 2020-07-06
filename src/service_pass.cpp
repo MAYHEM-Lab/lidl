@@ -25,8 +25,9 @@ structure procedure_params_struct(const module& mod,
         }
         s.members.emplace_back(name, std::move(m));
     }
-    s.attributes.add(std::make_unique<procedure_params_attribute>(
-        servic, std::string(name), proc));
+
+    s.params_info = procedure_params_info{&servic, std::string(name), &proc};
+
     return s;
 }
 
@@ -50,9 +51,10 @@ structure procedure_results_struct(const module& mod,
             m.type_ = param;
         }
         s.members.emplace_back(fmt::format("ret{}", s.members.size()), std::move(m));
+
+        s.return_info = procedure_params_info{&servic, std::string(name), &proc};
     }
-    s.attributes.add(std::make_unique<procedure_params_attribute>(
-        servic, std::string(name), proc));
+
     return s;
 }
 
@@ -83,15 +85,13 @@ void service_pass(module& mod) {
 
         mod.unions.push_back(std::move(procedure_params));
         auto handle = define(*mod.symbols, service_name + "_call", &mod.unions.back());
-        mod.unions.back().attributes.add(
-            std::make_unique<service_call_union_attribute>(service));
+        mod.unions.back().call_for     = &service;
         service.procedure_params_union = &mod.unions.back();
 
         mod.unions.push_back(std::move(procedure_results));
         auto res_handle =
             define(*mod.symbols, service_name + "_return", &mod.unions.back());
-        mod.unions.back().attributes.add(
-            std::make_unique<service_return_union_attribute>(service));
+        mod.unions.back().return_for    = &service;
         service.procedure_results_union = &mod.unions.back();
     }
 }

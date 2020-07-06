@@ -47,7 +47,7 @@ bool union_type::is_reference_type(const module& mod) const {
 }
 
 const enumeration& union_type::get_enum() const {
-    return *attributes.get<union_enum_attribute>("union_enum")->union_enum;
+    return *alternatives_enum;
 }
 
 int union_type::yaml2bin(const module& mod,

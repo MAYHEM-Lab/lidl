@@ -20,7 +20,6 @@ add_library(lidl_core
         src/reference_type_pass.cpp
         src/scope.cpp
         src/name.cpp
-        src/attributes.cpp
         src/structure.cpp
         include/lidl/union.hpp
         include/lidl/member.hpp

@@ -3,14 +3,15 @@
 //
 
 #include "raw_union_gen.hpp"
+
 #include "cppgen.hpp"
 #include "enum_gen.hpp"
 #include "struct_bodygen.hpp"
 
 namespace lidl::cpp {
 std::string raw_union_gen::generate_getter(std::string_view member_name,
-                                       const member& mem,
-                                       bool is_const) {
+                                           const member& mem,
+                                           bool is_const) {
     auto member_type = get_type(mod(), mem.type_);
     if (!member_type->is_reference_type(mod())) {
         auto type_name              = get_identifier(mod(), mem.type_);
@@ -64,10 +65,8 @@ sections raw_union_gen::do_generate() {
                 member_name);
         }
 
-        ctors.push_back(fmt::format("{}({}) : {} {{}}",
-                                    ctor_name(),
-                                    arg_names,
-                                    initializer_list));
+        ctors.push_back(
+            fmt::format("{}({}) : {} {{}}", ctor_name(), arg_names, initializer_list));
     }
 
     constexpr auto format = R"__(class {0} : ::lidl::union_base<{0}> {{
@@ -172,13 +171,12 @@ sections raw_union_gen::generate_traits() {
 
     auto res = sections{{std::move(trait_sect)}};
 
-    if (auto attr =
-        get().attributes.get<service_call_union_attribute>("service_call_union")) {
+    if (auto serv = get().call_for) {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_call_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;
@@ -190,13 +188,12 @@ sections raw_union_gen::generate_traits() {
         res.add(std::move(rpc_traits_sect));
     }
 
-    if (auto attr = get().attributes.get<service_return_union_attribute>(
-        "service_return_union")) {
+    if (auto serv = get().return_for) {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_return_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;

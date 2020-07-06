@@ -1,6 +1,5 @@
 #pragma once
 
-#include <lidl/attributes.hpp>
 #include <lidl/basic.hpp>
 #include <lidl/types.hpp>
 #include <stdexcept>
@@ -52,14 +51,5 @@ public:
     }
 
 private:
-};
-
-struct union_enum_attribute : attribute {
-    union_enum_attribute(enumeration* e)
-        : attribute("union_enum")
-        , union_enum(e) {
-    }
-
-    enumeration* union_enum;
 };
 } // namespace lidl

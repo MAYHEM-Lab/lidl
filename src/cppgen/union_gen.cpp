@@ -179,7 +179,7 @@ sections union_gen::do_generate() {
     operator_eq.keys.push_back(misc_key());
     operator_eq.add_dependency(def_key());
     operator_eq.name_space = mod().name_space;
-    auto eq_format         = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
+    auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
         if (left.alternative() != right.alternative()) {{ return false; }}
         switch (left.alternative()) {{
             {1}
@@ -272,13 +272,12 @@ sections union_gen::generate_traits() {
 
     auto res = sections{{std::move(trait_sect)}};
 
-    if (auto attr =
-            get().attributes.get<service_call_union_attribute>("service_call_union")) {
+    if (auto serv = get().call_for) {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_call_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;
@@ -290,13 +289,12 @@ sections union_gen::generate_traits() {
         res.add(std::move(rpc_traits_sect));
     }
 
-    if (auto attr = get().attributes.get<service_return_union_attribute>(
-            "service_return_union")) {
+    if (auto serv = get().return_for) {
         constexpr auto rpc_trait_format =
             R"__(template <> struct service_return_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, attr->serv);
+        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;

@@ -15,7 +15,7 @@ enumeration enum_for_union(const union_type& u, const module& m) {
 void union_enum_pass(module& m) {
     for (auto& u : m.unions) {
         m.enums.emplace_back(enum_for_union(u, m));
-        u.attributes.add(std::make_unique<union_enum_attribute>(&m.enums.back()));
+        u.alternatives_enum = &m.enums.back();
     }
 }
 } // namespace lidl

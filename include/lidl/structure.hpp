@@ -2,15 +2,17 @@
 
 #include <algorithm>
 #include <deque>
-#include <lidl/attributes.hpp>
 #include <lidl/basic.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
+#include <lidl/service.hpp>
 
 namespace lidl {
 struct structure : public value_type {
     std::deque<std::tuple<std::string, member>> members;
-    attribute_holder attributes;
+
+    std::optional<procedure_params_info> params_info;
+    std::optional<procedure_params_info> return_info;
 
     bool is_reference_type(const module& mod) const override;
 

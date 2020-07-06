@@ -5,8 +5,6 @@
 #pragma once
 
 #include <deque>
-#include <lidl/attributes.hpp>
-#include <lidl/structure.hpp>
 #include <lidl/types.hpp>
 #include <lidl/union.hpp>
 
@@ -16,6 +14,8 @@ struct procedure {
     std::deque<std::pair<std::string, name>> parameters;
     const structure* params_struct;
     const structure* results_struct;
+
+    std::optional<source_info> source_information;
 };
 
 struct property : member {
@@ -28,40 +28,5 @@ struct service {
     std::deque<std::pair<std::string, procedure>> procedures;
     const union_type* procedure_params_union;
     const union_type* procedure_results_union;
-};
-
-class procedure_params_attribute : public attribute {
-public:
-    explicit procedure_params_attribute(const service& serv,
-                                        std::string name,
-                                        const procedure& p)
-        : attribute("procedure_params")
-        , serv(&serv)
-        , proc_name(std::move(name))
-        , proc(&p) {
-    }
-    const service* serv;
-    std::string proc_name;
-    const procedure* proc;
-};
-
-class service_call_union_attribute : public attribute {
-public:
-    explicit service_call_union_attribute(const service& serv)
-        : attribute("service_call_union")
-        , serv{&serv} {
-    }
-
-    const service* serv;
-};
-
-class service_return_union_attribute : public attribute {
-public:
-    explicit service_return_union_attribute(const service& serv)
-        : attribute("service_return_union")
-        , serv{&serv} {
-    }
-
-    const service* serv;
 };
 } // namespace lidl
