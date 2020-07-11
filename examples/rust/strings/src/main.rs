@@ -1,4 +1,4 @@
-mod lidl;
+use lidl;
 
 fn main() {
     let mut buf : [u8; 128] = [0; 128];

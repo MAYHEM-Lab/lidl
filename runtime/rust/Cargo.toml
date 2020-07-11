@@ -1,5 +1,5 @@
 [package]
-name = "lidlrt"
+name = "lidl"
 version = "0.1.0"
 authors = ["Fatih Bakir <mfatihbakir@gmail.com>"]
 edition = "2018"

@@ -1,4 +1,4 @@
-use crate::lidl::MessageBuilder;
+use crate::MessageBuilder;
 
 #[repr(C)]
 pub struct String {
@@ -11,8 +11,8 @@ impl String {
     }
 
     pub fn get<'a>(&'a self) -> &'a str {
-        use std::slice;
-        use std::str;
+        use core::slice;
+        use core::str;
 
         unsafe {
             // The string contents lie right after the length.
@@ -39,7 +39,7 @@ impl String {
             let ptr = (&mut buffer[0] as *mut u8) as *mut i16;
             *ptr = str.as_bytes().len() as i16
         }
-        buffer[std::mem::size_of::<String>() ..].copy_from_slice(str.as_bytes());
+        buffer[core::mem::size_of::<String>() ..].copy_from_slice(str.as_bytes());
         String::from_buffer(buffer)
     }
 }
