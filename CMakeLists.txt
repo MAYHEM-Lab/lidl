@@ -45,6 +45,8 @@ target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
 target_compile_definitions(lidl_core PUBLIC LIDL_VERSION_STRING=\"${PROJECT_VERSION}\")
 if(UNIX AND NOT APPLE)
   target_compile_options(lidl_core PUBLIC -Wno-deprecated-declarations -Werror=return-type)
+  target_compile_options(lidl_core PUBLIC -ffunction-sections -fdata-sections)
+  target_link_options(lidl_core PUBLIC -Wl,--gc-sections)
 endif()
 
 add_subdirectory(3rd_party EXCLUDE_FROM_ALL)
