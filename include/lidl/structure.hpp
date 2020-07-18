@@ -11,7 +11,16 @@ namespace lidl {
 struct structure : public value_type {
     std::deque<std::tuple<std::string, member>> members;
 
+    /**
+     * If this member has a value, this structure is generated to transport the parameters
+     * for that procedure.
+     */
     std::optional<procedure_params_info> params_info;
+
+    /**
+     * If this member has a value, this structure is generated to transport the return
+     * values of that procedure.
+     */
     std::optional<procedure_params_info> return_info;
 
     bool is_reference_type(const module& mod) const override;
