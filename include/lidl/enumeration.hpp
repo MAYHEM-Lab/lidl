@@ -10,14 +10,10 @@ struct enum_member {
     std::optional<source_info> src_info;
 };
 
-struct enumeration : type {
+struct enumeration : value_type {
 public:
     name underlying_type;
     std::vector<std::pair<std::string, enum_member>> members;
-
-    bool is_reference_type(const module& mod) const override {
-        return false;
-    }
 
     virtual raw_layout wire_layout(const module& mod) const override {
         return get_type(mod, underlying_type)->wire_layout(mod);
