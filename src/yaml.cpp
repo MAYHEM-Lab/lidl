@@ -241,7 +241,8 @@ class yaml_loader {
         e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
         for (auto member : node["members"]) {
             e.members.emplace_back(member.as<std::string>(),
-                                   enum_member{static_cast<int>(e.members.size())});
+                                   enum_member{static_cast<int>(e.members.size()),
+                                               make_source_info(member)});
         }
         return e;
     }

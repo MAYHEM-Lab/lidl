@@ -7,6 +7,7 @@
 namespace lidl {
 struct enum_member {
     int value;
+    std::optional<source_info> src_info;
 };
 
 struct enumeration : type {
