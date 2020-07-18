@@ -14,11 +14,25 @@ namespace lidl {
 struct union_type : public value_type {
     std::deque<std::tuple<std::string, member>> members;
 
+    /**
+     * If a union is raw, the alternatives type and members are not generated and the
+     * union is completely unsafe to use.
+     */
     bool raw = false;
 
+    /**
+     * This member points to the enumeration that stores our alternatives.
+     */
     const enumeration* alternatives_enum = nullptr;
 
+    /** If this member is not null, this union stores the parameter structs of that
+     * service.
+     */
     const service* call_for = nullptr;
+
+    /**
+     * If this member is not null, this union stores the return structs of that service.
+     */
     const service* return_for = nullptr;
 
     const enumeration& get_enum() const;
