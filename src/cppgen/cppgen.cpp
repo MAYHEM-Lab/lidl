@@ -74,7 +74,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
             }
             auto identifier = get_identifier(mod, std::get<name>(param.args.at(0)));
             params.emplace_back(fmt::format("const {}& {}", identifier, param_name));
-        } else if (auto vt = dynamic_cast<const view_type*>(param_type); vt) {
+        } else if (param_type->is_view(mod)) {
             auto identifier = get_identifier(mod, param);
             params.emplace_back(fmt::format("{} {}", identifier, param_name));
         } else {
@@ -103,7 +103,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
         if (ret_type->is_reference_type(mod)) {
             ret_type_name = fmt::format("const {}&", ret_type_name);
             params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
-        } else if (auto vt = dynamic_cast<const view_type*>(ret_type); vt) {
+        } else if (ret_type->is_view(mod)) {
             params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
         }
     }
