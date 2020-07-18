@@ -7,12 +7,9 @@ namespace lidl::cpp {
 struct union_gen : generator_base<union_type> {
     using generator_base::generator_base;
 
-    sections generate() override {
-        return do_generate();
-    }
+    sections generate() override;
 
 private:
-    sections do_generate();
 
     sections generate_traits();
 

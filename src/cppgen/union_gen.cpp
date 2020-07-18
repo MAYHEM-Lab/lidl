@@ -45,7 +45,7 @@ std::string union_gen::generate_getter(std::string_view member_name,
     return "";
 }
 
-sections union_gen::do_generate() {
+sections union_gen::generate() {
     std::vector<std::string> members;
     for (auto& [name, member] : get().members) {
         members.push_back(raw_struct_gen::generate_field(
