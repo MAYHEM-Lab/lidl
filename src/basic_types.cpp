@@ -85,6 +85,7 @@ std::unique_ptr<module> basic_module() {
     auto str = add_type("string", std::make_unique<string_type>());
 
     add_type("string_view", std::make_unique<view_type>(name{str}));
+    add_generic("span", std::make_unique<span_type>());
 
     add_generic("ptr", std::make_unique<pointer_type>());
     add_generic("vector", std::make_unique<vector_type>());

@@ -35,4 +35,16 @@ struct view_type : type {
 private:
     name m_wire_type;
 };
-}
+
+struct span_type : generic {
+    span_type()
+        : generic(make_generic_declaration({{"T", "type"}})) {
+    }
+
+    std::unique_ptr<type> instantiate(const module& mod,
+                                      const generic_instantiation& ins) const override {
+        return std::make_unique<view_type>(name{
+            recursive_name_lookup(*mod.symbols, "vector").value(), ins.get_name().args});
+    }
+};
+} // namespace lidl
