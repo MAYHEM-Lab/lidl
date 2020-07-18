@@ -201,39 +201,6 @@ private:
     const generic* m_actual;
 };
 
-namespace detail {
-struct forward_decl : generic {
-    using generic::generic;
-
-    virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation&) const override {
-        throw std::runtime_error(
-            "Wire layout shouldn't be called on a forward declaration!");
-    }
-
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override {
-        throw std::runtime_error(
-            "Is reference shouldn't be called on a forward declaration!");
-    }
-
-    YAML::Node bin2yaml(const module& module,
-                        const generic_instantiation& instantiation,
-                        ibinary_reader& span) const override {
-        throw std::runtime_error(
-            "bin2yaml shouldn't be called on a forward declaration!");
-    }
-
-    int yaml2bin(const module& mod,
-                 const generic_instantiation& instantiation,
-                 const YAML::Node& node,
-                 ibinary_writer& writer) const override {
-        throw std::runtime_error(
-            "yaml2bin shouldn't be called on a forward declaration!");
-    }
-};
-} // namespace detail
-
 struct pointer_type : generic {
     pointer_type();
 
