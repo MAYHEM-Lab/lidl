@@ -34,7 +34,6 @@ add_library(
   include/lidl/basic_types.hpp
   src/layout.cpp
   include/lidl/binary_writer.hpp
-  include/lidl/types/pointer.hpp
   include/lidl/view_types.hpp
   src/types.cpp
   include/lidl/source_info.hpp
