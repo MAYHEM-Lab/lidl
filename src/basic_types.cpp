@@ -204,15 +204,6 @@ YAML::Node string_type::bin2yaml(const module&, ibinary_reader& reader) const {
         std::string(reinterpret_cast<const char*>(raw_str.data()), raw_str.size()));
 }
 
-raw_layout string_type::wire_layout(const module& mod) const {
-    //    throw std::runtime_error("Don't ask for a string's layout!");
-    return {2, 2};
-}
-
-bool string_type::is_reference_type(const module& mod) const {
-    return true;
-}
-
 YAML::Node bool_type::bin2yaml(const module& module, ibinary_reader& reader) const {
     return YAML::Node(reader.read_object<bool>());
 }

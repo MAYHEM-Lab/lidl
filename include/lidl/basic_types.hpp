@@ -185,11 +185,8 @@ struct double_type : basic_type {
     }
 };
 
-struct string_type : type {
+struct string_type : reference_type {
     YAML::Node bin2yaml(const module&, ibinary_reader& span) const override;
-
-    raw_layout wire_layout(const module& mod) const override;
-    bool is_reference_type(const module& mod) const override;
 
     int yaml2bin(const module& module,
                  const YAML::Node& node,
