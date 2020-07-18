@@ -21,6 +21,11 @@ raw_layout union_type::wire_layout(const lidl::module& mod) const {
 }
 
 YAML::Node union_type::bin2yaml(const module& mod, ibinary_reader& reader) const {
+    if (raw) {
+        std::cerr << "[WARN]"
+                  << " Cannot determine the type of a raw union. Skipping the field\n";
+        return {};
+    }
     YAML::Node node;
 
     auto& enumerator = get_enum();
