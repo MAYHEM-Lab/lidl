@@ -11,7 +11,7 @@
 #include <lidl/types.hpp>
 
 namespace lidl {
-struct union_type : public value_type {
+struct union_type : public type {
     std::deque<std::tuple<std::string, member>> members;
 
     /**

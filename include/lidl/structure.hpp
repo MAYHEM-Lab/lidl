@@ -8,7 +8,7 @@
 #include <lidl/service.hpp>
 
 namespace lidl {
-struct structure : public value_type {
+struct structure : public type {
     std::deque<std::tuple<std::string, member>> members;
 
     /**
