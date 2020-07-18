@@ -9,7 +9,6 @@
 #include <lyra/lyra.hpp>
 #include <string_view>
 #include <yaml.hpp>
-#include "passes.hpp"
 
 namespace lidl {
 namespace cpp {
