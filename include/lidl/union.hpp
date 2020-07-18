@@ -38,7 +38,7 @@ struct union_type : public type {
     const enumeration& get_enum() const;
 
     union_type()                  = default;
-    union_type(const union_type&) = delete;
+    union_type(const union_type&) = default;
     union_type(union_type&&)      = default;
     union_type& operator=(union_type&&) = default;
 
