@@ -13,6 +13,12 @@
 #include <lidl/source_info.hpp>
 
 namespace lidl {
+enum class type_categories {
+    value,
+    reference,
+    view
+};
+
 struct module;
 struct type {
 public:
