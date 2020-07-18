@@ -370,16 +370,13 @@ private:
     const module* m_module;
 };
 } // namespace
-} // namespace lidl::cpp
 
-namespace lidl {
 void generate(const module& mod, std::ostream& str) {
     for (auto& [_, child] : mod.children) {
         generate(*child, str);
     }
 
-    using namespace cpp;
     cppgen gen(mod);
     gen.generate(str);
 }
-} // namespace lidl
+} // namespace lidl::cpp

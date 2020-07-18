@@ -1,4 +1,5 @@
 #include "lidl/union.hpp"
+#include "passes.hpp"
 
 #include <fstream>
 #include <functional>
@@ -11,9 +12,11 @@
 #include "passes.hpp"
 
 namespace lidl {
+namespace cpp {
 void generate(const module& mod, std::ostream& str);
+}
 std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
-    backends{{"cpp", generate}};
+    backends{{"cpp", cpp::generate}};
 
 struct lidlc_args {
     std::istream* input_stream;
@@ -54,8 +57,7 @@ int main(int argc, char** argv) {
                   "output file")["-o"]["--output-file"]("Output file to write to.")
             .optional() |
         lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.").required() |
-        lyra::opt(version)["--version"]("Print lidl version") |
-        lyra::help(help);
+        lyra::opt(version)["--version"]("Print lidl version") | lyra::help(help);
     auto res = cli.parse({argc, argv});
 
     if (version) {
