@@ -135,6 +135,15 @@ sections struct_gen::generate_traits() {
         res.add(std::move(rpc_traits_sect));
     }
 
+    auto validate_format = R"__([[nodiscard]] inline bool validate(const {}& val, tos::span<const uint8_t> buffer);)__";
+
+    section validator_sect;
+    validator_sect.key = misc_key();
+    validator_sect.add_dependency(def_key());
+    validator_sect.name_space = "lidl";
+    validator_sect.definition = fmt::format(validate_format, absolute_name());
+    res.add(std::move(validator_sect));
+
     return res;
 }
 
