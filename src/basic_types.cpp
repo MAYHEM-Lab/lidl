@@ -49,6 +49,10 @@ int pointer_type::yaml2bin(const module& mod,
     throw std::runtime_error("pointee must be a regular type");
 }
 
+type_categories pointer_type::category(const module& mod,
+                                       const generic_instantiation& instantiation) const {
+    return type_categories::reference;
+}
 
 std::unique_ptr<module> basic_module() {
     auto basic_mod = std::make_unique<module>();
@@ -100,13 +104,13 @@ const generic_instantiation& module::create_or_get_instantiation(const name& ins
     return instantiations.back();
 }
 
-bool array_type::is_reference(const module& mod,
-                              const generic_instantiation& instantiation) const {
+type_categories array_type::category(const module& mod,
+                                     const generic_instantiation& instantiation) const {
     auto arg = std::get<name>(instantiation.arguments()[0]);
     if (auto regular = get_type(mod, arg); regular) {
-        return regular->is_reference_type(mod);
+        return regular->category(mod);
     }
-    return false;
+    return type_categories::value;
 }
 
 int vector_type::yaml2bin(const module& mod,
@@ -179,6 +183,11 @@ YAML::Node vector_type::bin2yaml(const module& mod,
     }
 
     throw std::runtime_error("pointee must be a regular type");
+}
+
+type_categories vector_type::category(const module& mod,
+                                      const generic_instantiation& instantiation) const {
+    return type_categories::reference;
 }
 
 int string_type::yaml2bin(const module& module,

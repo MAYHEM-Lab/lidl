@@ -10,9 +10,9 @@
 
 
 namespace lidl {
-structure generic_structure::instantiate(const module& mod,
+std::unique_ptr<type> generic_structure::instantiate(const module& mod,
                                          const generic_instantiation& ins) const {
-    structure newstr;
+    auto newstr = std::make_unique<structure>();
 
     auto& genstr = dynamic_cast<const generic_structure&>(ins.generic_type());
 
@@ -32,7 +32,7 @@ structure generic_structure::instantiate(const module& mod,
             // If a member does not have a forward declared type, we can safely skip it.
             member new_mem;
             new_mem.type_ = mem.type_;
-            newstr.members.emplace_back(member_name, std::move(new_mem));
+            newstr->members.emplace_back(member_name, std::move(new_mem));
             continue;
         }
 
@@ -47,15 +47,15 @@ structure generic_structure::instantiate(const module& mod,
 
         member new_mem;
         new_mem.type_ = it->second;
-        newstr.members.emplace_back(member_name, std::move(new_mem));
+        newstr->members.emplace_back(member_name, std::move(new_mem));
     }
 
     return newstr;
 }
 
-union_type generic_union::instantiate(const module& mod,
+std::unique_ptr<type> generic_union::instantiate(const module& mod,
                                       const generic_instantiation& ins) const {
-    union_type newstr;
+    auto newstr = std::make_unique<union_type>();
 
     auto& genstr = dynamic_cast<const generic_union&>(ins.generic_type());
 
@@ -75,7 +75,7 @@ union_type generic_union::instantiate(const module& mod,
             // If a member does not have a forward declared type, we can safely skip it.
             member new_mem;
             new_mem.type_ = mem.type_;
-            newstr.members.emplace_back(member_name, std::move(new_mem));
+            newstr->members.emplace_back(member_name, std::move(new_mem));
             continue;
         }
 
@@ -93,16 +93,10 @@ union_type generic_union::instantiate(const module& mod,
 
         member new_mem;
         new_mem.type_ = it->second;
-        newstr.members.emplace_back(member_name, std::move(new_mem));
+        newstr->members.emplace_back(member_name, std::move(new_mem));
     }
 
     return newstr;
-}
-int generic_union::yaml2bin(const module& mod,
-                             const generic_instantiation& instantiation,
-                             const YAML::Node& node,
-                             ibinary_writer& writer) const {
-    return instantiate(mod, instantiation).yaml2bin(mod, node, writer);
 }
 
 generic_declaration

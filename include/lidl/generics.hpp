@@ -68,20 +68,36 @@ struct generic {
 
     generic(generic&&) = default;
 
-    virtual bool is_reference(const module& mod, const generic_instantiation&) const = 0;
+    virtual type_categories category(const module& mod,
+                                     const generic_instantiation& instantiation) const {
+        return instantiate(mod, instantiation)->category(mod);
+    }
 
     virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation&) const = 0;
+                                   const generic_instantiation& instantiation) const {
+        return instantiate(mod, instantiation)->wire_layout(mod);
+    }
 
-    virtual YAML::Node
-    bin2yaml(const module&, const generic_instantiation&, ibinary_reader&) const = 0;
+    virtual YAML::Node bin2yaml(const module& mod,
+                                const generic_instantiation& instantiation,
+                                ibinary_reader& span) const {
+
+        return instantiate(mod, instantiation)->bin2yaml(mod, span);
+    }
 
     virtual int yaml2bin(const module& mod,
-                         const generic_instantiation&,
-                         const YAML::Node&,
-                         ibinary_writer&) const = 0;
+                         const generic_instantiation& instantiation,
+                         const YAML::Node& node,
+                         ibinary_writer& writer) const {
+        return instantiate(mod, instantiation)->yaml2bin(mod, node, writer);
+    }
 
     virtual ~generic() = default;
+
+    virtual std::unique_ptr<type> instantiate(const module& mod,
+                                              const generic_instantiation& ins) const {
+        return nullptr;
+    }
 
     generic_declaration declaration;
 };
@@ -92,31 +108,8 @@ struct generic_structure : generic {
         , struct_(static_cast<structure&&>(s)) {
     }
 
-    virtual raw_layout
-    wire_layout(const module& mod,
-                const generic_instantiation& instantiation) const override {
-        return instantiate(mod, instantiation).wire_layout(mod);
-    }
-
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override {
-        return instantiate(mod, instantiation).is_reference_type(mod);
-    }
-
-    YAML::Node bin2yaml(const module& mod,
-                        const generic_instantiation& instantiation,
-                        ibinary_reader& span) const override {
-        return instantiate(mod, instantiation).bin2yaml(mod, span);
-    }
-
-    int yaml2bin(const module& mod,
-                 const generic_instantiation& instantiation,
-                 const YAML::Node& node,
-                 ibinary_writer& writer) const override {
-        return instantiate(mod, instantiation).yaml2bin(mod, node, writer);
-    }
-
-    structure instantiate(const module& mod, const generic_instantiation& ins) const;
+    std::unique_ptr<type> instantiate(const module& mod,
+                                      const generic_instantiation& ins) const override;
 
     structure struct_;
 };
@@ -127,28 +120,8 @@ struct generic_union : generic {
         , union_(std::move(s)) {
     }
 
-    raw_layout wire_layout(const module& mod,
-                           const generic_instantiation& instantiation) const override {
-        return instantiate(mod, instantiation).wire_layout(mod);
-    }
-
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override {
-        return instantiate(mod, instantiation).is_reference_type(mod);
-    }
-
-    YAML::Node bin2yaml(const module& mod,
-                        const generic_instantiation& instantiation,
-                        ibinary_reader& span) const override {
-        return instantiate(mod, instantiation).bin2yaml(mod, span);
-    }
-
-    int yaml2bin(const module& mod,
-                 const generic_instantiation& instantiation,
-                 const YAML::Node& node,
-                 ibinary_writer& writer) const override;
-
-    union_type instantiate(const module& mod, const generic_instantiation& ins) const;
+    std::unique_ptr<type> instantiate(const module& mod,
+                                      const generic_instantiation& ins) const override;
 
     union_type union_;
 };
@@ -162,8 +135,8 @@ public:
         m_actual       = base_type;
     }
 
-    bool is_reference_type(const module& mod) const override {
-        return m_actual->is_reference(mod, *this);
+    type_categories category(const module& mod) const override {
+        return m_actual->category(mod, *this);
     }
 
     raw_layout wire_layout(const module& mod) const override {
@@ -204,10 +177,8 @@ private:
 struct pointer_type : generic {
     pointer_type();
 
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override {
-        return true;
-    }
+    type_categories category(const module& mod,
+                             const generic_instantiation& instantiation) const override;
 
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation&) const override;

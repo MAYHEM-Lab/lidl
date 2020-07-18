@@ -7,13 +7,13 @@ struct array_type : generic {
         : generic(make_generic_declaration({{"T", "type"}, {"Size", "i32"}})) {
     }
 
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override;
+    type_categories category(const module& mod,
+                             const generic_instantiation& instantiation) const override;
 
     virtual raw_layout
     wire_layout(const module& mod,
                 const generic_instantiation& instantiation) const override {
-        if (is_reference(mod, instantiation)) {
+        if (category(mod, instantiation) == type_categories::reference) {
             return {2, 2};
         }
         auto& arg = std::get<name>(instantiation.arguments()[0]);
@@ -201,10 +201,8 @@ struct vector_type : generic {
     virtual raw_layout wire_layout(const module& mod,
                                    const generic_instantiation& ins) const override;
 
-    bool is_reference(const module& mod,
-                      const generic_instantiation& instantiation) const override {
-        return true;
-    }
+    type_categories category(const module& mod,
+                             const generic_instantiation& instantiation) const override;
 
     YAML::Node bin2yaml(const module& mod,
                         const generic_instantiation& instantiation,
