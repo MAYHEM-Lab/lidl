@@ -89,13 +89,14 @@ bool service_pass(module& mod) {
         }
 
         mod.unions.push_back(std::move(procedure_params));
-        auto handle = define(*mod.symbols, service_name + "_call", &mod.unions.back());
+        auto handle = define(
+            *mod.symbols, fmt::format("{}_call", service_name), &mod.unions.back());
         mod.unions.back().call_for     = &service;
         service.procedure_params_union = &mod.unions.back();
 
         mod.unions.push_back(std::move(procedure_results));
-        auto res_handle =
-            define(*mod.symbols, service_name + "_return", &mod.unions.back());
+        auto res_handle = define(
+            *mod.symbols, fmt::format("{}_return", service_name), &mod.unions.back());
         mod.unions.back().return_for    = &service;
         service.procedure_results_union = &mod.unions.back();
 
