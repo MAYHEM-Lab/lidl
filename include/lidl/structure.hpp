@@ -9,7 +9,7 @@
 
 namespace lidl {
 struct structure : public type {
-    std::deque<std::tuple<std::string, member>> members;
+    std::deque<std::pair<std::string, member>> members;
 
     /**
      * If this member has a value, this structure is generated to transport the parameters
