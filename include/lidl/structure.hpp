@@ -23,7 +23,7 @@ struct structure : public type {
      */
     std::optional<procedure_params_info> return_info;
 
-    bool is_reference_type(const module& mod) const override;
+    type_categories category(const module& mod) const override;
 
     raw_layout wire_layout(const module& mod) const override;
 

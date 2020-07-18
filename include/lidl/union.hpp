@@ -42,7 +42,7 @@ struct union_type : public type {
     union_type(union_type&&)      = default;
     union_type& operator=(union_type&&) = default;
 
-    bool is_reference_type(const module& mod) const override;
+    type_categories category(const module& mod) const override;
 
     virtual raw_layout wire_layout(const module& mod) const override;
 

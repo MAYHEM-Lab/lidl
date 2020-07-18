@@ -24,7 +24,19 @@ struct type {
 public:
     virtual raw_layout wire_layout(const module& mod) const = 0;
 
-    virtual bool is_reference_type(const module& mod) const = 0;
+    virtual type_categories category(const module& mod) const = 0;
+
+    bool is_value(const module& mod) const {
+        return category(mod) == type_categories::value;
+    }
+
+    bool is_reference_type(const module& mod) const {
+        return category(mod) == type_categories::reference;
+    }
+
+    bool is_view(const module& mod) const {
+        return category(mod) == type_categories::view;
+    }
 
     virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const = 0;
 
@@ -36,14 +48,14 @@ public:
 };
 
 struct value_type : type {
-    virtual bool is_reference_type(const module&) const override {
-        return false;
+    type_categories category(const module& mod) const override {
+        return type_categories::value;
     }
 };
 
 struct reference_type : type {
-    virtual bool is_reference_type(const module&) const override {
-        return true;
+    type_categories category(const module& mod) const override {
+        return type_categories::reference;
     }
 
     virtual raw_layout wire_layout(const module&) const override {

@@ -44,11 +44,15 @@ YAML::Node union_type::bin2yaml(const module& mod, ibinary_reader& reader) const
     return node;
 }
 
-bool union_type::is_reference_type(const module& mod) const {
-    return std::any_of(members.begin(), members.end(), [&](auto& mem) {
-        auto& [name, member] = mem;
-        return get_type(mod, member.type_)->is_reference_type(mod);
-    });
+type_categories union_type::category(const module& mod) const {
+    return std::any_of(members.begin(),
+                       members.end(),
+                       [&](auto& mem) {
+                           auto& [name, member] = mem;
+                           return get_type(mod, member.type_)->is_reference_type(mod);
+                       })
+               ? type_categories::reference
+               : type_categories::value;
 }
 
 const enumeration& union_type::get_enum() const {

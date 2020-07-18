@@ -2,11 +2,15 @@
 #include <lidl/structure.hpp>
 
 namespace lidl {
-bool structure::is_reference_type(const module& mod) const {
-    return std::any_of(members.begin(), members.end(), [&](auto& mem) {
-        auto& [name, member] = mem;
-        return get_type(mod, member.type_)->is_reference_type(mod);
-    });
+type_categories structure::category(const module& mod) const {
+    return std::any_of(members.begin(),
+                       members.end(),
+                       [&](auto& mem) {
+                           auto& [name, member] = mem;
+                           return get_type(mod, member.type_)->is_reference_type(mod);
+                       })
+               ? type_categories::reference
+               : type_categories::value;
 }
 
 raw_layout structure::wire_layout(const module& mod) const {
