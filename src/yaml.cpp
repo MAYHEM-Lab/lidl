@@ -144,8 +144,8 @@ class yaml_loader {
         if (!members) {
             throw missing_node_error("members", make_source_info(node));
         }
-        for (auto e : members) {
-            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+        for (auto&& e : members) {
+            auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
             s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
         }
 
@@ -160,8 +160,8 @@ class yaml_loader {
         if (!variants) {
             throw missing_node_error("variants", make_source_info(node));
         }
-        for (auto e : variants) {
-            auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
+        for (auto&& e : variants) {
+            auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
             u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
         }
 
@@ -221,13 +221,13 @@ class yaml_loader {
         service serv;
         serv.src_info = make_source_info(node);
 
-        for (auto base : node["extends"]) {
+        for (auto&& base : node["extends"]) {
             serv.extends.push_back(read_type(base, *mod.symbols));
         }
 
-        for (auto procedure : node["procedures"]) {
+        for (auto&& procedure : node["procedures"]) {
             auto& [name, val] =
-                static_cast<std::pair<YAML::Node, YAML::Node>&>(procedure);
+                static_cast<const std::pair<YAML::Node, YAML::Node>&>(procedure);
             serv.procedures.emplace_back(name.as<std::string>(),
                                          parse_procedure(val, mod));
         }
@@ -239,7 +239,7 @@ class yaml_loader {
         e.src_info = make_source_info(node);
 
         e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
-        for (auto member : node["members"]) {
+        for (auto&& member : node["members"]) {
             e.members.emplace_back(member.as<std::string>(),
                                    enum_member{static_cast<int>(e.members.size()),
                                                make_source_info(member)});
