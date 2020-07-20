@@ -1,4 +1,5 @@
 add_subdirectory(cppgen)
+add_subdirectory(jsgen)
 
 if(BUILD_TOOLS)
   add_subdirectory(tools)

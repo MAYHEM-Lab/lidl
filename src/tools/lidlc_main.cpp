@@ -14,8 +14,11 @@ namespace lidl {
 namespace cpp {
 void generate(const module& mod, std::ostream& str);
 }
+namespace js {
+void generate(const module& mod, std::ostream& str);
+}
 std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
-    backends{{"cpp", cpp::generate}};
+    backends{{"cpp", cpp::generate}, {"js", js::generate}, {"ts", js::generate}};
 
 struct lidlc_args {
     std::istream* input_stream;
