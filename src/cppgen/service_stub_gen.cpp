@@ -97,7 +97,7 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb(data(req_buf));
         lidl::create<lidl::service_call_union<{5}>>(mb, {3}({4}));
-        auto buf = mb.get_buffer().get_buffer();
+        auto buf = mb.get_buffer();
         auto resp = ServBase::send_receive(buf);
         auto& res =
             lidl::get_root<lidl::service_return_union<{5}>>(data(resp)).{1}();

@@ -185,21 +185,20 @@ int main(int argc, char** argv) {
         lidl::create<lidl_example::string_struct>(mb, lidl::create_string(mb, "hello"));
     auto sp = lidl::meta::detail::find_extent(s);
     std::cerr << sp.size() << '\n';
-    auto all = mb.get_buffer().get_buffer();
+    auto all = mb.get_buffer();
     std::cerr << all.size() << '\n';
 
     auto& deep = lidl::create<lidl_example::deep_struct>(
         mb, lidl::create_vector_sized<uint8_t>(mb, 0x2), s);
     sp = lidl::meta::detail::find_extent(deep);
     std::cerr << sp.size() << '\n';
-    all = mb.get_buffer().get_buffer();
+    all = mb.get_buffer();
     std::cerr << all.size() << '\n';
 
     // std::ifstream file(argv[1]);
     // std::vector<uint8_t> req(std::istream_iterator<uint8_t>(file),
     // std::istream_iterator<uint8_t>{});
     auto req = get_request();
-    auto buf = lidl::buffer(req);
     //    std::cout.write((const char*)req.data(), req.size());
     std::cout << lidl::nameof(
                      lidl::get_root<lidl_example::calculator_call>(buf).alternative())
@@ -213,7 +212,7 @@ int main(int argc, char** argv) {
 
     std::array<uint8_t, 256> resp;
     auto resp_builder = lidl::message_builder(resp);
-    handler(c, buf, resp_builder);
+    handler(c, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
     auto& res = lidl::get_root<lidl_example::calculator_return>(resp_builder.get_buffer())
@@ -222,7 +221,7 @@ int main(int argc, char** argv) {
 
     resp_builder = lidl::message_builder(resp);
     req          = get_echo_req();
-    rep_handler(r, lidl::buffer(req), resp_builder);
+    rep_handler(r, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
     auto& rep_res =
