@@ -13,8 +13,8 @@ TEST_CASE("scope declaration works") {
 }
 
 struct mock_type : type {
-    bool is_reference_type(const module&) const override {
-        return false;
+    type_categories category(const module& mod) const override {
+        return type_categories::view;
     }
 
     raw_layout wire_layout(const module&) const override {
@@ -42,10 +42,10 @@ TEST_CASE("scope definition works") {
 }
 
 struct mock_type2 : type {
-    bool is_reference_type(const module&) const override {
-        return false;
+    type_categories category(const module& mod) const override {
+        return type_categories::view;
     }
-
+    
     raw_layout wire_layout(const module&) const override {
         return {2, 2};
     }

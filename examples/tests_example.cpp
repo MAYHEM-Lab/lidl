@@ -20,7 +20,7 @@ int main() {
     }
 
     std::cout.write(
-        reinterpret_cast<const char*>(builder.get_buffer().get_buffer().data()),
-        builder.get_buffer().get_buffer().size());
+        reinterpret_cast<const char*>(builder.get_buffer().data()),
+        builder.get_buffer().size());
     std::cerr << "message took " << builder.size() << " bytes\n";
 }
