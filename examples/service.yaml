@@ -89,7 +89,7 @@ repeat:
           parameters:
             - u8
       parameters:
-        data:
+        arg:
           name: span
           parameters:
             - u8

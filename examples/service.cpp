@@ -31,9 +31,9 @@ public:
         return str.substr(0, 3);
     }
 
-    tos::span<uint8_t> echo_bytes(tos::span<uint8_t> data,
+    tos::span<uint8_t> echo_bytes(tos::span<uint8_t> arg,
                                   lidl::message_builder& response_builder) override {
-        return data;
+        return arg;
     }
 };
 
