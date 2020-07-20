@@ -54,7 +54,7 @@ example:
       parameters:
         str: complex_struct
 
-calculator:
+scientific_calculator:
   type: service
   procedures:
     add:
@@ -69,12 +69,6 @@ calculator:
       parameters:
         left: f64
         right: f64
-
-scientific_calculator:
-  type: service
-  extends:
-    - calculator
-  procedures:
     log:
       returns:
         - f64
@@ -89,3 +83,13 @@ repeat:
         - string_view
       parameters:
         message: string_view
+    echo_bytes:
+      returns:
+        - name: span
+          parameters:
+            - u8
+      parameters:
+        data:
+          name: span
+          parameters:
+            - u8

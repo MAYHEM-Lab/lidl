@@ -35,8 +35,8 @@ public:
 std::vector<uint8_t> get_request() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<lidl_example::calculator_call>(
-        builder, lidl_example::calculator_multiply_params(3, 5));
+    lidl::create<lidl_example::scientific_calculator_call>(
+        builder, lidl_example::scientific_calculator_multiply_params(3, 5));
     buf.resize(builder.size());
     return buf;
 }
@@ -201,7 +201,8 @@ int main(int argc, char** argv) {
     auto req = get_request();
     //    std::cout.write((const char*)req.data(), req.size());
     std::cout << lidl::nameof(
-                     lidl::get_root<lidl_example::calculator_call>(buf).alternative())
+                     lidl::get_root<lidl_example::scientific_calculator_call>(req)
+                         .alternative())
               << '\n';
 
     calculator_impl c;
@@ -215,7 +216,8 @@ int main(int argc, char** argv) {
     handler(c, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& res = lidl::get_root<lidl_example::calculator_return>(resp_builder.get_buffer())
+    auto& res = lidl::get_root<lidl_example::scientific_calculator_return>(
+                    resp_builder.get_buffer())
                     .multiply();
     std::cout << res.ret0() << '\n';
 
@@ -224,7 +226,8 @@ int main(int argc, char** argv) {
     rep_handler(r, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& rep_res =
-        lidl::get_root<lidl_example::repeat_return>(resp_builder.get_buffer()).echo();
+    auto& rep_res = lidl::get_root<lidl_example::repeat_return>(
+                        resp_builder.get_buffer())
+                        .echo();
     std::cout << rep_res.ret0().string_view() << '\n';
 }
