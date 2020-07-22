@@ -78,6 +78,12 @@ scientific_calculator:
 repeat:
   type: service
   procedures:
+    return_vector:
+      returns:
+        - name: vector
+          parameters:
+            - u8
+      parameters: []
     echo:
       returns:
         - string_view

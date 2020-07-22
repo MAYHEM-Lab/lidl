@@ -35,6 +35,11 @@ public:
                                   lidl::message_builder& response_builder) override {
         return arg;
     }
+
+    const lidl::vector<uint8_t>&
+    return_vector(lidl::message_builder& response_builder) override {
+        return lidl::create_vector_sized<uint8_t>(response_builder, 20);
+    }
 };
 
 std::vector<uint8_t> get_request() {
@@ -105,8 +110,7 @@ int main(int argc, char** argv) {
     rep_handler(r, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& rep_res = lidl::get_root<lidl_example::repeat_return>(
-                        resp_builder.get_buffer())
-                        .echo();
+    auto& rep_res =
+        lidl::get_root<lidl_example::repeat_return>(resp_builder.get_buffer()).echo();
     std::cout << rep_res.ret0().string_view() << '\n';
 }
