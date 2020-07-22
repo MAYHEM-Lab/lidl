@@ -169,10 +169,11 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
                        name(),
                        copy_and_return(proc));
 } catch (std::exception& ex) {
-    std::cerr << fmt::format(
-        "Stub generator for {} failed while generating code for {}, bailing out.",
-        name(),
-        proc_name);
+    std::cerr << fmt::format("Stub generator for {} failed while generating code for {}, "
+                             "bailing out. Error: {}\n",
+                             name(),
+                             proc_name,
+                             ex.what());
     return {};
 }
 } // namespace lidl::cpp
