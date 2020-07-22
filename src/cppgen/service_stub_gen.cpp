@@ -70,7 +70,14 @@ std::string remote_stub_generator::copy_and_return(const procedure& proc) {
     }
 
     auto ret_type = get_type(mod(), proc.return_types[0]);
+    auto ident = get_user_identifier(mod(), proc.return_types[0]);
     if (ret_type->is_reference_type(mod())) {
+        constexpr auto format = R"__(auto [__extent, __pos] = lidl::meta::detail::find_extent_and_position(res.ret0());
+auto __res_ptr = response_builder.allocate(__extent.size(), 1);
+memcpy(__res_ptr, __extent.data(), __extent.size());
+return *const_cast<{0}*>(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
+        return fmt::format(format, ident);
+        // Would just memcpy'ing the extent of the result work?
         throw std::runtime_error("Reference types are not supported by stubgen yet!");
     } else if (auto vt = dynamic_cast<const view_type*>(ret_type)) {
         auto wire_type_name = vt->get_wire_type();
