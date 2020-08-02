@@ -54,11 +54,11 @@ private:
     std::string
     generate_getter(std::string_view member_name, const member& mem, bool is_const);
 
-    const module& mod() {
+    const module& mod() const {
         return *m_module;
     }
 
-    const structure& str() {
+    const structure& str() const {
         return *m_struct;
     }
 

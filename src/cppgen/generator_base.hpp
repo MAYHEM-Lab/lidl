@@ -34,23 +34,23 @@ public:
     }
 
 protected:
-    const module& mod() {
+    const module& mod() const {
         return *m_module;
     }
 
-    const Type& get() {
+    const Type& get() const {
         return *m_elem;
     }
 
-    std::string_view name() {
+    std::string_view name() const {
         return m_name;
     }
 
-    std::string_view ctor_name() {
+    std::string_view ctor_name() const {
         return m_ctor_name;
     }
 
-    std::string_view absolute_name() {
+    std::string_view absolute_name() const {
         return m_abs_name;
     }
 
