@@ -33,6 +33,14 @@ sections raw_struct_gen::generate() {
     return res;
 }
 
+bool raw_struct_gen::is_constexpr() const {
+    if (get().is_reference_type(mod())) {
+        return false;
+    }
+
+    return true;
+}
+
 std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
     if (get().members.empty()) {
         return {};
@@ -136,5 +144,13 @@ std::string struct_body_gen::generate_getter(std::string_view member_name,
         }
     }
     return "";
+}
+
+bool struct_body_gen::is_constexpr() const{
+    if (str().is_reference_type(mod())) {
+        return false;
+    }
+
+    return true;
 }
 } // namespace lidl::cpp

@@ -29,6 +29,9 @@ public:
     }
 
 private:
+
+    bool is_constexpr() const;
+
     std::vector<std::string> generate_raw_constructor();
 };
 
@@ -50,6 +53,8 @@ public:
 
 private:
     std::vector<std::string> generate_constructor();
+
+    bool is_constexpr() const;
 
     std::string
     generate_getter(std::string_view member_name, const member& mem, bool is_const);
