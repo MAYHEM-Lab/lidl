@@ -64,7 +64,7 @@ std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
                         member_name));
     }
 
-    return {fmt::format("{}({}) : {} {{}}",
+    return {(is_constexpr() ? "constexpr " : "") + fmt::format("{}({}) : {} {{}}",
                         ctor_name(),
                         fmt::join(arg_names, ", "),
                         fmt::join(initializer_list, ", "))};
@@ -115,7 +115,7 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
         arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
     }
 
-    return {fmt::format("{}({}) : raw{{{}}} {{}}",
+    return {(is_constexpr() ? "constexpr " : "") + fmt::format("{}({}) : raw{{{}}} {{}}",
                         m_ctor_name,
                         fmt::join(arg_names, ", "),
                         fmt::join(initializer_list, ", "))};
@@ -129,7 +129,7 @@ std::string struct_body_gen::generate_getter(std::string_view member_name,
         auto type_name              = get_identifier(mod(), mem.type_);
         constexpr auto format       = R"__({}& {}() {{ return raw.{}; }})__";
         constexpr auto const_format = R"__(const {}& {}() const {{ return raw.{}; }})__";
-        return fmt::format(
+        return (is_constexpr() ? "constexpr " : "") + fmt::format(
             is_const ? const_format : format, type_name, member_name, member_name);
     } else {
         // need to dereference before return
@@ -139,7 +139,7 @@ std::string struct_body_gen::generate_getter(std::string_view member_name,
             constexpr auto format = R"__({}& {}() {{ return raw.{}.unsafe().get(); }})__";
             constexpr auto const_format =
                 R"__(const {}& {}() const {{ return raw.{}.unsafe().get(); }})__";
-            return fmt::format(
+            return (is_constexpr() ? "constexpr " : "") + fmt::format(
                 is_const ? const_format : format, identifier, member_name, member_name);
         }
     }
