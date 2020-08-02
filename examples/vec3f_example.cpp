@@ -4,6 +4,8 @@
 #include <iostream>
 #include <lidl/builder.hpp>
 
+constexpr gfx::vec3f v(1, 2, 3);
+
 int main() {
     std::array<uint8_t, 64> buf;
     lidl::message_builder builder(buf);
