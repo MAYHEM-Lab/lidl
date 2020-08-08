@@ -102,12 +102,12 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
     constexpr auto def_format = R"__({0} {1}({2}) override {{
         using lidl::data;
         auto req_buf = ServBase::get_buffer();
-        lidl::message_builder mb(data(req_buf));
+        lidl::message_builder mb{{tos::span<uint8_t>(req_buf)}};
         lidl::create<lidl::service_call_union<{5}>>(mb, {3}({4}));
         auto buf = mb.get_buffer();
         auto resp = ServBase::send_receive(buf);
         auto& res =
-            lidl::get_root<lidl::service_return_union<{5}>>(data(resp)).{1}();
+            lidl::get_root<lidl::service_return_union<{5}>>(tos::span<const uint8_t>(resp)).{1}();
         {6}
     }})__";
 
