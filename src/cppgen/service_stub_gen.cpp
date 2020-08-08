@@ -15,6 +15,7 @@ sections remote_stub_generator::generate() {
 
     // We depend on the definition for the service.
     sect.add_dependency(def_key());
+    sect.add_dependency(misc_key());
     sect.keys.emplace_back(symbol(), section_type::misc);
     sect.name_space = mod().name_space;
 

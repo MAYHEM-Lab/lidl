@@ -286,6 +286,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
+        rpc_traits_sect.key = {serv_handle, section_type::misc};
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -303,6 +304,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
+        rpc_traits_sect.key = {serv_handle, section_type::misc};
         res.add(std::move(rpc_traits_sect));
     }
 
