@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <lidl/builder.hpp>
 #include <lidl/meta.hpp>
 #include <lidl/status.hpp>
@@ -177,7 +178,7 @@ void request_handler(service_base& base_service,
 }
 } // namespace detail
 
-template <class ServiceT>
+template<class ServiceT>
 procedure_runner_t make_procedure_runner() {
     return &detail::request_handler<ServiceT>;
 }
