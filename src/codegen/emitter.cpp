@@ -9,8 +9,7 @@
 #include <unordered_map>
 
 
-namespace lidl::cpp {
-
+namespace lidl::codegen {
 bool emitter::pass() {
     bool changed = false;
 

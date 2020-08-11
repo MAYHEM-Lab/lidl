@@ -7,13 +7,13 @@ namespace lidl::cpp {
 struct struct_gen : generator_base<structure> {
     using generator_base::generator_base;
 
-    sections generate() override {
+    codegen::sections generate() override {
         return do_generate();
     }
 
 private:
-    sections do_generate();
+    codegen::sections do_generate();
 
-    sections generate_traits();
+    codegen::sections generate_traits();
 };
 }

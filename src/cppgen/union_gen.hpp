@@ -7,11 +7,11 @@ namespace lidl::cpp {
 struct union_gen : generator_base<union_type> {
     using generator_base::generator_base;
 
-    sections generate() override;
+    codegen::sections generate() override;
 
 private:
 
-    sections generate_traits();
+    codegen::sections generate_traits();
 
     std::string
     generate_getter(std::string_view member_name, const member& mem, bool is_const);

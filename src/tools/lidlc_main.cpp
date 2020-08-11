@@ -1,6 +1,7 @@
 #include "lidl/union.hpp"
 #include "passes.hpp"
 
+#include <codegen.hpp>
 #include <fstream>
 #include <functional>
 #include <gsl/span>
@@ -12,13 +13,13 @@
 
 namespace lidl {
 namespace cpp {
-void generate(const module& mod, std::ostream& str);
+std::unique_ptr<codegen::backend> make_backend();
 }
 namespace js {
 void generate(const module& mod, std::ostream& str);
 }
-std::unordered_map<std::string_view, std::function<void(const module&, std::ostream&)>>
-    backends{{"cpp", cpp::generate}, {"js", js::generate}, {"ts", js::generate}};
+std::unordered_map<std::string_view, std::function<std::unique_ptr<codegen::backend>()>>
+    backends{{"cpp", cpp::make_backend} /*, {"js", js::generate}, {"ts", js::generate}*/};
 
 struct lidlc_args {
     std::istream* input_stream;
@@ -28,16 +29,35 @@ struct lidlc_args {
 };
 
 void run(const lidlc_args& args) {
-    auto backend = backends.find(args.backend);
-    if (backend == backends.end()) {
+    auto backend_maker = backends.find(args.backend);
+    if (backend_maker == backends.end()) {
         std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
         return;
     }
+
     auto root_mod = std::make_unique<module>();
     root_mod->add_child("", basic_module());
-    auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
-    run_passes_until_stable(ym);
-    backend->second(ym, *args.output_stream);
+
+    try {
+        auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
+
+        try {
+            run_passes_until_stable(ym);
+        } catch (std::exception& err) {
+            std::cerr << "A pass failed: " << err.what() << '\n';
+        }
+
+        try {
+            auto backend = backend_maker->second();
+            backend->generate(ym, *args.output_stream);
+        } catch (std::exception& err) {
+            std::cerr << "Code generation failed: " << err.what() << '\n';
+            return;
+        }
+    } catch (std::exception& err) {
+        std::cerr << "Module parsing failed: " << err.what() << '\n';
+        return;
+    }
 }
 } // namespace lidl
 

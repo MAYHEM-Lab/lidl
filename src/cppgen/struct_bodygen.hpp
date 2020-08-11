@@ -21,7 +21,7 @@ class raw_struct_gen : generator_base<structure> {
 public:
     using generator_base::generator_base;
 
-    sections generate() override;
+    codegen::sections generate() override;
 
     static std::string
     generate_field(std::string_view name, std::string_view type_name) {
@@ -49,7 +49,7 @@ public:
         , m_struct{&str} {
     }
 
-    sections generate();
+    codegen::sections generate();
 
 private:
     std::vector<std::string> generate_constructor();

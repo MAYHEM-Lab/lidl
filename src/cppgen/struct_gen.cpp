@@ -9,8 +9,8 @@
 
 #include <lidl/service.hpp>
 
-
 namespace lidl::cpp {
+using codegen::sections;
 sections struct_gen::do_generate() {
     constexpr auto format = R"__(class {0} : public ::lidl::struct_base<{0}> {{
             {1}

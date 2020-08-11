@@ -10,6 +10,7 @@
 
 
 namespace lidl::cpp {
+using codegen::sections;
 std::string union_gen::generate_getter(std::string_view member_name,
                                        const member& mem,
                                        bool is_const) {
@@ -169,7 +170,7 @@ sections union_gen::generate() {
 
     // Member types must be defined before us
     for (auto& [name, member] : get().members) {
-        auto deps = def_keys_from_name(mod(), member.type_);
+        auto deps = codegen::def_keys_from_name(mod(), member.type_);
         for (auto& key : deps) {
             s.add_dependency(key);
         }

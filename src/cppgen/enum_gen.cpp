@@ -3,7 +3,7 @@
 #include "cppgen.hpp"
 
 namespace lidl::cpp {
-
+using codegen::sections;
 sections enum_gen::generate() {
     return do_generate();
 }

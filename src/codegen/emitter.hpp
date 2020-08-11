@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <sections.hpp>
 
-
-namespace lidl::cpp {
+namespace lidl::codegen {
 struct emitter {
 public:
     explicit emitter(const module& root, const module& mod, sections all);

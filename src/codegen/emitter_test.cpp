@@ -3,7 +3,7 @@
 #include <doctest.h>
 #include <lidl/module.hpp>
 
-namespace lidl::cpp {
+namespace lidl::codegen {
 namespace {
 TEST_CASE("emitter works") {
     auto mod = lidl::basic_module();
@@ -20,4 +20,4 @@ TEST_CASE("emitter works") {
     REQUIRE_EQ("struct foo {};\nstruct bar { foo f; };\n", e.emit());
 }
 } // namespace
-} // namespace lidl::cpp
+} // namespace lidl::codegen

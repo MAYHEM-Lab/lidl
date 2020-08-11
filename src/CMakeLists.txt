@@ -1,3 +1,4 @@
+add_subdirectory(codegen)
 add_subdirectory(cppgen)
 add_subdirectory(jsgen)
 

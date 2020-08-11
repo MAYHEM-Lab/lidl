@@ -10,6 +10,7 @@
 #include <lidl/view_types.hpp>
 
 namespace lidl::cpp {
+using codegen::sections;
 sections remote_stub_generator::generate() {
     section sect;
 

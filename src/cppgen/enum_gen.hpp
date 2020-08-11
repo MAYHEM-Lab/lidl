@@ -7,10 +7,10 @@ namespace lidl::cpp {
 struct enum_gen : generator_base<enumeration> {
     using generator_base::generator_base;
 
-    sections generate() override;
+    codegen::sections generate() override;
 
 private:
-    sections do_generate();
-    sections generate_traits();
+    codegen::sections do_generate();
+    codegen::sections generate_traits();
 };
 } // namespace lidl::cpp

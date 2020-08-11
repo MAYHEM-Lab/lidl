@@ -1,12 +1,10 @@
 #pragma once
 
-#include <lidl/basic.hpp>
-#include <set>
-#include <string>
-#include <vector>
 #include <variant>
+#include <string>
+#include <lidl/scope.hpp>
 
-namespace lidl::cpp {
+namespace lidl::codegen {
 enum class section_type
 {
     definition,
@@ -86,9 +84,4 @@ struct sections {
         }
     }
 };
-
-class generator {
-public:
-    virtual sections generate() = 0;
-};
-} // namespace lidl::cpp
+}

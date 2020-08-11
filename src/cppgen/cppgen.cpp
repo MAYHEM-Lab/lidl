@@ -13,6 +13,7 @@
 #include "union_gen.hpp"
 
 #include <algorithm>
+#include <codegen.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <lidl/basic.hpp>
@@ -25,8 +26,8 @@
 #include <string_view>
 #include <unordered_map>
 
-
 namespace lidl::cpp {
+using codegen::sections;
 namespace {
 bool is_anonymous(const module& mod, symbol t) {
     return !recursive_definition_lookup(*mod.symbols, t);
@@ -61,7 +62,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
 
     std::vector<std::string> params;
     for (auto& [param_name, param] : proc.parameters) {
-        auto deps = def_keys_from_name(mod, param);
+        auto deps = codegen::def_keys_from_name(mod, param);
         for (auto& key : deps) {
             dependencies.push_back(key);
         }
@@ -86,7 +87,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
     std::vector<section_key_t> return_deps;
 
     for (auto& ret : proc.return_types) {
-        auto deps = def_keys_from_name(mod, ret);
+        auto deps = codegen::def_keys_from_name(mod, ret);
         return_deps.insert(return_deps.end(), deps.begin(), deps.end());
     }
 
@@ -112,7 +113,6 @@ std::vector<section_key_t> generate_procedure(const module& mod,
 
     return dependencies;
 }
-
 
 sections
 generate_service_descriptor(const module& mod, std::string_view, const service& service) {
@@ -317,7 +317,7 @@ struct cppgen {
 
         //        str << forward_decls.str() << '\n';
 
-        emitter e(*mod().parent, mod(), m_sections);
+        codegen::emitter e(*mod().parent, mod(), m_sections);
 
         str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
         if (!mod().services.empty()) {
@@ -369,14 +369,33 @@ private:
 
     const module* m_module;
 };
+
+class backend : public codegen::backend {
+public:
+    void generate(const module& mod, std::ostream& str) override {
+        codegen::detail::current_backend = this;
+        for (auto& [_, child] : mod.children) {
+            generate(*child, str);
+        }
+
+        cppgen gen(mod);
+        gen.generate(str);
+    }
+    std::string get_user_identifier(const module& mod,
+                                    const lidl::name& name) const override {
+        return cpp::get_user_identifier(mod, name);
+    }
+    std::string get_local_identifier(const module& mod,
+                                     const lidl::name& name) const override {
+        return cpp::get_local_identifier(mod, name);
+    }
+    std::string get_identifier(const module& mod, const lidl::name& name) const override {
+        return cpp::get_identifier(mod, name);
+    }
+};
 } // namespace
 
-void generate(const module& mod, std::ostream& str) {
-    for (auto& [_, child] : mod.children) {
-        generate(*child, str);
-    }
-
-    cppgen gen(mod);
-    gen.generate(str);
+std::unique_ptr<codegen::backend> make_backend() {
+    return std::make_unique<cpp::backend>();
 }
 } // namespace lidl::cpp

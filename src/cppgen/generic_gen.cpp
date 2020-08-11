@@ -10,6 +10,7 @@
 #include "union_gen.hpp"
 
 namespace lidl::cpp {
+using codegen::sections;
 std::string generic_gen::local_full_name() {
     return get_local_identifier(mod(), get().get_name());
 }

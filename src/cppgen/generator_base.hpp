@@ -8,8 +8,12 @@
 #include <vector>
 
 namespace lidl::cpp {
+using codegen::section;
+using codegen::section_key_t;
+using codegen::section_type;
+
 template<class Type>
-class generator_base : public generator {
+class generator_base : public codegen::generator<Type> {
 public:
     generator_base(const module& mod,
                    symbol_handle sym,
@@ -17,12 +21,10 @@ public:
                    std::string_view ctor_name,
                    std::string_view abs_name,
                    const Type& elem)
-        : m_module{&mod}
-        , m_symbol(std::move(sym))
+        : codegen::generator<Type>(std::move(sym), mod, elem)
         , m_name{name}
         , m_ctor_name(ctor_name)
-        , m_abs_name(abs_name)
-        , m_elem{&elem} {
+        , m_abs_name(abs_name) {
     }
 
     generator_base(const module& mod,
@@ -34,14 +36,6 @@ public:
     }
 
 protected:
-    const module& mod() const {
-        return *m_module;
-    }
-
-    const Type& get() const {
-        return *m_elem;
-    }
-
     std::string_view name() const {
         return m_name;
     }
@@ -54,40 +48,33 @@ protected:
         return m_abs_name;
     }
 
-    const symbol_handle& symbol() const {
-        return m_symbol;
-    }
-
     section_key_t def_key() {
-        if (symbol().is_valid()) {
-            return section_key_t{symbol(), section_type::definition};
+        if (this->symbol().is_valid()) {
+            return section_key_t{this->symbol(), section_type::definition};
         } else {
             return section_key_t{std::string(absolute_name()), section_type::definition};
         }
     }
 
     section_key_t decl_key() {
-        if (symbol().is_valid()) {
-            return section_key_t{symbol(), section_type::declaration};
+        if (this->symbol().is_valid()) {
+            return section_key_t{this->symbol(), section_type::declaration};
         } else {
             return section_key_t{std::string(absolute_name()), section_type::declaration};
         }
     }
 
     section_key_t misc_key() {
-        if (symbol().is_valid()) {
-            return section_key_t{symbol(), section_type::misc};
+        if (this->symbol().is_valid()) {
+            return section_key_t{this->symbol(), section_type::misc};
         } else {
             return section_key_t{std::string(absolute_name()), section_type::misc};
         }
     }
 
 private:
-    symbol_handle m_symbol;
-    const module* m_module;
     std::string m_name;
     std::string m_ctor_name;
     std::string m_abs_name;
-    const Type* m_elem;
 };
 } // namespace lidl::cpp

@@ -8,7 +8,7 @@ class remote_stub_generator : public generator_base<service> {
 public:
     using generator_base::generator_base;
 
-    sections generate() override;
+    codegen::sections generate() override;
 
 private:
     std::string copy_proc_param(const procedure& proc,

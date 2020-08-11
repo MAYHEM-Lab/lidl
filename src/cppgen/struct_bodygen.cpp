@@ -1,7 +1,7 @@
 #include "struct_bodygen.hpp"
 
 namespace lidl::cpp {
-
+using codegen::sections;
 sections raw_struct_gen::generate() {
     std::vector<std::string> members;
     for (auto& [name, member] : get().members) {
@@ -22,7 +22,7 @@ sections raw_struct_gen::generate() {
 
     // Member types must be defined before us
     for (auto& [name, member] : get().members) {
-        auto deps = def_keys_from_name(mod(), member.type_);
+        auto deps = codegen::def_keys_from_name(mod(), member.type_);
         for (auto& key : deps) {
             def_sect.add_dependency(key);
         }
