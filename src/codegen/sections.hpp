@@ -37,6 +37,7 @@ struct section_key_t {
     }
 };
 
+// Computes the list of section keys that are depended on by the given name.
 inline std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm) {
     std::vector<section_key_t> all;
     all.emplace_back(nm.base, section_type::definition);
@@ -59,8 +60,11 @@ struct section {
     /**
      * This member is used as the key for the definition in dependency resolution.
      */
-    section_key_t key;
     std::vector<section_key_t> keys;
+
+    void add_key(section_key_t key) {
+        keys.push_back(std::move(key));
+    }
 
     std::string definition;
 
@@ -72,7 +76,9 @@ struct section {
 };
 
 struct sections {
-    std::vector<section> m_sections;
+    sections() = default;
+    sections(std::vector<section> sects) : m_sections{std::move(sects)} {
+    }
 
     void add(section sect) {
         m_sections.emplace_back(std::move(sect));
@@ -83,5 +89,12 @@ struct sections {
             m_sections.emplace_back(std::move(s));
         }
     }
+
+    std::vector<section>& get_sections() {
+        return m_sections;
+    }
+
+private:
+    std::vector<section> m_sections;
 };
 }

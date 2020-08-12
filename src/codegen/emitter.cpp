@@ -34,14 +34,16 @@ bool emitter::pass() {
         }
 
         for (auto& sect : sects) {
-            std::cerr << "    Emitting " << sect.key.to_string(*m_module) << "\n";
+            std::vector<std::string> key_names(sect.keys.size());
+            std::transform(sect.keys.begin(), sect.keys.end(), key_names.begin(), [&](auto& key) {
+              return key.to_string(*m_module);
+            });
+            std::cerr << "    Emitting " << fmt::format("{}\n", fmt::join(key_names, "\n             "));
 
             m_stream << sect.definition << '\n';
 
-            m_satisfied.emplace_back(sect.key);
             for (auto& key : sect.keys) {
                 m_satisfied.emplace_back(key);
-                std::cerr << "      Marking " << key.to_string(*m_module) << "\n";
             }
             m_generated.emplace_back(std::move(sect));
         }
@@ -60,7 +62,11 @@ std::string emitter::emit() {
     if (!m_not_generated.empty()) {
         std::cerr << "The following dependencies could not be resolved:\n";
         for (auto& sect : m_not_generated) {
-            std::cerr << sect.key.to_string(*m_module) << ":\n";
+            std::vector<std::string> key_names(sect.keys.size());
+            std::transform(sect.keys.begin(), sect.keys.end(), key_names.begin(), [&](auto& key) {
+                return key.to_string(*m_module);
+            });
+            std::cerr << fmt::format("{}:\n", fmt::join(key_names, "\n"));
             for (auto& dep : sect.depends_on) {
                 if (std::find(m_satisfied.begin(), m_satisfied.end(), dep) !=
                     m_satisfied.end()) {
@@ -82,8 +88,9 @@ void emitter::mark_module(const module& decl_mod) {
                 continue;
             }
 
-            std::cerr << fmt::format("Marking {}\n", fmt::join(absolute_name(sym_handle), "::"));
-            mark_satisfied({sym_handle, section_type::definition});
+            auto key = section_key_t{sym_handle, section_type::definition};
+            std::cerr << fmt::format("Marking {}\n", key.to_string(decl_mod));
+            mark_satisfied(key);
         }
     }
     for (auto& [name, child] : decl_mod.children) {
@@ -93,7 +100,7 @@ void emitter::mark_module(const module& decl_mod) {
 
 emitter::emitter(const module& root_mod, const module& mod, sections all)
     : m_module{&mod}
-    , m_not_generated(std::move(all.m_sections)) {
+    , m_not_generated(std::move(all.get_sections())) {
 
     mark_module(root_mod);
 }

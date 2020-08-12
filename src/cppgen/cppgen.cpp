@@ -200,7 +200,7 @@ generate_service(const module& mod, std::string_view name, const service& servic
     auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
     auto serv_full_name = get_identifier(mod, {serv_handle});
 
-    def_sec.key        = {serv_handle, section_type::definition};
+    def_sec.add_key({serv_handle, section_type::definition});
     def_sec.definition = str.str();
     def_sec.name_space = mod.name_space;
 
@@ -315,8 +315,6 @@ struct cppgen {
         // TODO: fix module traits
         //        m_sections.merge_before(generate_module_traits());
 
-        //        str << forward_decls.str() << '\n';
-
         codegen::emitter e(*mod().parent, mod(), m_sections);
 
         str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
@@ -336,7 +334,7 @@ private:
             }};)__";
 
         std::vector<std::string> symbol_names;
-        for (auto& s : m_sections.m_sections) {
+        for (auto& s : m_sections.get_sections()) {
             // TODO:
             //            symbol_names.emplace_back(s.name.name);
         }

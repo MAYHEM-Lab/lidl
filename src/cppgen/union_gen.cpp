@@ -134,16 +134,16 @@ sections union_gen::generate() {
     auto enum_res = en.generate();
     std::vector<section> defs;
     std::copy_if(
-        std::make_move_iterator(enum_res.m_sections.begin()),
-        std::make_move_iterator(enum_res.m_sections.end()),
+        std::make_move_iterator(enum_res.get_sections().begin()),
+        std::make_move_iterator(enum_res.get_sections().end()),
         std::back_inserter(defs),
-        [](const auto& sec) { return sec.key.type == section_type::definition; });
+        [](const auto& sec) { return !sec.keys.empty() && sec.keys[0].type == section_type::definition; });
 
     std::vector<section> misc;
-    std::copy_if(std::make_move_iterator(enum_res.m_sections.begin()),
-                 std::make_move_iterator(enum_res.m_sections.end()),
+    std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
+                 std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(misc),
-                 [](const auto& sec) { return sec.key.type == section_type::misc; });
+                 [](const auto& sec) { return !sec.keys.empty() && sec.keys[0].type == section_type::misc; });
 
     auto bodies = std::accumulate(
         defs.begin(), defs.end(), std::string(), [](auto all, auto& part) {
@@ -151,9 +151,8 @@ sections union_gen::generate() {
         });
 
     section s;
-    s.keys.push_back(def_key());
+    s.add_key(def_key());
     for (auto& sec : defs) {
-        s.keys.push_back(std::move(sec.key));
         s.keys.insert(s.keys.begin(), sec.keys.begin(), sec.keys.end());
     }
 
@@ -268,7 +267,7 @@ sections union_gen::generate_traits() {
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
-    trait_sect.key        = misc_key();
+    trait_sect.add_key(misc_key());
     trait_sect.add_dependency(def_key());
 
     auto res = sections{{std::move(trait_sect)}};
@@ -287,7 +286,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.key = {serv_handle, section_type::misc};
+        rpc_traits_sect.add_key({serv_handle, section_type::misc});
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -305,7 +304,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.key = {serv_handle, section_type::misc};
+        rpc_traits_sect.add_key({serv_handle, section_type::misc});
         res.add(std::move(rpc_traits_sect));
     }
 

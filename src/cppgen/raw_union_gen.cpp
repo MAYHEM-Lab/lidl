@@ -168,7 +168,7 @@ sections raw_union_gen::generate_traits() {
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
-    trait_sect.key        = misc_key();
+    trait_sect.add_key(misc_key());
     trait_sect.add_dependency(def_key());
 
     auto res = sections{{std::move(trait_sect)}};

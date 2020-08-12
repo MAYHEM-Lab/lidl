@@ -20,8 +20,8 @@ sections struct_gen::do_generate() {
 
     section s;
     s.keys.push_back(def_key());
-    s.definition = fmt::format(format, name(), body.m_sections[0].definition);
-    s.depends_on = body.m_sections[0].depends_on;
+    s.definition = fmt::format(format, name(), body.get_sections().at(0).definition);
+    s.depends_on = body.get_sections().at(0).depends_on;
     s.name_space = mod().name_space;
 
     section operator_eq;
@@ -138,7 +138,7 @@ sections struct_gen::generate_traits() {
     auto validate_format = R"__([[nodiscard]] inline bool validate(const {}& val, tos::span<const uint8_t> buffer);)__";
 
     section validator_sect;
-    validator_sect.key = misc_key();
+    validator_sect.add_key(misc_key());
     validator_sect.add_dependency(def_key());
     validator_sect.name_space = "lidl";
     validator_sect.definition = fmt::format(validate_format, absolute_name());

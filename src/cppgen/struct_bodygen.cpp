@@ -16,7 +16,7 @@ sections raw_struct_gen::generate() {
         }};)__";
 
     section def_sect;
-    def_sect.key = def_key();
+    def_sect.add_key(def_key());
     def_sect.definition =
         fmt::format(format, name(), fmt::join(ctor, "\n"), fmt::join(members, "\n"));
 
@@ -90,12 +90,12 @@ sections struct_body_gen::generate() {
             raw_t raw;)__";
 
     section def;
-    def.key        = {m_symbol, section_type::definition};
+    def.add_key({m_symbol, section_type::definition});
     def.definition = fmt::format(format,
                                  fmt::join(ctor, "\n"),
                                  fmt::join(accessors, "\n"),
-                                 sects.m_sections[0].definition);
-    def.depends_on = sects.m_sections[0].depends_on;
+                                 sects.get_sections().at(0).definition);
+    def.depends_on = sects.get_sections().at(0).depends_on;
     return {{std::move(def)}};
 }
 

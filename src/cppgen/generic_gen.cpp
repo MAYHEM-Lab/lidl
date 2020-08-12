@@ -74,14 +74,14 @@ sections generic_gen::do_generate() {
 
     section decl;
     decl.name_space = mod().name_space;
-    decl.key        = decl_key();
+    decl.add_key(decl_key());
     decl.definition = declare_template(mod(), name(), get().generic_type());
     common.add(std::move(decl));
 
     if (auto genstr = dynamic_cast<const generic_structure*>(&get().generic_type())) {
         auto res = do_generate(*genstr);
-        for (auto& sec : res.m_sections) {
-            if (sec.key.type == section_type::definition ||
+        for (auto& sec : res.get_sections()) {
+            if (sec.keys.at(0).type == section_type::definition ||
                 std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
@@ -90,11 +90,10 @@ sections generic_gen::do_generate() {
             }
         }
         common.merge_before(res);
-    }
-    if (auto genun = dynamic_cast<const generic_union*>(&get().generic_type())) {
+    } else if (auto genun = dynamic_cast<const generic_union*>(&get().generic_type())) {
         auto res = do_generate(*genun);
-        for (auto& sec : res.m_sections) {
-            if (sec.key.type == section_type::definition ||
+        for (auto& sec : res.get_sections()) {
+            if (sec.keys.at(0).type == section_type::definition ||
                 std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
@@ -103,6 +102,9 @@ sections generic_gen::do_generate() {
             }
         }
         common.merge_before(res);
+    } else {
+        // This is not a user defined generic, so no point in emitting it.
+        return {};
     }
     return common;
 }

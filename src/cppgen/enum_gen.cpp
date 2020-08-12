@@ -18,7 +18,7 @@ sections enum_gen::do_generate() {
         }};)__";
 
     section s;
-    s.key = def_key();
+    s.add_key(def_key());
     s.name_space = mod().name_space;
 
     s.definition = fmt::format(
@@ -45,7 +45,7 @@ sections enum_gen::generate_traits() {
 
     section trait_sect;
     trait_sect.name_space = "lidl";
-    trait_sect.key        = misc_key();
+    trait_sect.add_key(misc_key());
     trait_sect.definition =
         fmt::format(format, absolute_name(), names.size(), fmt::join(names, ", "));
     trait_sect.add_dependency(def_key());
