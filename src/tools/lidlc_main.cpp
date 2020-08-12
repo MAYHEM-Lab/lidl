@@ -32,6 +32,11 @@ void run(const lidlc_args& args) {
     auto backend_maker = backends.find(args.backend);
     if (backend_maker == backends.end()) {
         std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
+        std::vector<std::string_view> names(backends.size());
+        std::transform(backends.begin(), backends.end(), names.begin(), [](auto& be) {
+            return be.first;
+        });
+        std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
         return;
     }
 
