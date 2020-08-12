@@ -6,6 +6,7 @@
 #include <string>
 
 namespace lidl {
+class base;
 struct type;
 struct generic;
 struct enumeration;
