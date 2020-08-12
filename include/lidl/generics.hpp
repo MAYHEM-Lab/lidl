@@ -61,7 +61,7 @@ generic_declaration
 
 struct module;
 class generic_instantiation;
-struct generic {
+struct generic : public base {
     explicit generic(generic_declaration decl)
         : declaration(std::move(decl)) {
     }

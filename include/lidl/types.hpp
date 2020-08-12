@@ -4,13 +4,14 @@
 #include <iostream>
 #include <lidl/binary_writer.hpp>
 #include <lidl/layout.hpp>
+#include <lidl/source_info.hpp>
+#include <lidl/base.hpp>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
-#include <lidl/source_info.hpp>
 
 namespace lidl {
 enum class type_categories {
@@ -20,7 +21,7 @@ enum class type_categories {
 };
 
 struct module;
-struct type {
+struct type : public base {
 public:
     virtual raw_layout wire_layout(const module& mod) const = 0;
 
