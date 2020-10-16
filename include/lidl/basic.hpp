@@ -63,6 +63,10 @@ struct generic_argument : std::variant<name, int64_t> {
     const std::variant<name, int64_t>& get_variant() const {
         return *this;
     }
+
+    const name& as_name() const {
+        return std::get<name>(*this);
+    }
 };
 
 bool operator==(const symbol_handle& left, const symbol_handle& right);
