@@ -8,6 +8,9 @@ structure procedure_params_struct(const module& mod,
                                   const service& servic,
                                   std::string_view name,
                                   const procedure& proc) {
+    static auto string = std::get<const type*>(
+        get_symbol(*lidl::recursive_name_lookup(*mod.symbols, "string")));
+
     structure s;
     for (auto& [name, param] : proc.parameters) {
         member m;
@@ -21,6 +24,13 @@ structure procedure_params_struct(const module& mod,
              */
             m.type_ = vt->get_wire_type();
         } else {
+            if (get_type(mod, param)->is_reference_type(mod) &&
+                get_type(mod, param.args[0].as_name()) == string) {
+                std::cerr << fmt::format("Warning at {}: Prefer using string_view rather "
+                                         "than string in procedure parameters.\n",
+                                         to_string(*proc.src_info));
+            }
+
             m.type_ = param;
         }
         s.members.emplace_back(name, std::move(m));
