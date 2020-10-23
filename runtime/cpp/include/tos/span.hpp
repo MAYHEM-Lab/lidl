@@ -10,6 +10,7 @@
 #if defined(__cpp_lib_string_view)
 #include <string_view>
 #endif
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -127,9 +128,9 @@ public:
 
 #if defined(__cpp_lib_string_view)
     template<class U = T,
-             typename = std::enable_if_t<
-                 std::is_same_v<std::remove_const_t<U>, std::string_view::value_type> &&
-                 std::is_const_v<U>>>
+        typename = std::enable_if_t<
+            std::is_same_v<std::remove_const_t<U>, std::string_view::value_type> &&
+            std::is_const_v<U>>>
     constexpr span(const std::string_view& str)
         : m_base(str.data())
         , m_len(str.size()) {
@@ -137,18 +138,18 @@ public:
 #endif
 
     template<class U = T,
-             typename = std::enable_if_t<
-                 std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
-                 !std::is_const_v<U>>>
+        typename = std::enable_if_t<
+            std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
+            !std::is_const_v<U>>>
     constexpr span(std::string& str)
         : m_base(str.data())
         , m_len(str.size()) {
     }
 
     template<class U = T,
-             typename = std::enable_if_t<
-                 std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
-                 std::is_const_v<U>>>
+        typename = std::enable_if_t<
+            std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
+            std::is_const_v<U>>>
     constexpr span(const std::string& str)
         : m_base(str.data())
         , m_len(str.size()) {
@@ -244,7 +245,7 @@ public:
      * @param len length of the slice
      * @return a new span
      */
-    constexpr span slice(size_t begin, size_t len) {
+    constexpr span slice(size_t begin, size_t len) const {
         return {m_base + begin, len};
     }
 
@@ -254,8 +255,16 @@ public:
      * @param begin beginning index of the slice
      * @return a new span
      */
-    constexpr span slice(size_t begin) {
-        return {m_base + begin, size() - begin};
+    constexpr span slice(size_t begin) const {
+        return slice(begin, size() - begin);
+    }
+
+    [[nodiscard]] constexpr span pop_back() const {
+        return slice(0, size() - 1);
+    }
+
+    [[nodiscard]] constexpr span pop_front() const {
+        return slice(1);
     }
 
 private:
@@ -283,19 +292,20 @@ span<T> empty_span() {
  * @return a span containing t
  */
 template<class T>
-span<T> monospan(T& t) {
+constexpr span<T> monospan(T& t) {
     return span<T>(&t, 1);
 }
 
-template<class U, class T>
-span<U> spanify(T&& t) {
-    return span<U>(std::forward<T>(t));
-}
-
-template<class T, class U>
+/**
+ * Given a span of type U, creates a view on that span where the type is the given
+ * raw type.
+ *
+ * Size of the given type must be 1.
+ */
+template<class T = const uint8_t, class U>
 span<T> raw_cast(span<U> sp) {
     static_assert(sizeof(T) == 1, "");
-    return {reinterpret_cast<T*>(sp.data()), sp.size() * sizeof(U)};
+    return {reinterpret_cast<T*>(sp.data()), sp.size_bytes()};
 }
 
 template<class T>
@@ -328,8 +338,11 @@ constexpr bool operator!=(tos::span<T> left, span<U> right) {
     return !(left == right);
 }
 
-template <class T, class U>
-void copy(tos::span<T> lhs, tos::span<const U> rhs) {
-    std::copy(rhs.begin(), rhs.end(), lhs.begin());
+template<class T, class U>
+span<T> safe_span_copy(span<T> to, span<const U> from) {
+    auto len = std::min(to.size(), from.size());
+    std::copy_n(from.begin(), len, to.begin());
+    return to.slice(0, len);
+}
 }
 } // namespace tos

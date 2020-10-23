@@ -65,7 +65,7 @@ public:
 };
 
 template<class T>
-tos::span<uint8_t> data(T&);
+tos::span<uint8_t> as_span(T&);
 
 namespace meta {
 template<class... ParamsT>
