@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-
 namespace tos {
 /**
  * Span is a class template that represents a view to a
@@ -127,29 +126,29 @@ public:
     }
 
 #if defined(__cpp_lib_string_view)
-    template<class U = T,
-        typename = std::enable_if_t<
-            std::is_same_v<std::remove_const_t<U>, std::string_view::value_type> &&
-            std::is_const_v<U>>>
+    template<class U  = T,
+             typename = std::enable_if_t<
+                 std::is_same_v<std::remove_const_t<U>, std::string_view::value_type> &&
+                 std::is_const_v<U>>>
     constexpr span(const std::string_view& str)
         : m_base(str.data())
         , m_len(str.size()) {
     }
 #endif
 
-    template<class U = T,
-        typename = std::enable_if_t<
-            std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
-            !std::is_const_v<U>>>
+    template<class U  = T,
+             typename = std::enable_if_t<
+                 std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
+                 !std::is_const_v<U>>>
     constexpr span(std::string& str)
         : m_base(str.data())
         , m_len(str.size()) {
     }
 
-    template<class U = T,
-        typename = std::enable_if_t<
-            std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
-            std::is_const_v<U>>>
+    template<class U  = T,
+             typename = std::enable_if_t<
+                 std::is_same_v<std::remove_const_t<U>, std::string::value_type> &&
+                 std::is_const_v<U>>>
     constexpr span(const std::string& str)
         : m_base(str.data())
         , m_len(str.size()) {
@@ -343,6 +342,5 @@ span<T> safe_span_copy(span<T> to, span<const U> from) {
     auto len = std::min(to.size(), from.size());
     std::copy_n(from.begin(), len, to.begin());
     return to.slice(0, len);
-}
 }
 } // namespace tos
