@@ -62,5 +62,8 @@ int main(int argc, char** argv) {
     reader.seek(-root->wire_layout(mod).size());
 
     auto yaml = root->bin2yaml(mod, reader);
+
+    yaml["$lidlmeta"]["root_type"] = argv[2];
+
     std::cout << yaml << '\n';
 }
