@@ -71,8 +71,8 @@ bool reference_type_pass(module& m) {
             for (auto& ret_type : proc.return_types) {
                 changed |= reference_type_pass(m, ret_type);
             }
-            for (auto& [_, param_type] : proc.parameters) {
-                changed |= reference_type_pass(m, param_type);
+            for (auto& [_name, param] : proc.parameters) {
+                changed |= reference_type_pass(m, param.type);
             }
         }
     }

@@ -9,9 +9,20 @@
 #include <lidl/union.hpp>
 
 namespace lidl {
+enum class param_flags {
+    in = 1,
+    out = 2,
+    in_out = 3
+};
+
+struct parameter {
+    lidl::name type;
+    param_flags flags = param_flags::in;
+};
+
 struct procedure {
     std::deque<name> return_types;
-    std::deque<std::pair<std::string, name>> parameters;
+    std::deque<std::pair<std::string, parameter>> parameters;
     const structure* params_struct;
     const structure* results_struct;
 

@@ -10,15 +10,15 @@
 
 class calculator_impl : public lidl_example::scientific_calculator {
 public:
-    double add(const double& left, const double& right) override {
+    double add(double left, double right) override {
         return left + right;
     }
 
-    double multiply(const double& left, const double& right) override {
+    double multiply(double left, double right) override {
         return left * right;
     }
 
-    double log(const double& val) override {
+    double log(double val) override {
         return ::log(val);
     }
 };

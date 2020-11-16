@@ -4,6 +4,16 @@
 #include "generator_base.hpp"
 
 namespace lidl::cpp {
+class service_generator : public generator_base<service> {
+public:
+    using generator_base::generator_base;
+
+    codegen::sections generate() override;
+
+private:
+
+};
+
 class remote_stub_generator : public generator_base<service> {
 public:
     using generator_base::generator_base;
@@ -13,7 +23,7 @@ public:
 private:
     std::string copy_proc_param(const procedure& proc,
                                 std::string_view param_name,
-                                const lidl::name& param_type);
+                                const lidl::parameter& param);
 
     std::string copy_and_return(const procedure& proc);
 

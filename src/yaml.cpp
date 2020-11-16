@@ -106,6 +106,12 @@ class yaml_loader {
         throw std::runtime_error("shouldn't reach here");
     }
 
+    parameter read_parameter(const YAML::Node& param_node, const scope& s) {
+        auto type = read_type(param_node, s);
+
+        return parameter{type, param_flags::in};
+    }
+
     static void read_member_attributes(const YAML::Node& attrib_node, member& mem) {
         if (!attrib_node) {
             return;
@@ -211,7 +217,7 @@ class yaml_loader {
                     throw std::runtime_error("wtf");
                 }
                 result.parameters.emplace_back(name.as<std::string>(),
-                                               read_type(val, *mod.symbols));
+                                               read_parameter(val, *mod.symbols));
             }
         }
         return result;

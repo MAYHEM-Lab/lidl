@@ -14,7 +14,7 @@ structure procedure_params_struct(const module& mod,
     structure s;
     for (auto& [name, param] : proc.parameters) {
         member m;
-        if (auto vt = dynamic_cast<const view_type*>(get_type(mod, param)); vt) {
+        if (auto vt = dynamic_cast<const view_type*>(get_type(mod, param.type)); vt) {
             /**
              * While procedures may have view types in their parameters, view types do not
              * have representations on the wire. The struct we are generating is only used
@@ -24,14 +24,14 @@ structure procedure_params_struct(const module& mod,
              */
             m.type_ = vt->get_wire_type();
         } else {
-            if (get_type(mod, param)->is_reference_type(mod) &&
-                get_type(mod, param.args[0].as_name()) == string) {
+            if (get_type(mod, param.type)->is_reference_type(mod) &&
+                get_type(mod, param.type.args[0].as_name()) == string) {
                 std::cerr << fmt::format("Warning at {}: Prefer using string_view rather "
                                          "than string in procedure parameters.\n",
                                          to_string(*proc.src_info));
             }
 
-            m.type_ = param;
+            m.type_ = param.type;
         }
         s.members.emplace_back(name, std::move(m));
     }
