@@ -16,5 +16,7 @@ private:
     std::string generate_member(std::string_view mem_name, const member& mem);
 
     std::string generate_metadata();
+    std::string generate_layout() const;
+    std::string generate_members() const;
 };
 }

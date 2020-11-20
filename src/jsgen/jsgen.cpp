@@ -29,8 +29,7 @@ public:
             exports.emplace_back(name);
         }
 
-        str << "const lidl = require(\"@lidldev/rt\");\n";
-        str << R"__(const inspect = Symbol.for('nodejs.util.inspect.custom'))__" << '\n';
+        str << "\"use strict\";\nconst lidl = require(\"@lidldev/rt\");\n";
         for (auto& out : m_sections.sects) {
             str << out.body << '\n';
         }
