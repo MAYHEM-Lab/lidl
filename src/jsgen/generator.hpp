@@ -44,11 +44,11 @@ protected:
         return m_name;
     }
 
-    const T& get() {
+    const T& get() const {
         return *m_obj;
     }
 
-    const module& mod() {
+    const module& mod() const {
         return *m_mod;
     }
 
