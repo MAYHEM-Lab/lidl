@@ -5,9 +5,7 @@
 #include <string>
 
 namespace lidl::js {
-std::string get_js_identifier(const module& mod, const name& n);
-std::string get_local_js_identifier(const module& mod, const name& n);
-std::string get_identifier(const module& mod, const name& n);
-std::string get_local_identifier(const module& mod, const name& n);
-std::string get_user_identifier(const module& mod, const name& n);
+std::string get_local_type_name(const module& mod, const name& n);
+std::string get_local_obj_name(const module& mod, const name& n);
+std::string get_local_user_obj_name(const module& mod, const name& n);
 } // namespace lidl::js

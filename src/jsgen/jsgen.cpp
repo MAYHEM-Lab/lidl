@@ -3,6 +3,7 @@
 #include "struct_gen.hpp"
 
 #include <codegen.hpp>
+#include <emitter.hpp>
 #include <lidl/module.hpp>
 #include <ostream>
 
@@ -23,18 +24,18 @@ public:
             //            }
             auto sym       = *mod().symbols->definition_lookup(&s);
             auto name      = local_name(sym);
-            auto generator = struct_gen(
-                mod(), sym, name /*, get_identifier(mod(), lidl::name{sym})*/, s);
+            auto generator =
+                struct_gen(mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
             m_sections.merge_before(generator.generate());
             exports.emplace_back(name);
         }
 
-        str << "\"use strict\";\nconst lidl = require(\"@lidldev/rt\");\n";
-        for (auto& out : m_sections.sects) {
-            str << out.body << '\n';
-        }
+        codegen::emitter e(*mod().parent, mod(), m_sections);
 
-        str << fmt::format("module.exports = {{ {} }};", fmt::join(exports, ", "));
+        str << "import * as lidl from \"@lidldev/rt\";\n";
+        str << '\n';
+
+        str << e.emit() << '\n';
     }
 
 private:
@@ -42,12 +43,13 @@ private:
         return *m_mod;
     }
 
-    sections m_sections;
+    codegen::sections m_sections;
     const module* m_mod;
 };
 class backend : public codegen::backend {
 public:
     void generate(const module& mod, std::ostream& str) override {
+        codegen::detail::current_backend = this;
         for (auto& [_, child] : mod.children) {
             generate(*child, str);
         }
@@ -57,19 +59,14 @@ public:
     }
     std::string get_user_identifier(const module& mod,
                                     const lidl::name& name) const override {
-        throw std::runtime_error("Not implemented: get_user_identifier");
-//        return cpp::get_user_identifier(mod, name);
+        return js::get_local_user_obj_name(mod, name);
     }
     std::string get_local_identifier(const module& mod,
                                      const lidl::name& name) const override {
-        throw std::runtime_error("Not implemented: get_local_identifier");
-
-//        return cpp::get_local_identifier(mod, name);
+        return js::get_local_obj_name(mod, name);
     }
     std::string get_identifier(const module& mod, const lidl::name& name) const override {
-        throw std::runtime_error("Not implemented: get_identifier");
-
-//        return cpp::get_identifier(mod, name);
+        return js::get_local_obj_name(mod, name);
     }
 };
 } // namespace
