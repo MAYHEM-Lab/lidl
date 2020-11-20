@@ -1,6 +1,6 @@
 {
   "name": "@lidldev/rt",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Native Lidl Runtime for TypeScript",
   "main": "build/lidl.js",
   "types": "build/lidl.d.ts",
