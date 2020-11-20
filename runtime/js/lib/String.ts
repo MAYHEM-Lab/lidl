@@ -1,25 +1,29 @@
 import { MessageBuilder } from "./MessageBuilder";
+import {Layout, LidlObject, Type, TypedType} from "./Object";
 
-export class LidlString {
-    private _data: Uint8Array;
-
-    constructor(view: Uint8Array) {
-        this._data = view;
+export class LidlStringClass implements TypedType<LidlString> {
+    instantiate(data: Uint8Array): LidlString {
+        return new LidlString(data);
     }
 
-    private dataView() {
-        return new DataView(this._data.buffer, this._data.byteOffset, this._data.byteLength);
+    layout(): Layout {
+        return {
+            size: 2,
+            alignment: 2
+        };
     }
+}
 
+export class LidlString extends LidlObject {
     length(): number {
         return this.dataView().getInt16(0, true);
     }
 
     private dataBuffer() {
-        return new Uint8Array(this._data.subarray(2, 2 + this.length()));
+        return super.sliceBuffer(2, this.length());
     }
 
-    get data(): string {
+    get value(): string {
         return new TextDecoder("utf-8").decode(this.dataBuffer());
     }
 
@@ -35,11 +39,7 @@ export class LidlString {
         return new LidlString(sizeBuffer);
     }
 
-    static _metadata = {
-        layout: {
-            size: 2,
-            align: 2
-        },
-        reference: true
+    get_type(): Type {
+        return new LidlStringClass();
     }
 }

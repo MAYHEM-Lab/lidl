@@ -1,5 +1,9 @@
 import { LidlObject } from "./Object";
 
+abstract class Obj {
+    static layout: Layout;
+}
+
 class Layout {
     size: number = 0;
     alignment: number = 0;
@@ -7,7 +11,7 @@ class Layout {
 
 class BasicVector {
     view: Uint8Array;
-    elemLayout: Layout;
+    private elemLayout: Layout;
 
     constructor(view: Uint8Array, layout: Layout) {
         this.view = view;

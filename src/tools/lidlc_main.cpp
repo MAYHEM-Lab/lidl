@@ -16,10 +16,11 @@ namespace cpp {
 std::unique_ptr<codegen::backend> make_backend();
 }
 namespace js {
-void generate(const module& mod, std::ostream& str);
+std::unique_ptr<codegen::backend> make_backend();
 }
 std::unordered_map<std::string_view, std::function<std::unique_ptr<codegen::backend>()>>
-    backends{{"cpp", cpp::make_backend} /*, {"js", js::generate}, {"ts", js::generate}*/};
+    backends{{"cpp", cpp::make_backend}, {"js", js::make_backend},
+             /* {"ts", js::generate}*/};
 
 struct lidlc_args {
     std::istream* input_stream;
