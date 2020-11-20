@@ -2,7 +2,6 @@ add_library(
   lidl_cppgen
   cppgen.cpp
   get_identifier.cpp
-  generator_base.hpp
   struct_gen.hpp
   struct_bodygen.hpp
   enum_gen.hpp

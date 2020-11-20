@@ -4,7 +4,7 @@
 #include <lidl/enumeration.hpp>
 
 namespace lidl::cpp {
-struct enum_gen : generator_base<enumeration> {
+struct enum_gen : codegen::generator_base<enumeration> {
     using generator_base::generator_base;
 
     codegen::sections generate() override;

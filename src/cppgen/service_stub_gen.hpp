@@ -4,7 +4,7 @@
 #include "generator_base.hpp"
 
 namespace lidl::cpp {
-class service_generator : public generator_base<service> {
+class service_generator : public codegen::generator_base<service> {
 public:
     using generator_base::generator_base;
 
@@ -14,7 +14,7 @@ private:
 
 };
 
-class remote_stub_generator : public generator_base<service> {
+class remote_stub_generator : public codegen::generator_base<service> {
 public:
     using generator_base::generator_base;
 

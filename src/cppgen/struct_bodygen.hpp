@@ -17,7 +17,7 @@ namespace lidl::cpp {
  * Therefore, the output of this generator is wrapped with something that supplies
  * accessors.
  */
-class raw_struct_gen : generator_base<structure> {
+class raw_struct_gen : codegen::generator_base<structure> {
 public:
     using generator_base::generator_base;
 

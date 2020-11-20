@@ -5,7 +5,7 @@
 
 namespace lidl::cpp {
 
-struct generic_gen : generator_base<generic_instantiation> {
+struct generic_gen : codegen::generator_base<generic_instantiation> {
     using generator_base::generator_base;
 
     codegen::sections generate() override {

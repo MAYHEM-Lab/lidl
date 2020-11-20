@@ -4,6 +4,8 @@
 
 namespace lidl::cpp {
 using codegen::sections;
+using codegen::section;
+
 sections enum_gen::generate() {
     return do_generate();
 }

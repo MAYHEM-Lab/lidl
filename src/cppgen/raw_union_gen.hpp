@@ -4,7 +4,7 @@
 #include <lidl/union.hpp>
 
 namespace lidl::cpp {
-struct raw_union_gen : generator_base<union_type> {
+struct raw_union_gen : codegen::generator_base<union_type> {
     using generator_base::generator_base;
 
     codegen::sections generate() override {

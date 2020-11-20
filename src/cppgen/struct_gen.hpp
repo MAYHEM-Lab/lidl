@@ -4,7 +4,7 @@
 #include <lidl/structure.hpp>
 
 namespace lidl::cpp {
-struct struct_gen : generator_base<structure> {
+struct struct_gen : codegen::generator_base<structure> {
     using generator_base::generator_base;
 
     codegen::sections generate() override {

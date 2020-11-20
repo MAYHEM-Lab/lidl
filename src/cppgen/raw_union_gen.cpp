@@ -10,6 +10,7 @@
 
 namespace lidl::cpp {
 using codegen::sections;
+using codegen::section;
 
 std::string raw_union_gen::generate_getter(std::string_view member_name,
                                            const member& mem,

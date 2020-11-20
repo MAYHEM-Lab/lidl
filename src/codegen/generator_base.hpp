@@ -7,11 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace lidl::cpp {
-using codegen::section;
-using codegen::section_key_t;
-using codegen::section_type;
-
+namespace lidl::codegen {
 template<class Type>
 class generator_base : public codegen::generator<Type> {
 public:
