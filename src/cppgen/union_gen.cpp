@@ -133,17 +133,21 @@ sections union_gen::generate() {
                 get().get_enum());
     auto enum_res = en.generate();
     std::vector<section> defs;
-    std::copy_if(
-        std::make_move_iterator(enum_res.get_sections().begin()),
-        std::make_move_iterator(enum_res.get_sections().end()),
-        std::back_inserter(defs),
-        [](const auto& sec) { return !sec.keys.empty() && sec.keys[0].type == section_type::definition; });
+    std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
+                 std::make_move_iterator(enum_res.get_sections().end()),
+                 std::back_inserter(defs),
+                 [](const auto& sec) {
+                     return !sec.keys.empty() &&
+                            sec.keys[0].type == section_type::definition;
+                 });
 
     std::vector<section> misc;
     std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
                  std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(misc),
-                 [](const auto& sec) { return !sec.keys.empty() && sec.keys[0].type == section_type::misc; });
+                 [](const auto& sec) {
+                     return !sec.keys.empty() && sec.keys[0].type == section_type::misc;
+                 });
 
     auto bodies = std::accumulate(
         defs.begin(), defs.end(), std::string(), [](auto all, auto& part) {
@@ -287,6 +291,8 @@ sections union_gen::generate_traits() {
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         rpc_traits_sect.add_key({serv_handle, section_type::misc});
+        rpc_traits_sect.add_key({fmt::format("service_call_union<{}>", serv_full_name),
+                                 section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -305,6 +311,8 @@ sections union_gen::generate_traits() {
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
         rpc_traits_sect.add_key({serv_handle, section_type::misc});
+        rpc_traits_sect.add_key({fmt::format("service_return_union<{}>", serv_full_name),
+                                 section_type::definition});
         res.add(std::move(rpc_traits_sect));
     }
 

@@ -74,7 +74,8 @@ std::pair<std::string, std::vector<section_key_t>> make_proc_signature(
     }
 
     constexpr auto decl_format = "{} {}({})";
-    auto sig = fmt::format(decl_format, ret_type_name, proc_name, fmt::join(params, ", "));
+    auto sig =
+        fmt::format(decl_format, ret_type_name, proc_name, fmt::join(params, ", "));
 
     return {sig, dependencies};
 }
@@ -87,6 +88,10 @@ sections remote_stub_generator::generate() {
     // We depend on the definition for the service.
     sect.add_dependency(def_key());
     sect.add_dependency(misc_key());
+    sect.add_dependency({fmt::format("service_return_union<{0}>", absolute_name()),
+                         section_type::definition});
+    sect.add_dependency({fmt::format("service_call_union<{0}>", absolute_name()),
+                         section_type::definition});
     sect.keys.emplace_back(symbol(), section_type::misc);
     sect.name_space = mod().name_space;
 
@@ -148,7 +153,7 @@ std::string remote_stub_generator::copy_and_return(const procedure& proc) {
             R"__(auto [__extent, __pos] = lidl::meta::detail::find_extent_and_position(res.ret0());
 auto __res_ptr = response_builder.allocate(__extent.size(), 1);
 memcpy(__res_ptr, __extent.data(), __extent.size());
-return *const_cast<{0}*>(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
+return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
         return fmt::format(format, ident);
         // Would just memcpy'ing the extent of the result work?
         throw std::runtime_error("Reference types are not supported by stubgen yet!");
@@ -172,14 +177,6 @@ return copied;)__";
 
 std::string remote_stub_generator::make_procedure_stub(std::string_view proc_name,
                                                        const procedure& proc) try {
-    std::vector<std::string> params;
-    for (auto& [param_name, param] : proc.parameters) {
-        auto format     = decide_param_type_decoration(mod(), param);
-        auto identifier = get_user_identifier(mod(), param.type);
-
-        params.emplace_back(fmt::format(format, identifier, param_name));
-    }
-
     std::string ret_type_name;
     if (proc.return_types.empty()) {
         ret_type_name = "void";
@@ -188,9 +185,6 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
         ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
         if (ret_type->is_reference_type(mod())) {
             ret_type_name = fmt::format("const {}&", ret_type_name);
-            params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
-        } else if (auto vt = dynamic_cast<const view_type*>(ret_type); vt) {
-            params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
         }
     }
 
@@ -215,24 +209,23 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
             fmt::format("lidl::create<{}>", params_struct_identifier);
     }
 
-    constexpr auto def_format = R"__({0} {1}({2}) override {{
+    constexpr auto def_format = R"__({0} override {{
         using lidl::as_span;
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb{{as_span(req_buf)}};
-        lidl::create<lidl::service_call_union<{5}>>(mb, {3}({4}));
+        lidl::create<lidl::service_call_union<{4}>>(mb, {2}({3}));
         auto buf = mb.get_buffer();
         auto resp = ServBase::send_receive(buf);
         auto& res =
-            lidl::get_root<lidl::service_return_union<{5}>>(tos::span<const uint8_t>(as_span(resp))).{1}();
-        {6}
+            lidl::get_root<lidl::service_return_union<{4}>>(tos::span<const uint8_t>(as_span(resp))).{1}();
+        {5}
     }})__";
 
     auto [sig, deps] = make_proc_signature(mod(), proc_name, proc);
 
     return fmt::format(def_format,
-                       ret_type_name,
+                       sig,
                        proc_name,
-                       fmt::join(params, ", "),
                        params_struct_identifier,
                        fmt::join(param_names, ", "),
                        name(),
