@@ -1,4 +1,7 @@
 import {LidlObject, Type, Layout, Int16} from "./BasicTypes"
+import assert from "assert";
+import {MessageBuilder} from "./MessageBuilder";
+import {CreateObject} from "./Object";
 
 export class Pointer extends LidlObject {
     private pointee_t: Type;
@@ -9,7 +12,7 @@ export class Pointer extends LidlObject {
     }
 
     set_offset(offset: number) {
-        this.as_int16().value = -offset;
+        this.as_int16().value = offset;
     }
 
     get_offset(): number {
@@ -17,7 +20,7 @@ export class Pointer extends LidlObject {
     }
 
     get_type(): Type {
-        return new PtrClass(this.pointee_t);
+        return new PointerClass(this.pointee_t);
     }
 
     deref(): LidlObject {
@@ -25,8 +28,11 @@ export class Pointer extends LidlObject {
         return this.pointee_t.instantiate(buf);
     }
 
-    init(val: any) {
-        this.set_offset(val);
+    init(val: LidlObject) {
+        assert(val.get_type().layout().size === this.pointee_t.layout().size);
+        const offset = this.buffer().byteOffset - val.buffer().byteOffset;
+        this.set_offset(offset);
+        // this.set_offset(val);
     }
 
     public get value(): any {
@@ -47,7 +53,7 @@ export class Pointer extends LidlObject {
     }
 }
 
-export class PtrClass implements Type {
+export class PointerClass implements Type {
     constructor(pointee_type: Type) {
         this.pointee_t = pointee_type;
     }

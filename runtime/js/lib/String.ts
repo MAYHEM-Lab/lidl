@@ -6,6 +6,18 @@ export class LidlStringClass implements TypedType<LidlString> {
         return new LidlString(data);
     }
 
+    create(mb: MessageBuilder, data: string) {
+        const sizeBuffer = mb.allocate(2 + data.length, 2);
+
+        const sizeView = new DataView(sizeBuffer.buffer, sizeBuffer.byteOffset, sizeBuffer.byteLength);
+        sizeView.setInt16(0, data.length, true);
+
+        const dataArray = sizeBuffer.subarray(2);
+        dataArray.set(new TextEncoder().encode(data));
+
+        return new LidlString(sizeBuffer);
+    }
+
     layout(): Layout {
         return {
             size: 2,
@@ -25,18 +37,6 @@ export class LidlString extends LidlObject {
 
     get value(): string {
         return new TextDecoder("utf-8").decode(this.dataBuffer());
-    }
-
-    static create = (mb: MessageBuilder, data: string) : LidlString => {
-        const sizeBuffer = mb.allocate(2 + data.length, 2);
-
-        const sizeView = new DataView(sizeBuffer.buffer, sizeBuffer.byteOffset, sizeBuffer.byteLength);
-        sizeView.setInt16(0, data.length, true);
-
-        const dataArray = sizeBuffer.subarray(2);
-        dataArray.set(new TextEncoder().encode(data));
-
-        return new LidlString(sizeBuffer);
     }
 
     get_type(): Type {

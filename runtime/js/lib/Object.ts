@@ -43,7 +43,7 @@ export abstract class LidlObject {
         return new Uint8Array(this.buffer().buffer, this.buffer().byteOffset + offset, length);
     }
 
-    protected buffer(): Uint8Array {
+    public buffer(): Uint8Array {
         return this._buffer;
     }
 

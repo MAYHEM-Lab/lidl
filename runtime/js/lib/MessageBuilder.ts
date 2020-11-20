@@ -14,4 +14,8 @@ export class MessageBuilder {
         this.ptr += size;
         return res;
     }
+
+    get_buffer(): Uint8Array {
+        return this.data.subarray(0, this.ptr);
+    }
 }

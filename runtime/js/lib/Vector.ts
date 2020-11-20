@@ -1,13 +1,4 @@
-import { LidlObject } from "./Object";
-
-abstract class Obj {
-    static layout: Layout;
-}
-
-class Layout {
-    size: number = 0;
-    alignment: number = 0;
-}
+import {Layout, LidlObject} from "./Object";
 
 class BasicVector {
     view: Uint8Array;
