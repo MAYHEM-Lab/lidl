@@ -73,7 +73,6 @@ std::string struct_gen::generate_member(std::string_view mem_name, const member&
             format, fmt::arg("mem_name", mem_name), fmt::arg("name", name()));
     }
     if (mem_type->is_reference_type(mod())) {
-        // This is a basic type
         constexpr auto format = R"__(get {mem_name}() {{
             return this.member_by_name("{mem_name}").value;
         }})__";
