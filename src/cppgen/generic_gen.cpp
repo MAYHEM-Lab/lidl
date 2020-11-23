@@ -41,7 +41,6 @@ sections generic_gen::do_generate(const generic_union& u) {
     tmpmod.unions.emplace_back(
         *dynamic_cast<union_type*>(u.instantiate(mod(), get()).get()));
     run_passes_until_stable(tmpmod);
-    union_enum_pass(tmpmod);
 
     union_gen gen(
         tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.unions.back());
