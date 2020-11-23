@@ -24,9 +24,9 @@ struct value_parameter : generic_parameter {
 
 std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_view type);
 
-struct generic_declaration {
+struct generic_parameters {
 public:
-    explicit generic_declaration(
+    explicit generic_parameters(
         std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>>&& params)
         : m_params{std::move(params)} {
     }
@@ -54,15 +54,15 @@ public:
 private:
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> m_params;
 };
-static_assert(std::is_move_constructible_v<generic_declaration>);
+static_assert(std::is_move_constructible_v<generic_parameters>);
 
-generic_declaration
+generic_parameters
     make_generic_declaration(std::vector<std::pair<std::string, std::string>>);
 
 struct module;
 class generic_instantiation;
 struct generic : public base {
-    explicit generic(generic_declaration decl)
+    explicit generic(generic_parameters decl)
         : declaration(std::move(decl)) {
     }
 
@@ -99,11 +99,11 @@ struct generic : public base {
         return nullptr;
     }
 
-    generic_declaration declaration;
+    generic_parameters declaration;
 };
 
 struct generic_structure : generic {
-    explicit generic_structure(generic_declaration decl, structure s)
+    explicit generic_structure(generic_parameters decl, structure s)
         : generic(std::move(decl))
         , struct_(static_cast<structure&&>(s)) {
     }
@@ -115,7 +115,7 @@ struct generic_structure : generic {
 };
 
 struct generic_union : generic {
-    explicit generic_union(generic_declaration decl, union_type s)
+    explicit generic_union(generic_parameters decl, union_type s)
         : generic(std::move(decl))
         , union_(std::move(s)) {
     }

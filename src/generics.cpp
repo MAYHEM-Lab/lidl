@@ -99,13 +99,13 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
     return newstr;
 }
 
-generic_declaration
+generic_parameters
 make_generic_declaration(std::vector<std::pair<std::string, std::string>> arg) {
     std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> res;
     for (auto& [name, type] : arg) {
         res.emplace_back(name, get_generic_parameter_for_type(type));
     }
-    return generic_declaration(std::move(res));
+    return generic_parameters(std::move(res));
 }
 
 std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_view type) {

@@ -34,7 +34,7 @@ class yaml_loader {
         return source_info{mark.line, mark.column, mark.pos, m_origin};
     }
 
-    generic_declaration parse_parameters(const YAML::Node& node) {
+    generic_parameters parse_parameters(const YAML::Node& node) {
         std::vector<std::pair<std::string, std::unique_ptr<generic_parameter>>> params;
 
         for (auto e : node) {
@@ -54,7 +54,7 @@ class yaml_loader {
             params.emplace_back(name, std::move(param_type));
         }
 
-        return generic_declaration(std::move(params));
+        return generic_parameters(std::move(params));
     }
 
     std::vector<generic_argument> parse_generic_args(const YAML::Node& node,
