@@ -108,8 +108,7 @@ class yaml_loader {
 
     parameter read_parameter(const YAML::Node& param_node, const scope& s) {
         auto type = read_type(param_node, s);
-
-        return parameter{type, param_flags::in};
+        return parameter{type, param_flags::in, make_source_info(param_node)};
     }
 
     static void read_member_attributes(const YAML::Node& attrib_node, member& mem) {

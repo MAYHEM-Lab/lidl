@@ -18,6 +18,7 @@ enum class param_flags {
 struct parameter {
     lidl::name type;
     param_flags flags = param_flags::in;
+    std::optional<source_info> src_info;
 };
 
 struct procedure {
