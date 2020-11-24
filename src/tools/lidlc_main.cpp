@@ -48,7 +48,9 @@ void run(const lidlc_args& args) {
         auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
 
         try {
-            run_passes_until_stable(ym);
+            for (auto& [name, mod] : root_mod->children) {
+                run_passes_until_stable(*mod);
+            }
         } catch (std::exception& err) {
             std::cerr << "A pass failed: " << err.what() << '\n';
         }
