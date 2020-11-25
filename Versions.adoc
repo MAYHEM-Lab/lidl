@@ -1,5 +1,12 @@
 = Version history
 
+== 0.1.4
+
+. `js` backend almost functional, though has a wrong name since it actually
+emits TypeScript source.
+. Span view type works correctly over the wire.
+. `yaml2lidl` got a minor rework which made it easier to use.
+
 == 0.1.2
 
 . Span view type
