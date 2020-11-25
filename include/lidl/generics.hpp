@@ -131,7 +131,7 @@ struct generic_union : generic {
     union_type union_;
 };
 
-class generic_instantiation : public type {
+class generic_instantiation final : public type {
 public:
     explicit generic_instantiation(name n)
         : m_name(std::move(n)) {
