@@ -12,7 +12,7 @@
 
 namespace lidl {
 struct union_type : public type {
-    std::deque<std::tuple<std::string, member>> members;
+    std::deque<std::pair<std::string, member>> members;
 
     /**
      * If a union is raw, the alternatives type and members are not generated and the
