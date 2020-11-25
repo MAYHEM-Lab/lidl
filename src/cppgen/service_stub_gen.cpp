@@ -125,8 +125,8 @@ std::string remote_stub_generator::copy_proc_param(const procedure& proc,
         //            "lidl::create<{}>(mb, {})",
         //            get_identifier(mod(),
         //            std::get<lidl::name>(param_type_name.args[0])), param_name);
-    } else if (auto view_t = dynamic_cast<const view_type*>(param_type)) {
-        auto wire_type_name = view_t->get_wire_type();
+    } else if (param_type->is_view(mod())) {
+        auto wire_type_name = param_type->get_wire_type(mod());
         if (wire_type_name.base ==
             recursive_full_name_lookup(*mod().symbols, "string").value()) {
 
@@ -157,8 +157,8 @@ return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __p
         return fmt::format(format, ident);
         // Would just memcpy'ing the extent of the result work?
         throw std::runtime_error("Reference types are not supported by stubgen yet!");
-    } else if (auto vt = dynamic_cast<const view_type*>(ret_type)) {
-        auto wire_type_name = vt->get_wire_type();
+    } else if (ret_type->is_view(mod())) {
+        auto wire_type_name = ret_type->get_wire_type(mod());
         if (wire_type_name.base !=
             recursive_full_name_lookup(*mod().symbols, "string").value()) {
             throw std::runtime_error("Stubgen only supports string_views");

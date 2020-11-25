@@ -14,7 +14,8 @@ structure procedure_params_struct(const module& mod,
     structure s;
     for (auto& [name, param] : proc.parameters) {
         member m;
-        if (auto vt = dynamic_cast<const view_type*>(get_type(mod, param.type)); vt) {
+        auto param_t = get_type(mod, param.type);
+        if (param_t->is_view(mod)) {
             /**
              * While procedures may have view types in their parameters, view types do not
              * have representations on the wire. The struct we are generating is only used
@@ -22,7 +23,7 @@ structure procedure_params_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = vt->get_wire_type();
+            m.type_ = param_t->get_wire_type(mod);
         } else {
             if (get_type(mod, param.type)->is_reference_type(mod) &&
                 get_type(mod, param.type.args[0].as_name()) == string) {
@@ -48,7 +49,8 @@ structure procedure_results_struct(const module& mod,
     structure s;
     for (auto& param : proc.return_types) {
         member m;
-        if (auto vt = dynamic_cast<const view_type*>(get_type(mod, param)); vt) {
+        auto param_t = get_type(mod, param);
+        if (param_t->is_view(mod)) {
             /**
              * While procedures may have view types in their return values, view types do
              * not have representations on the wire. The struct we are generating is only
@@ -56,7 +58,7 @@ structure procedure_results_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = vt->get_wire_type();
+            m.type_ = param_t->get_wire_type(mod);
         } else {
             m.type_ = param;
         }

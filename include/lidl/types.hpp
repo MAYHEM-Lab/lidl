@@ -12,6 +12,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
+#include <lidl/basic.hpp>
 
 namespace lidl {
 enum class type_categories {
@@ -42,6 +43,10 @@ public:
     virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const = 0;
 
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
+
+    virtual name get_wire_type(const module& mod) const {
+        throw std::runtime_error("get_wire_type not implemented");
+    }
 
     virtual ~type() = default;
 

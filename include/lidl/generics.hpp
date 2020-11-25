@@ -92,6 +92,11 @@ struct generic : public base {
         return instantiate(mod, instantiation)->yaml2bin(mod, node, writer);
     }
 
+    virtual name get_wire_type(const module& mod,
+                               const generic_instantiation& instantiation) const {
+        return instantiate(mod, instantiation)->get_wire_type(mod);
+    }
+
     virtual ~generic() = default;
 
     virtual std::unique_ptr<type> instantiate(const module& mod,
@@ -151,6 +156,10 @@ public:
                  const YAML::Node& node,
                  ibinary_writer& writer) const override {
         return m_actual->yaml2bin(mod, *this, node, writer);
+    }
+
+    name get_wire_type(const module& mod) const override {
+        return m_actual->get_wire_type(mod, *this);
     }
 
     gsl::span<const generic_argument> arguments() const {
