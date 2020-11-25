@@ -1,3 +1,6 @@
+$lidlmeta:
+  name: lidl::examples
+
 foo:
   type: generic<structure>
   parameters:

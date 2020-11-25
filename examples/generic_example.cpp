@@ -6,7 +6,7 @@ int main() {
     std::array<uint8_t, 128> buf;
     lidl::message_builder builder(buf);
 
-    auto& f = lidl::create<module::foo<lidl::string>>(
+    auto& f = lidl::create<lidl::example::foo<lidl::string>>(
         builder, lidl::create_string(builder, "hello"));
     std::cout << f.t().string_view() << '\n';
 
