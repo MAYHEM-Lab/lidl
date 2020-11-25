@@ -1,5 +1,6 @@
-#include "struct_gen.hpp"
+#include "union_gen.hpp"
 
+#include "enum_gen.hpp"
 #include "get_identifier.hpp"
 #include "jsgen.hpp"
 
@@ -10,7 +11,7 @@
 namespace lidl::js {
 using codegen::section;
 using codegen::sections;
-sections struct_gen::generate() {
+sections union_gen::generate() {
     constexpr auto format = R"__(
 export class {name}Class implements lidl.StructType {{
     instantiate(data: Uint8Array): {name} {{
@@ -55,10 +56,18 @@ export class {name} extends {struct_base} {{
                                  fmt::arg("ctor", generate_ctor()));
     def.add_key(def_key());
 
-    return sections{{std::move(def)}};
+    auto enum_res = enum_gen(mod(),
+                             {},
+                             fmt::format("{}Variants", name()),
+                             fmt::format("{}Variants", name()),
+                             get().get_enum());
+
+    auto res = enum_res.generate();
+    res.add(std::move(def));
+    return res;
 }
 
-std::string struct_gen::generate_member(std::string_view mem_name, const member& mem) {
+std::string union_gen::generate_member(std::string_view mem_name, const member& mem) {
     auto mem_type = get_type(mod(), mem.type_);
     if (mem_type->is_value(mod())) {
         // This is a basic type
@@ -74,6 +83,7 @@ std::string struct_gen::generate_member(std::string_view mem_name, const member&
             format, fmt::arg("mem_name", mem_name), fmt::arg("name", name()));
     }
     if (mem_type->is_reference_type(mod())) {
+        // This is a basic type
         constexpr auto format = R"__(get {mem_name}() {{
             return this.member_by_name("{mem_name}").value;
         }})__";
@@ -85,7 +95,7 @@ std::string struct_gen::generate_member(std::string_view mem_name, const member&
     return "";
 }
 
-std::string struct_gen::generate_members() const {
+std::string union_gen::generate_members() const {
     constexpr auto format = R"__(
     members() {{
         return {{
@@ -94,51 +104,47 @@ std::string struct_gen::generate_members() const {
     }}
 )__";
 
-    std::vector<std::string> member_offsets(get().members.size());
+    auto layout       = get().layout(mod());
+    auto value_offset = layout.offset_of("val").value();
+
+    std::vector<std::string> member_offsets(get().members.size() + 1);
+    member_offsets[0] = fmt::format("{} : {{ offset: {}, type: {} }}",
+                                    "discriminator",
+                                    0,
+                                    fmt::format("new {}VariantsClass()", name()));
     std::transform(get().members.begin(),
                    get().members.end(),
-                   member_offsets.begin(),
-                   [this](auto& member_entry) {
-                       auto& t  = member_entry.second.type_;
-                       auto typ = get_type(mod(), t);
-                       return fmt::format(
-                           "{} : {{ offset: {}, type: {} }}",
-                           member_entry.first,
-                           get().layout(mod()).offset_of(member_entry.first).value(),
-                           get_local_type_name(mod(), t));
+                   member_offsets.begin() + 1,
+                   [this, value_offset](auto& member_entry) {
+                       auto& t = member_entry.second.type_;
+                       return fmt::format("{} : {{ offset: {}, type: {} }}",
+                                          member_entry.first,
+                                          value_offset,
+                                          get_local_type_name(mod(), t));
                    });
 
     return fmt::format(format, fmt::arg("member_data", fmt::join(member_offsets, ",\n")));
 }
 
-std::string struct_gen::generate_ctor() const {
+std::string union_gen::generate_ctor() const {
     constexpr auto format = R"__(
     create({args}) : {name} {{
-        const init = {{
-            {init_map}
-        }};
-        return <{name}>lidl.CreateObject(this, mb, init);
     }}
 )__";
 
-    std::vector<std::string> args(get().members.size() + 1);
-    args.front() = "mb: lidl.MessageBuilder";
+    std::vector<std::string> types(get().members.size());
     std::transform(
-        get().members.begin(), get().members.end(), args.begin() + 1, [this](auto& mem) {
+        get().members.begin(), get().members.end(), types.begin(), [this](auto& mem) {
             auto& t = mem.second.type_;
-            return fmt::format("{}: {}", mem.first, get_local_user_obj_name(mod(), t));
+            return fmt::format("{}", get_local_user_obj_name(mod(), t));
         });
 
-    std::vector<std::string> init(get().members.size());
-    std::transform(
-        get().members.begin(), get().members.end(), init.begin(), [this](auto& mem) {
-            auto& t = mem.second.type_;
-            return fmt::format("{}: {}", mem.first, mem.first);
-        });
+    std::vector<std::string> args(2);
+    args.front() = "mb: lidl.MessageBuilder";
+    args.back() = fmt::format("val: {}", fmt::join(types, " | "));
 
     return fmt::format(format,
                        fmt::arg("args", fmt::join(args, ", ")),
-                       fmt::arg("name", name()),
-                       fmt::arg("init_map", fmt::join(init, ",\n")));
+                       fmt::arg("name", name()));
 }
 } // namespace lidl::js

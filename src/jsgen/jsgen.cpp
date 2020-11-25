@@ -1,6 +1,8 @@
+#include "enum_gen.hpp"
 #include "generator.hpp"
 #include "get_identifier.hpp"
 #include "struct_gen.hpp"
+#include "union_gen.hpp"
 
 #include <codegen.hpp>
 #include <emitter.hpp>
@@ -9,6 +11,10 @@
 
 namespace lidl::js {
 namespace {
+bool is_anonymous(const module& mod, symbol t) {
+    return !recursive_definition_lookup(*mod.symbols, t);
+}
+
 class jsgen {
 public:
     explicit jsgen(const module& mod)
@@ -24,8 +30,32 @@ public:
             //            }
             auto sym       = *mod().symbols->definition_lookup(&s);
             auto name      = local_name(sym);
+            auto generator = struct_gen(
+                mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
+            m_sections.merge_before(generator.generate());
+            exports.emplace_back(name);
+        }
+
+        for (auto& s : mod().unions) {
+            //            if (is_anonymous(*m_module, &s)) {
+            //                continue;
+            //            }
+            auto sym       = *mod().symbols->definition_lookup(&s);
+            auto name      = local_name(sym);
+            auto generator = union_gen(
+                mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
+            m_sections.merge_before(generator.generate());
+            exports.emplace_back(name);
+        }
+
+        for (auto& s : mod().enums) {
+            if (is_anonymous(mod(), &s)) {
+                continue;
+            }
+            auto sym  = *mod().symbols->definition_lookup(&s);
+            auto name = local_name(sym);
             auto generator =
-                struct_gen(mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
+                enum_gen(mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
             m_sections.merge_before(generator.generate());
             exports.emplace_back(name);
         }

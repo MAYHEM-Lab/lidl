@@ -2,10 +2,8 @@
 
 #include "generator_base.hpp"
 
-#include <lidl/structure.hpp>
-
 namespace lidl::js {
-class struct_gen : codegen::generator_base<structure> {
+class union_gen : public codegen::generator_base<union_type> {
 public:
     using generator_base::generator_base;
 
@@ -19,4 +17,4 @@ private:
 
     std::string generate_members() const;
 };
-}
+} // namespace lidl::js

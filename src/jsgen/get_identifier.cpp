@@ -8,6 +8,7 @@ namespace lidl::js {
 namespace {
 std::optional<std::string> known_type_obj_conversion(const std::string_view& name) {
     std::unordered_map<std::string_view, std::string_view> basic_types{
+        {"bool", "boolean"},
         {"f32", "number"},
         {"f64", "number"},
         {"i8", "number"},
@@ -22,7 +23,7 @@ std::optional<std::string> known_type_obj_conversion(const std::string_view& nam
         {"optional", "lidl::optional"},
         {"string", "lidl.LidlString"},
         {"string_view", "string"},
-        {"vector", "lidl::vector"},
+        {"vector", "lidl.Vector"},
         {"ptr", "lidl.Pointer"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
@@ -34,6 +35,7 @@ std::optional<std::string> known_type_obj_conversion(const std::string_view& nam
 
 std::optional<std::string> known_type_conversion(const std::string_view& name) {
     std::unordered_map<std::string_view, std::string_view> basic_types{
+        {"bool", "lidl.Bool"},
         {"f32", "lidl.Float"},
         {"f64", "lidl.Double"},
         {"i8", "lidl.Int8"},
@@ -48,7 +50,7 @@ std::optional<std::string> known_type_conversion(const std::string_view& name) {
         {"optional", "lidl::optional"},
         {"string", "lidl.LidlString"},
         {"string_view", "string"},
-        {"vector", "lidl::vector"},
+        {"vector", "lidl.Vector"},
         {"ptr", "lidl.Pointer"}};
 
     if (auto it = basic_types.find(name); it != basic_types.end()) {
@@ -64,10 +66,10 @@ std::string do_get_obj_identifier(std::vector<std::string_view> full_path) {
                    full_path.end(),
                    converted_parts.begin(),
                    [](auto part) -> std::string {
-                     if (auto known = known_type_obj_conversion(part); known) {
-                         return *known;
-                     }
-                     return std::string(part);
+                       if (auto known = known_type_obj_conversion(part); known) {
+                           return *known;
+                       }
+                       return std::string(part);
                    });
 
     return fmt::format("{}", fmt::join(converted_parts, "."));
@@ -102,9 +104,9 @@ std::string get_obj_identifier(const module& mod, const name& n) {
                    n.args.end(),
                    generic_args.begin(),
                    [&](const generic_argument& arg) {
-                     return std::visit(
-                         [&](auto& arg) { return get_obj_identifier(mod, arg); },
-                         arg.get_variant());
+                       return std::visit(
+                           [&](auto& arg) { return get_obj_identifier(mod, arg); },
+                           arg.get_variant());
                    });
 
     return fmt::format("{}_{}", base_name, fmt::join(generic_args, "_"));
@@ -116,10 +118,10 @@ std::string do_get_type_identifier(std::vector<std::string_view> full_path) {
                    full_path.end(),
                    converted_parts.begin(),
                    [](auto part) -> std::string {
-                     if (auto known = known_type_conversion(part); known) {
-                         return *known;
-                     }
-                     return std::string(part);
+                       if (auto known = known_type_conversion(part); known) {
+                           return *known;
+                       }
+                       return std::string(part);
                    });
 
     return fmt::format("new {}Class", fmt::join(converted_parts, "."));
@@ -183,9 +185,9 @@ std::string get_local_obj_name(const module& mod, const name& n) {
                    n.args.end(),
                    generic_args.begin(),
                    [&](const generic_argument& arg) {
-                     return std::visit(
-                         [&](auto& arg) { return get_obj_identifier(mod, arg); },
-                         arg.get_variant());
+                       return std::visit(
+                           [&](auto& arg) { return get_obj_identifier(mod, arg); },
+                           arg.get_variant());
                    });
 
     return fmt::format("{}", base_name);
