@@ -51,5 +51,7 @@ struct union_type : public type {
     int yaml2bin(const module& mod,
                  const YAML::Node& node,
                  ibinary_writer& writer) const override;
+
+    compound_layout layout(const module& mod) const;
 };
 } // namespace lidl

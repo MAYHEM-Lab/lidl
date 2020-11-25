@@ -1,22 +1,10 @@
+#include <cassert>
 #include <lidl/module.hpp>
 #include <lidl/union.hpp>
 
 namespace lidl {
 raw_layout union_type::wire_layout(const lidl::module& mod) const {
-    union_layout_computer computer;
-    for (auto& [name, member] : members) {
-        if (get_type(mod, member.type_)->is_reference_type(mod)) {
-            computer.add({2, 2});
-        } else {
-            computer.add(get_type(mod, member.type_)->wire_layout(mod));
-        }
-    }
-
-    compound_layout overall_computer;
-    if (!raw) {
-        overall_computer.add_member("discriminator", get_enum().wire_layout(mod));
-    }
-    overall_computer.add_member("val", computer.get());
+    auto overall_computer = layout(mod);
     return overall_computer.get();
 }
 
@@ -56,6 +44,7 @@ type_categories union_type::category(const module& mod) const {
 }
 
 const enumeration& union_type::get_enum() const {
+    assert(alternatives_enum);
     return *alternatives_enum;
 }
 
@@ -95,5 +84,23 @@ int union_type::yaml2bin(const module& mod,
     }
 
     return pos;
+}
+
+compound_layout union_type::layout(const module& mod) const {
+    union_layout_computer computer;
+    for (auto& [name, member] : members) {
+        if (get_type(mod, member.type_)->is_reference_type(mod)) {
+            computer.add({2, 2});
+        } else {
+            computer.add(get_type(mod, member.type_)->wire_layout(mod));
+        }
+    }
+
+    compound_layout overall_computer;
+    if (!raw) {
+        overall_computer.add_member("discriminator", get_enum().wire_layout(mod));
+    }
+    overall_computer.add_member("val", computer.get());
+    return overall_computer;
 }
 } // namespace lidl
