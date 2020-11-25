@@ -5,3 +5,4 @@ export * from "./lib/BasicTypes";
 export * from "./lib/Pointer";
 export * from "./lib/Structure";
 export * from "./lib/Array";
+export * from "./lib/Vector";

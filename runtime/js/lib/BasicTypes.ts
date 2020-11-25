@@ -1,5 +1,33 @@
 import {Layout, Type, LidlObject, TypedType} from "./Object";
+
 export {Layout, Type, LidlObject, TypedType} from "./Object"
+
+export class BoolClass implements TypedType<Bool> {
+    instantiate(data: Uint8Array): Bool {
+        return new Bool(data);
+    }
+
+    layout(): Layout {
+        return {
+            size: 1,
+            alignment: 1
+        };
+    }
+}
+
+export class Bool extends LidlObject {
+    get_type(): Type {
+        return new BoolClass();
+    }
+
+    get value(): boolean {
+        return super.dataView().getUint8(0) != 0;
+    }
+
+    set value(val: boolean) {
+        super.dataView().setUint8(0, val ? 1 : 0);
+    }
+}
 
 export class FloatClass implements TypedType<Float> {
     instantiate(buffer: Uint8Array): Float {

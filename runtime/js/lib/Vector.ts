@@ -1,33 +1,59 @@
-import {Layout, LidlObject} from "./Object";
+import {Layout, LidlObject, Type} from "./Object";
 
-class BasicVector {
-    view: Uint8Array;
-    private elemLayout: Layout;
+export class VectorClass implements Type {
+    constructor(public type: Type) {
+    }
 
-    constructor(view: Uint8Array, layout: Layout) {
-        this.view = view;
-        this.elemLayout = layout;
+    instantiate(data: Uint8Array): LidlObject {
+        return new Vector(this, data);
+    }
+
+    layout(): Layout {
+        return {
+            size: 2,
+            alignment: this.type.layout().alignment
+        };
+    }
+}
+
+export class Vector extends LidlObject {
+    private readonly _type : VectorClass;
+
+    constructor(type: VectorClass, buffer: Uint8Array) {
+        super(buffer);
+        this._type = type;
     }
 
     length(): number {
-        return new DataView(this.view.buffer).getInt16(0, true);
+        return super.dataView().getInt16(0, true);
     }
 
     dataBuffer() {
         let offset = 2;
-        while (offset % this.elemLayout.alignment != 0) {
+        while (offset % this._type.layout().alignment != 0) {
             offset += 1;
         }
-        return new Uint8Array(this.view.subarray(offset, offset + this.length() * this.elemLayout.size));
+        return this.sliceBuffer(offset, this.length() * this._type.layout().size);
     }
 
-    dataPerElement() {
-        const buffer = this.dataBuffer();
-        const res = [];
-        const len = this.length()
-        for (let i = 0; i < len; ++i) {
-            res.push(buffer.subarray(i * this.elemLayout.size, (i + 1) * this.elemLayout.size));
+    get_type(): Type {
+        return this._type;
+    }
+
+    get value(): any {
+        const arr = [];
+        for (let i = 0; i < this.length(); ++i) {
+            arr.push(this.at(i).value);
         }
-        return res;
+        return arr;
+    }
+
+    at(idx: number): any {
+        return this._type.type.instantiate(this.buffer_for(idx));
+    }
+
+    private buffer_for(idx: number): Uint8Array {
+        const baseBuffer = this.dataBuffer();
+        return baseBuffer.subarray(idx * this._type.type.layout().size, (idx + 1) * this._type.type.layout().size);
     }
 }

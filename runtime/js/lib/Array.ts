@@ -20,35 +20,35 @@ export class LidlArrayClass implements Type {
 export class LidlArray extends LidlObject {
     constructor(type: LidlArrayClass, buffer: Uint8Array) {
         super(buffer);
-        this.lidl_type = type;
+        this._type = type;
     }
 
-    private readonly lidl_type: LidlArrayClass;
+    private readonly _type: LidlArrayClass;
 
     get_type(): Type {
-        return this.lidl_type;
+        return this._type;
     }
 
     init(val: [LidlObject]) {
-        assert(val.length == this.lidl_type.size);
-        for (let i = 0; i < this.lidl_type.size; ++i) {
+        assert(val.length == this._type.size);
+        for (let i = 0; i < this._type.size; ++i) {
             this.at(i).init(val[i]);
         }
     }
 
     get value(): any {
         const arr = [];
-        for (let i = 0; i < this.lidl_type.size; ++i) {
+        for (let i = 0; i < this._type.size; ++i) {
             arr.push(this.at(i).value);
         }
         return arr;
     }
 
     at(idx: number): any {
-        return this.lidl_type.type.instantiate(this.buffer_for(idx));
+        return this._type.type.instantiate(this.buffer_for(idx));
     }
 
     private buffer_for(idx: number): Uint8Array {
-        return super.sliceBuffer(idx * this.lidl_type.type.layout().size, this.lidl_type.type.layout().size);
+        return super.sliceBuffer(idx * this._type.type.layout().size, this._type.type.layout().size);
     }
 }
