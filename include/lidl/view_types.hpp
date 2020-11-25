@@ -10,7 +10,7 @@ struct view_type : type {
         : m_wire_type{wire_type} {
     }
 
-    type_categories category(const module& mod) const override {
+    type_categories category(const module& mod) const final {
         return type_categories::view;
     }
 
@@ -36,15 +36,26 @@ private:
     name m_wire_type;
 };
 
-struct span_type : generic {
-    span_type()
+struct span_type : view_type {
+public:
+    span_type(const module& mod, const generic_instantiation& ins)
+        : view_type(name{recursive_name_lookup(*mod.symbols, "vector").value(),
+                         ins.get_name().args})
+        , m_ins{ins} {
+    }
+
+private:
+    generic_instantiation m_ins;
+};
+
+struct generic_span_type : generic {
+    generic_span_type()
         : generic(make_generic_declaration({{"T", "type"}})) {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
                                       const generic_instantiation& ins) const override {
-        return std::make_unique<view_type>(name{
-            recursive_name_lookup(*mod.symbols, "vector").value(), ins.get_name().args});
+        return std::make_unique<span_type>(mod, ins);
     }
 };
 } // namespace lidl
