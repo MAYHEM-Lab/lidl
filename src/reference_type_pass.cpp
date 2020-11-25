@@ -18,17 +18,18 @@ name pointerify(const symbol_handle& ptr_sym, const name& n) {
 
 bool reference_type_pass(const module& mod, name& n) {
     auto ptr_sym     = recursive_name_lookup(*mod.symbols, "ptr").value();
+
+    if (n.base == ptr_sym) {
+        // The name is already a pointer
+        return false;
+    }
+
     auto member_type = get_type(mod, n);
     if (!member_type->is_reference_type(mod)) {
         return false;
     }
 
     if (auto gen = dynamic_cast<const generic_instantiation*>(member_type); gen) {
-        if (auto ptr = dynamic_cast<const pointer_type*>(&gen->generic_type()); ptr) {
-            // The member is already a pointer
-            return false;
-        }
-
         if (dynamic_cast<const generic_structure*>(&gen->generic_type()) ||
             dynamic_cast<const generic_union*>(&gen->generic_type())) {
             /**
@@ -40,11 +41,11 @@ bool reference_type_pass(const module& mod, name& n) {
             n = pointerify(ptr_sym, n);
             return true;
         }
+    }
 
-        for (auto& arg : n.args) {
-            if (auto sym = std::get_if<name>(&arg); sym) {
-                reference_type_pass(mod, *sym);
-            }
+    for (auto& arg : n.args) {
+        if (auto sym = std::get_if<name>(&arg); sym) {
+            reference_type_pass(mod, *sym);
         }
     }
 
