@@ -226,8 +226,8 @@ class yaml_loader {
         service serv;
         serv.src_info = make_source_info(node);
 
-        for (auto&& base : node["extends"]) {
-            serv.extends.push_back(read_type(base, *mod.symbols));
+        if (auto&& base = node["extends"]; base) {
+            serv.extends = read_type(base, *mod.symbols);
         }
 
         for (auto&& procedure : node["procedures"]) {

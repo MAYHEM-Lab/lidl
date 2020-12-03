@@ -35,7 +35,7 @@ struct property : member {
 };
 
 struct service {
-    std::vector<name> extends;
+    std::optional<name> extends;
     std::deque<std::pair<std::string, property>> properties;
     std::deque<std::pair<std::string, procedure>> procedures;
     const union_type* procedure_params_union = nullptr;
