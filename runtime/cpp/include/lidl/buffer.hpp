@@ -4,9 +4,9 @@
 #include <tos/span.hpp>
 
 namespace lidl {
-template<class T>
-const T& get_root(tos::span<const uint8_t> buf) {
-    auto loc = buf.end() - sizeof(T);
-    return *reinterpret_cast<const T*>(loc);
+template<class T, class BufferT>
+auto& get_root(BufferT&& buf) {
+    auto loc = &*(buf.end() - sizeof(T));
+    return *const_cast<T*>(reinterpret_cast<const T*>(loc));
 }
 } // namespace lidl

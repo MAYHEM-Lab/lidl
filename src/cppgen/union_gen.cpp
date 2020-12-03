@@ -94,6 +94,14 @@ sections union_gen::generate() {
                     {1}
                 }}
                 LIDL_UNREACHABLE();
+            }}
+
+template <class FunT>
+            friend decltype(auto) visit(const FunT& fn, {0}& val) {{
+                switch (val.alternative()) {{
+                    {1}
+                }}
+                LIDL_UNREACHABLE();
             }})__";
 
     auto visitor = fmt::format(visitor_format, name(), fmt::join(cases, "\n"));
