@@ -24,8 +24,8 @@ struct parameter {
 struct procedure {
     std::deque<name> return_types;
     std::deque<std::pair<std::string, parameter>> parameters;
-    const structure* params_struct;
-    const structure* results_struct;
+    const structure* params_struct = nullptr;
+    const structure* results_struct = nullptr;
 
     std::optional<source_info> src_info;
 };
