@@ -7,19 +7,32 @@ using pass = bool (*)(module&);
 
 bool union_enum_pass(module& m);
 bool reference_type_pass(module& m);
+bool service_proc_pass(module& mod);
 bool service_pass(module& m);
 
 inline bool run_all_passes(module& m) {
-    pass passes[] = {&union_enum_pass, &reference_type_pass, &service_pass};
+    constexpr std::pair<std::string_view, pass> passes[] = {
+        {"Union enum pass", &union_enum_pass},
+        {"Reference type pass", &reference_type_pass},
+        {"Service procedure pass", &service_proc_pass},
+        {"Service pass", &service_pass},
+    };
 
     bool changed = false;
-    for (auto& pass : passes) {
-        changed |= pass(m);
+    for (auto& [name, pass] : passes) {
+        std::cerr << "Running pass " << name << '\n';
+        try {
+            changed |= pass(m);
+        } catch (std::exception& err) {
+            std::cerr << "Exception while running pass " << name << '\n';
+            throw;
+        }
     }
     return changed;
 }
 
 inline void run_passes_until_stable(module& m) {
-    while (run_all_passes(m));
+    while (run_all_passes(m))
+        ;
 }
 } // namespace lidl

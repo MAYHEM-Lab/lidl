@@ -20,7 +20,7 @@ std::string decide_param_type_decoration(const module& mod, const parameter& par
     } else {
         if (param.flags == param_flags::in) {
             // Small types are passed by value.
-            if (param_type->wire_layout(mod).size() <= 8) {
+            if (param_type->wire_layout(mod).size() <= 2) {
                 return "{} {}";
             }
             return "const {}& {}";
@@ -95,15 +95,16 @@ sections remote_stub_generator::generate() {
     sect.keys.emplace_back(symbol(), section_type::misc);
     sect.name_space = mod().name_space;
 
-    std::vector<std::string> proc_stubs(get().procedures.size());
+    auto all_procs = get().all_procedures();
+    std::vector<std::string> proc_stubs(all_procs.size());
     std::transform(
-        get().procedures.begin(),
-        get().procedures.end(),
+        all_procs.begin(),
+        all_procs.end(),
         proc_stubs.begin(),
-        [this](auto& proc) { return make_procedure_stub(proc.first, proc.second); });
+        [this](auto& proc) { return make_procedure_stub(proc.first, *proc.second); });
 
     constexpr auto stub_format =
-        R"__(template <class ServBase> class remote_{0} : public {0}, private ServBase {{
+        R"__(template <class ServBase> class remote_{0} final : public {0}, private ServBase {{
     public:
         template <class... BaseParams>
         explicit remote_{0}(BaseParams&&... params) : ServBase(std::forward<BaseParams>(params)...) {{}}
@@ -270,26 +271,22 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     sect.add_dependency({params_union, section_type::definition});
     sect.add_dependency({results_union, section_type::definition});
 
-    std::vector<std::string> tuple_types(service.procedures.size());
-    std::transform(service.procedures.begin(),
-                   service.procedures.end(),
-                   tuple_types.begin(),
-                   [&](auto& proc) {
-                       auto param_name =
-                           get_identifier(mod,
-                                          name{*mod.symbols->definition_lookup(
-                                              std::get<procedure>(proc).params_struct)});
-                       auto res_name =
-                           get_identifier(mod,
-                                          name{*mod.symbols->definition_lookup(
-                                              std::get<procedure>(proc).results_struct)});
-                       return fmt::format(
-                           "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
-                           serv_full_name,
-                           std::get<std::string>(proc),
-                           param_name,
-                           res_name);
-                   });
+    auto all_procs = service.all_procedures();
+    std::vector<std::string> tuple_types(all_procs.size());
+    std::transform(
+        all_procs.begin(), all_procs.end(), tuple_types.begin(), [&](auto& proc_pair) {
+            auto& [proc_name, proc_ptr] = proc_pair;
+            auto param_name             = get_identifier(
+                mod, name{*mod.symbols->definition_lookup(proc_ptr->params_struct)});
+            auto res_name = get_identifier(
+                mod, name{*mod.symbols->definition_lookup(proc_ptr->results_struct)});
+            return fmt::format(
+                "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
+                serv_full_name,
+                proc_name,
+                param_name,
+                res_name);
+        });
     str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
                        serv_full_name);
     str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
@@ -308,10 +305,11 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
 
 sections service_generator::generate() {
     std::vector<std::string> inheritance;
-    for (auto& base : get().extends) {
-        inheritance.emplace_back(get_identifier(mod(), {base.base}));
+    if (auto& base = get().extends; base) {
+        inheritance.emplace_back(get_identifier(mod(), {*base}));
+    } else {
+        inheritance.emplace_back(fmt::format("::lidl::service_base", name()));
     }
-    inheritance.emplace_back(fmt::format("::lidl::service<{}>", name()));
 
     std::stringstream str;
 

@@ -10,15 +10,15 @@
 
 class calculator_impl : public lidl_example::scientific_calculator {
 public:
-    double add(double left, double right) override {
+    double add(const double& left, const double& right) override {
         return left + right;
     }
 
-    double multiply(double left, double right) override {
+    double multiply(const double& left, const double& right) override {
         return left * right;
     }
 
-    double log(double val) override {
+    double log(const double& val) override {
         return ::log(val);
     }
 };
@@ -46,7 +46,7 @@ std::vector<uint8_t> get_request() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
     lidl::create<lidl_example::scientific_calculator_call>(
-        builder, lidl_example::scientific_calculator_multiply_params(3, 5));
+        builder, lidl_example::calculator_multiply_params(3, 5));
     buf.resize(builder.size());
     return buf;
 }

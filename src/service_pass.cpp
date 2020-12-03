@@ -1,9 +1,12 @@
+#include <cassert>
 #include <lidl/module.hpp>
 #include <lidl/service.hpp>
 #include <lidl/structure.hpp>
 #include <lidl/view_types.hpp>
+#include <stack>
 
 namespace lidl {
+namespace {
 structure procedure_params_struct(const module& mod,
                                   const service& servic,
                                   std::string_view name,
@@ -70,49 +73,98 @@ structure procedure_results_struct(const module& mod,
     return s;
 }
 
+bool do_proc_pass(module& mod,
+                  service& serv,
+                  std::string_view proc_name,
+                  procedure& proc) {
+    if (proc.results_struct && proc.params_struct) {
+        return false;
+    }
+
+    mod.structs.emplace_back(procedure_params_struct(mod, serv, proc_name, proc));
+    proc.params_struct = &mod.structs.back();
+
+    mod.structs.emplace_back(procedure_results_struct(mod, serv, proc_name, proc));
+    proc.results_struct = &mod.structs.back();
+
+    return true;
+}
+
+bool do_service_pass(module& mod, service& serv) {
+    if (serv.procedure_params_union) {
+        return false;
+    }
+    std::string service_name(local_name(*mod.symbols->definition_lookup(&serv)));
+    std::cerr << "Pass for service " << service_name << '\n';
+
+    union_type procedure_params;
+    union_type procedure_results;
+
+    for (auto& s : serv.inheritance_list()) {
+        for (auto& [proc_name, proc] : s->procedures) {
+            assert(proc.params_struct_name.base.is_valid());
+            assert(proc.results_struct_name.base.is_valid());
+            procedure_params.members.emplace_back(proc_name,
+                                                  member{name{proc.params_struct_name}});
+            procedure_results.members.emplace_back(proc_name,
+                                                   member{name{proc.results_struct_name}});
+        }
+    }
+
+    mod.unions.push_back(std::move(procedure_params));
+    auto handle =
+        define(*mod.symbols, fmt::format("{}_call", service_name), &mod.unions.back());
+    mod.unions.back().call_for  = &serv;
+    serv.procedure_params_union = &mod.unions.back();
+
+    mod.unions.push_back(std::move(procedure_results));
+    auto res_handle =
+        define(*mod.symbols, fmt::format("{}_return", service_name), &mod.unions.back());
+    mod.unions.back().return_for = &serv;
+    serv.procedure_results_union = &mod.unions.back();
+
+    return true;
+}
+} // namespace
+
 bool service_pass(module& mod) {
     bool changed = false;
+
     for (auto& service : mod.services) {
-        if (service.procedure_params_union) {
-            continue;
-        }
+        changed |= do_service_pass(mod, service);
+    }
 
-        std::string service_name(local_name(*mod.symbols->definition_lookup(&service)));
-        union_type procedure_params;
-        union_type procedure_results;
+    return changed;
+}
 
-        for (auto& [proc_name, proc] : service.procedures) {
-            mod.structs.emplace_back(
-                procedure_params_struct(mod, service, proc_name, proc));
+bool service_proc_pass(module& mod) {
+    bool changed = false;
+
+    for (auto& serv : mod.services) {
+        std::string service_name(local_name(*mod.symbols->definition_lookup(&serv)));
+
+        for (auto& [proc_name, proc] : serv.procedures) {
+            if (proc.results_struct && proc.params_struct) {
+                continue;
+            }
+
+            std::cerr << "Generating param and result structs for " << service_name << "::" << proc_name << '\n';
+            auto proc_res = do_proc_pass(mod, serv, proc_name, proc);
+            assert(proc_res);
+            assert(proc.results_struct && proc.params_struct);
+
             auto handle = define(*mod.symbols,
                                  fmt::format("{}_{}_params", service_name, proc_name),
-                                 &mod.structs.back());
-            procedure_params.members.emplace_back(proc_name, member{name{handle}});
-            proc.params_struct = &mod.structs.back();
-
-            mod.structs.emplace_back(
-                procedure_results_struct(mod, service, proc_name, proc));
+                                 proc.params_struct);
             auto res_handle =
                 define(*mod.symbols,
                        fmt::format("{}_{}_results", service_name, proc_name),
-                       &mod.structs.back());
-            procedure_results.members.emplace_back(proc_name, member{name{res_handle}});
-            proc.results_struct = &mod.structs.back();
+                       proc.results_struct);
+
+            proc.params_struct_name  = name{handle};
+            proc.results_struct_name = name{res_handle};
+            changed = true;
         }
-
-        mod.unions.push_back(std::move(procedure_params));
-        auto handle = define(
-            *mod.symbols, fmt::format("{}_call", service_name), &mod.unions.back());
-        mod.unions.back().call_for     = &service;
-        service.procedure_params_union = &mod.unions.back();
-
-        mod.unions.push_back(std::move(procedure_results));
-        auto res_handle = define(
-            *mod.symbols, fmt::format("{}_return", service_name), &mod.unions.back());
-        mod.unions.back().return_for    = &service;
-        service.procedure_results_union = &mod.unions.back();
-
-        changed = true;
     }
 
     return changed;

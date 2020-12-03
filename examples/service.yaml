@@ -54,7 +54,7 @@ example:
       parameters:
         str: complex_struct
 
-scientific_calculator:
+calculator:
   type: service
   procedures:
     add:
@@ -69,12 +69,16 @@ scientific_calculator:
       parameters:
         left: f64
         right: f64
+
+scientific_calculator:
+  type: service
+  extends: calculator
+  procedures:
     log:
       returns:
         - f64
       parameters:
         val: f64
-
 repeat:
   type: service
   procedures:
