@@ -60,7 +60,7 @@ export class {name} extends {struct_base} {{
                              {},
                              fmt::format("{}Variants", name()),
                              fmt::format("{}Variants", name()),
-                             get().get_enum());
+                             get().get_enum(mod()));
 
     auto res = enum_res.generate();
     res.add(std::move(def));
@@ -141,10 +141,9 @@ std::string union_gen::generate_ctor() const {
 
     std::vector<std::string> args(2);
     args.front() = "mb: lidl.MessageBuilder";
-    args.back() = fmt::format("val: {}", fmt::join(types, " | "));
+    args.back()  = fmt::format("val: {}", fmt::join(types, " | "));
 
-    return fmt::format(format,
-                       fmt::arg("args", fmt::join(args, ", ")),
-                       fmt::arg("name", name()));
+    return fmt::format(
+        format, fmt::arg("args", fmt::join(args, ", ")), fmt::arg("name", name()));
 }
 } // namespace lidl::js

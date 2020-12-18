@@ -16,8 +16,8 @@ YAML::Node union_type::bin2yaml(const module& mod, ibinary_reader& reader) const
     }
     YAML::Node node;
 
-    auto& enumerator = get_enum();
-    auto enum_layout = enumerator.wire_layout(mod);
+    const auto& enumerator = get_enum(mod);
+    auto enum_layout       = enumerator.wire_layout(mod);
 
     auto alternative_node = enumerator.bin2yaml(mod, reader);
     int alternative       = enumerator.find_by_name(alternative_node.as<std::string>());
@@ -43,9 +43,11 @@ type_categories union_type::category(const module& mod) const {
                : type_categories::value;
 }
 
-const enumeration& union_type::get_enum() const {
-    assert(alternatives_enum);
-    return *alternatives_enum;
+const enumeration& union_type::get_enum(const module& m) const {
+    if (!m_enumeration) {
+        m_enumeration = std::make_unique<enumeration>(enum_for_union(m, *this));
+    }
+    return *m_enumeration;
 }
 
 int union_type::yaml2bin(const module& mod,
@@ -55,11 +57,11 @@ int union_type::yaml2bin(const module& mod,
         throw std::runtime_error("Union has not exactly 1 member!");
     }
 
-    auto active_member    = node.begin()->first.as<std::string>();
-    auto& enumerator      = get_enum();
-    auto enum_index       = enumerator.find_by_name(active_member);
-    auto& [mem_name, mem] = members[enum_index];
-    auto t                = get_type(mod, mem.type_);
+    auto active_member     = node.begin()->first.as<std::string>();
+    const auto& enumerator = get_enum(mod);
+    auto enum_index        = enumerator.find_by_name(active_member);
+    auto& [mem_name, mem]  = members[enum_index];
+    auto t                 = get_type(mod, mem.type_);
 
     int pointee_pos = 0;
     if (t->is_reference_type(mod)) {
@@ -98,9 +100,18 @@ compound_layout union_type::layout(const module& mod) const {
 
     compound_layout overall_computer;
     if (!raw) {
-        overall_computer.add_member("discriminator", get_enum().wire_layout(mod));
+        overall_computer.add_member("discriminator", get_enum(mod).wire_layout(mod));
     }
     overall_computer.add_member("val", computer.get());
     return overall_computer;
+}
+
+enumeration enum_for_union(const module& m, const union_type& u) {
+    enumeration e;
+    e.underlying_type = name{recursive_name_lookup(*m.symbols, "i8").value()};
+    for (auto& [name, _] : u.members) {
+        e.members.emplace_back(name, enum_member{static_cast<int>(e.members.size())});
+    }
+    return e;
 }
 } // namespace lidl

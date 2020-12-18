@@ -5,14 +5,12 @@
 namespace lidl {
 using pass = bool (*)(module&);
 
-bool union_enum_pass(module& m);
 bool reference_type_pass(module& m);
 bool service_proc_pass(module& mod);
 bool service_pass(module& m);
 
 inline bool run_all_passes(module& m) {
     constexpr std::pair<std::string_view, pass> passes[] = {
-        {"Union enum pass", &union_enum_pass},
         {"Reference type pass", &reference_type_pass},
         {"Service procedure pass", &service_proc_pass},
         {"Service pass", &service_pass},

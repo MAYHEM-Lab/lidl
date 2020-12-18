@@ -9,8 +9,8 @@
 #include "struct_bodygen.hpp"
 
 namespace lidl::cpp {
-using codegen::sections;
 using codegen::section;
+using codegen::sections;
 
 std::string raw_union_gen::generate_getter(std::string_view member_name,
                                            const member& mem,
@@ -131,7 +131,7 @@ sections raw_union_gen::generate_traits() {
     for (auto& [member_name, member] : get().members) {
         std::string arg_names;
         std::string initializer_list;
-        const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
+        const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);

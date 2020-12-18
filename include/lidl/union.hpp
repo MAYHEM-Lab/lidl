@@ -20,11 +20,6 @@ struct union_type : public type {
      */
     bool raw = false;
 
-    /**
-     * This member points to the enumeration that stores our alternatives.
-     */
-    const enumeration* alternatives_enum = nullptr;
-
     /** If this member is not null, this union stores the parameter structs of that
      * service.
      */
@@ -35,7 +30,7 @@ struct union_type : public type {
      */
     const service* return_for = nullptr;
 
-    const enumeration& get_enum() const;
+    const enumeration& get_enum(const module& m) const;
 
     union_type()                  = default;
     union_type(const union_type&) = default;
@@ -53,5 +48,10 @@ struct union_type : public type {
                  ibinary_writer& writer) const override;
 
     compound_layout layout(const module& mod) const;
+
+private:
+    mutable std::unique_ptr<const enumeration> m_enumeration;
 };
+
+enumeration enum_for_union(const module& m, const union_type& u);
 } // namespace lidl

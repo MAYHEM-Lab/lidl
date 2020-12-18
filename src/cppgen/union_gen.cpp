@@ -59,7 +59,7 @@ sections union_gen::generate() {
     for (auto& [member_name, member] : get().members) {
         std::string arg_names;
         std::string initializer_list;
-        const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
+        const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);
@@ -138,7 +138,7 @@ template <class FunT>
                 {},
                 "alternatives",
                 std::string(absolute_name()) + "::alternatives",
-                get().get_enum());
+                get().get_enum(mod()));
     auto enum_res = en.generate();
     std::vector<section> defs;
     std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
@@ -241,7 +241,7 @@ sections union_gen::generate_traits() {
     for (auto& [member_name, member] : get().members) {
         std::string arg_names;
         std::string initializer_list;
-        const auto enum_val = get().get_enum().find_by_value(member_index++)->first;
+        const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);

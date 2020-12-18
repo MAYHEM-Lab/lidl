@@ -28,7 +28,6 @@ add_library(
   src/enumeration.cpp
   include/lidl/union.hpp
   include/lidl/enumeration.hpp
-  src/union_enum_pass.cpp
   src/instantiation_pass.cpp
   src/service_pass.cpp
   include/lidl/basic_types.hpp
