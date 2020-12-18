@@ -1,6 +1,7 @@
 #include "generics_generated.hpp"
 
 #include <iostream>
+#include <array>
 
 int main() {
     std::array<uint8_t, 128> buf;
