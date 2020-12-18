@@ -12,6 +12,12 @@ if (NOT ${CLANG_FORMAT_BIN} MATCHES "NOTFOUND")
     message(STATUS "Found clang-format")
 endif()
 
+define_property(
+        SOURCE
+        PROPERTY LIDLC_OUTPUT_PATH
+        BRIEF_DOCS "Output path for the given file"
+        FULL_DOCS "Output path for the given file")
+
 if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
     function(add_lidlc Name)
         set(LIDLC_OUTPUTS)
@@ -26,10 +32,12 @@ if (NOT ${LIDLC_BIN} MATCHES "NOTFOUND")
 
             add_custom_command(OUTPUT ${LIDLC_OUTPUT}
                     COMMAND ${LIDLC_BIN}
-                    ARGS -gcpp -f ${FILE} -o ${LIDLC_OUTPUT}
+                    ARGS -gcpp -f ${FILE} -o ${LIDLC_OUTPUT} "-I$<JOIN:$<TARGET_PROPERTY:${Name},INTERFACE_INCLUDE_DIRECTORIES>, -I>"
                     DEPENDS ${FILE} ${LIDLC_BIN}
                     COMMENT "Building C++ header for ${FILE}"
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+            set_property(SOURCE ${FILE} PROPERTY LIDLC_OUTPUT_PATH ${LIDLC_OUTPUT})
 
             if (NOT ${CLANG_FORMAT_BIN} MATCHES "NOTFOUND")
                 #[[add_custom_command(OUTPUT ${LIDLC_OUTPUT}
