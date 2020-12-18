@@ -2,11 +2,13 @@
 #include "passes.hpp"
 
 #include <codegen.hpp>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <gsl/span>
 #include <iostream>
 #include <lidl/basic.hpp>
+#include <lidl/loader.hpp>
 #include <lyra/lyra.hpp>
 #include <string_view>
 #include <yaml.hpp>
@@ -27,6 +29,8 @@ struct lidlc_args {
     std::ostream* output_stream;
     std::string backend;
     std::optional<std::string> origin;
+    std::vector<std::string> import_paths;
+    bool just_details = false;
 };
 
 void run(const lidlc_args& args) {
@@ -41,29 +45,35 @@ void run(const lidlc_args& args) {
         return;
     }
 
-    auto root_mod = std::make_unique<module>();
-    root_mod->add_child("", basic_module());
+    auto importer = std::make_unique<lidl::path_resolver>();
+    for (auto& path : args.import_paths) {
+        importer->add_import_path(path);
+    }
 
     try {
-        auto& ym = yaml::load_module(*root_mod, *args.input_stream, args.origin);
+        lidl::load_context ctx;
+        ctx.set_importer(std::move(importer));
+        auto mod = ctx.do_import(*args.origin, "");
 
-        try {
-            for (auto& [name, mod] : root_mod->children) {
-                run_passes_until_stable(*mod);
+        if (args.just_details) {
+            YAML::Node res;
+            res["imports"] = {};
+            for (auto& [path, _] : ctx.import_mapping) {
+                res["imports"].push_back(path);
             }
-        } catch (std::exception& err) {
-            std::cerr << "A pass failed: " << err.what() << '\n';
+            std::cout << res << '\n';
+            return;
         }
 
         try {
             auto backend = backend_maker->second();
-            backend->generate(ym, *args.output_stream);
+            backend->generate(*mod, *args.output_stream);
         } catch (std::exception& err) {
             std::cerr << "Code generation failed: " << err.what() << '\n';
             return;
         }
     } catch (std::exception& err) {
-        std::cerr << "Module parsing failed: " << err.what() << '\n';
+        std::cerr << "Module loading failed: " << err.what() << '\n';
         return;
     }
 }
@@ -73,13 +83,16 @@ int main(int argc, char** argv) {
     bool version         = false;
     bool help            = false;
     bool read_from_stdin = false;
+    bool build_details   = false;
     std::string input_path;
     std::string out_path;
     std::string backend;
+    std::vector<std::string> import_paths;
     auto cli =
         lyra::cli_parser() |
         lyra::opt(input_path, "input")["-f"]["--input-file"]("Input file to read from.")
             .optional() |
+        lyra::opt(import_paths, "import_paths")["-I"]("Import prefixes") |
         lyra::opt(read_from_stdin)["-i"]["--stdin"](
             "Read the input from the standard input.")
             .optional() |
@@ -87,6 +100,7 @@ int main(int argc, char** argv) {
                   "output file")["-o"]["--output-file"]("Output file to write to.")
             .optional() |
         lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.").required() |
+        lyra::opt(build_details, "build details")["-d"].optional() |
         lyra::opt(version)["--version"]("Print lidl version") | lyra::help(help);
     auto res = cli.parse({argc, argv});
 
@@ -115,20 +129,26 @@ int main(int argc, char** argv) {
     args.input_stream  = &std::cin;
     args.output_stream = &std::cout;
 
+    auto path = std::filesystem::canonical(std::filesystem::current_path() / input_path);
     if (!input_path.empty()) {
-        args.input_stream = new std::ifstream{input_path};
+        args.input_stream = new std::ifstream{path.string()};
         if (!args.input_stream->good()) {
-            throw std::runtime_error("File not found: " + input_path);
+            throw std::runtime_error("File not found: " + path.string());
         }
-        args.origin = input_path;
+        args.origin = path.string();
     }
+
     if (!out_path.empty()) {
         args.output_stream = new std::ofstream{out_path};
         if (!args.input_stream->good()) {
             throw std::runtime_error("File not found: " + input_path);
         }
     }
+
     args.backend = std::move(backend);
+
+    args.import_paths = std::move(import_paths);
+    args.just_details = build_details;
 
     lidl::run(args);
 

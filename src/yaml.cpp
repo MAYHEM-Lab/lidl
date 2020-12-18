@@ -9,6 +9,7 @@
 #include <lidl/enumeration.hpp>
 #include <lidl/errors.hpp>
 #include <lidl/generics.hpp>
+#include <lidl/loader.hpp>
 #include <lidl/service.hpp>
 #include <lidl/types.hpp>
 #include <lidl/union.hpp>
@@ -25,7 +26,7 @@ public:
     }
 };
 
-class yaml_loader {
+class yaml_loader : public module_loader {
     std::optional<source_info> make_source_info(const YAML::Node& node) {
         auto&& mark = node.Mark();
         if (mark.is_null()) {
@@ -253,15 +254,22 @@ class yaml_loader {
     }
 
 public:
-    yaml_loader(module& root,
+    yaml_loader(load_context& ctx,
                 const YAML::Node& node,
                 std::optional<std::string> origin = {})
-        : m_root{&root}
+        : m_context{&ctx}
+        , m_root{&ctx.get_root()}
         , m_node{node}
         , m_origin{std::move(origin)} {
+        auto meta = get_metadata();
+        m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("module"));
     }
 
-    module_meta parse_metadata() {
+    module& get_module() override {
+        return *m_mod;
+    }
+
+    module_meta get_metadata() override {
         module_meta res;
         auto metadata = m_node["$lidlmeta"];
         if (metadata) {
@@ -275,34 +283,7 @@ public:
         return res;
     }
 
-    module& start() {
-        auto meta = parse_metadata();
-        m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("module"));
-
-        for (auto& import : meta.imports) {
-            std::cerr << "Import " << import << '\n';
-            auto path = fmt::format("{}.yaml", import);
-            std::ifstream import_file(path);
-            if (!import_file.good()) {
-                std::cerr << "Could not open " << path << '\n';
-            }
-            auto import_node = YAML::Load(import_file);
-            yaml_loader loader(*m_root, import_node);
-
-            auto imported_meta = loader.parse_metadata();
-
-            auto& imported_module = loader.start();
-            m_imports.push_back(std::move(loader));
-        }
-
-        return *m_mod;
-    }
-
     void declare_pass() {
-        for (auto& imported : m_imports) {
-            imported.declare_pass();
-        }
-
         for (auto e : m_node) {
             auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
             Expects(key);
@@ -331,10 +312,6 @@ public:
     }
 
     void define_pass() {
-        for (auto& imported : m_imports) {
-            imported.define_pass();
-        }
-
         for (auto e : m_node) {
             auto& [key, val] = static_cast<std::pair<YAML::Node, YAML::Node>&>(e);
             Expects(key);
@@ -372,12 +349,17 @@ public:
         }
     }
 
+    void load() override {
+        declare_pass();
+        define_pass();
+    }
+
     module& get() {
-        return *m_mod;
+        return get_module();
     }
 
 private:
-    std::vector<yaml_loader> m_imports;
+    load_context* m_context;
 
     YAML::Node m_node;
     module* m_root;
@@ -385,16 +367,13 @@ private:
     std::optional<std::string> m_origin;
 };
 } // namespace
-
-module& load_module(module& root, std::istream& file, std::optional<std::string> origin) {
-    auto node = YAML::Load(file);
-
-    yaml_loader loader(root, node, origin);
-
-    auto& m = loader.start();
-
-    loader.declare_pass();
-    loader.define_pass();
-    return m;
-}
 } // namespace lidl::yaml
+
+namespace lidl {
+std::unique_ptr<module_loader> make_yaml_loader(load_context& root,
+                                                std::istream& file,
+                                                std::optional<std::string> origin) {
+    auto node = YAML::Load(file);
+    return std::make_unique<yaml::yaml_loader>(root, node, origin);
+}
+} // namespace lidl
