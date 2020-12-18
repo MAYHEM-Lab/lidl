@@ -10,8 +10,8 @@
 #include "union_gen.hpp"
 
 namespace lidl::cpp {
-using codegen::sections;
 using codegen::section;
+using codegen::sections;
 std::string generic_gen::local_full_name() {
     return get_local_identifier(mod(), get().get_name());
 }
@@ -39,7 +39,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     // TODO: Create an unrelated module here
     tmpmod.symbols = mod().symbols->add_child_scope("tmp");
     tmpmod.unions.emplace_back(
-        *dynamic_cast<union_type*>(u.instantiate(mod(), get()).get()));
+        std::move(*dynamic_cast<union_type*>(u.instantiate(mod(), get()).get())));
     run_passes_until_stable(tmpmod);
 
     union_gen gen(
@@ -81,8 +81,7 @@ sections generic_gen::do_generate() {
     if (auto genstr = dynamic_cast<const generic_structure*>(&get().generic_type())) {
         auto res = do_generate(*genstr);
         for (auto& sec : res.get_sections()) {
-            if (sec.keys.at(0).type == section_type::definition ||
-                std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+            if (std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
@@ -93,8 +92,7 @@ sections generic_gen::do_generate() {
     } else if (auto genun = dynamic_cast<const generic_union*>(&get().generic_type())) {
         auto res = do_generate(*genun);
         for (auto& sec : res.get_sections()) {
-            if (sec.keys.at(0).type == section_type::definition ||
-                std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+            if (std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
