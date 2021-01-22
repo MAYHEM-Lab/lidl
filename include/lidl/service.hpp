@@ -56,6 +56,17 @@ struct service {
         return res;
     }
 
+    std::optional<int> proc_index(const procedure& proc) const {
+        auto all_proc = all_procedures();
+        auto iter = std::find_if(all_proc.begin(), all_proc.end(), [&proc](auto& pair) {
+            return pair.second == &proc;
+        });
+        if (iter == all_proc.end()) {
+            return {};
+        }
+        return std::distance(all_proc.begin(), iter);
+    }
+
     std::vector<const service*> inheritance_list() const {
         std::vector<const service*> inheritance;
 
