@@ -1,11 +1,11 @@
-#include "lidl/builder.hpp"
+#include "lidlrt/builder.hpp"
 #include "service_generated.hpp"
 
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <lidl/find_extent.hpp>
+#include <lidlrt/find_extent.hpp>
 #include <unordered_map>
 
 class calculator_impl : public lidl_example::scientific_calculator {
