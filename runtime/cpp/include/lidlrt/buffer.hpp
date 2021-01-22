@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lidl/ptr.hpp>
+#include <lidlrt/ptr.hpp>
 #include <tos/span.hpp>
 
 namespace lidl {

@@ -5,9 +5,9 @@
 #pragma once
 
 #include <cstring>
-#include <lidl/builder.hpp>
-#include <lidl/meta.hpp>
-#include <lidl/status.hpp>
+#include <lidlrt/builder.hpp>
+#include <lidlrt/meta.hpp>
+#include <lidlrt/status.hpp>
 #include <string_view>
 #include <tuple>
 
@@ -17,6 +17,8 @@ class service_descriptor;
 
 template<auto Fn, class ParamsT, class ResultsT>
 struct procedure_descriptor {
+    static constexpr auto function = Fn;
+    using params_type = ParamsT;
     std::string_view name;
 };
 
