@@ -162,9 +162,9 @@ struct cppgen {
 
         codegen::emitter e(*mod().parent, mod(), m_sections);
 
-        str << "#pragma once\n\n#include <lidl/lidl.hpp>\n";
+        str << "#pragma once\n\n#include <lidlrt/lidl.hpp>\n";
         if (!mod().services.empty()) {
-            str << "#include <lidl/service.hpp>\n";
+            str << "#include <lidlrt/service.hpp>\n";
         }
         str << '\n';
 
