@@ -379,6 +379,7 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
         auto ret_type = get_type(mod(), proc.return_types.at(0));
         ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
         if (ret_type->is_reference_type(mod())) {
+            // Notice the return type is a pointer here!
             ret_type_name = fmt::format("{}*", ret_type_name);
         }
     }
@@ -401,6 +402,17 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
         auto result_ = NextLayer::execute({2}, &params_tuple_, nullptr);
     }})__";
 
+    // Since we can't use a natural return path, we instead allocate the memory to hold
+    // the return object. If the return object is a reference, it's being converted to a
+    // pointer above, since references aren't objects.
+    // Once we have this, the parameters tuple and the address of the return memory is
+    // passed to the zero-copy handler.
+    // Once it returns, it will have placed the return value in the buffer provided.
+    // We cast it to a pointer to the return type and dereference it to return the right
+    // value.
+    // If the return type is actually a reference, we need one more dereference to get a
+    // reference from our pointer, so the last {4} is * if the return type is a ref type
+    // and empty otherwise.
     constexpr auto def_format = R"__({0} override {{
         {1}
         using ret_t = {3};
