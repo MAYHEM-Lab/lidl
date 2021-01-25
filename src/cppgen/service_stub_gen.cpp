@@ -390,7 +390,7 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
         param_names.begin(),
         [this, &proc](auto& param) { return fmt::format("&{}", param.first); });
     if (proc.results_struct->is_reference_type(mod())) {
-        param_names.emplace(param_names.begin(), "&response_builder");
+        param_names.emplace_back("&response_builder");
     }
 
     auto tuple_make = fmt::format("auto params_tuple_ = std::make_tuple({0});",
@@ -406,7 +406,7 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
         using ret_t = {3};
         std::aligned_storage_t<sizeof(ret_t), alignof(ret_t)> return_;
         auto result_ = NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
-        return *reinterpret_cast<{3}{4}>(&return_);
+        return {4}*reinterpret_cast<ret_t*>(&return_);
     }})__";
 
     auto [sig, deps] = make_proc_signature(mod(), proc_name, proc);
@@ -416,6 +416,6 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
                        tuple_make,
                        get().proc_index(proc).value(),
                        ret_type_name,
-                       proc.results_struct->is_reference_type(mod()) ? "" : "*");
+                       proc.results_struct->is_reference_type(mod()) ? "*" : "");
 }
 } // namespace lidl::cpp
