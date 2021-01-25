@@ -152,9 +152,12 @@ struct cppgen {
                 service_generator(mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
             auto stub_generator = remote_stub_generator(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+            auto svc_generator = svc_stub_generator(
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
 
             m_sections.merge_before(generator.generate());
             m_sections.merge_before(stub_generator.generate());
+            m_sections.merge_before(svc_generator.generate());
         }
 
         // TODO: fix module traits

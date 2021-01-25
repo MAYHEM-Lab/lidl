@@ -98,10 +98,9 @@ sections remote_stub_generator::generate() {
     auto all_procs = get().all_procedures();
     std::vector<std::string> proc_stubs(all_procs.size());
     std::transform(
-        all_procs.begin(),
-        all_procs.end(),
-        proc_stubs.begin(),
-        [this](auto& proc) { return make_procedure_stub(proc.first, *proc.second); });
+        all_procs.begin(), all_procs.end(), proc_stubs.begin(), [this](auto& proc) {
+            return make_procedure_stub(proc.first, *proc.second);
+        });
 
     constexpr auto stub_format =
         R"__(template <class ServBase> class remote_{0} final : public {0}, private ServBase {{
@@ -340,5 +339,83 @@ sections service_generator::generate() {
 
     res.merge_before(generate_service_descriptor(mod(), name(), get()));
     return res;
+}
+
+codegen::sections svc_stub_generator::generate() {
+    section sect;
+
+    // We depend on the definition for the service.
+    sect.add_dependency(def_key());
+    sect.add_dependency(misc_key());
+    sect.keys.emplace_back(symbol(), section_type::misc);
+    sect.name_space = mod().name_space;
+
+    auto all_procs = get().all_procedures();
+    std::vector<std::string> proc_stubs(all_procs.size());
+    std::transform(
+        all_procs.begin(), all_procs.end(), proc_stubs.begin(), [this](auto& proc) {
+            return make_procedure_stub(proc.first, *proc.second);
+        });
+
+    constexpr auto stub_format =
+        R"__(template <class NextLayer> class zerocopy_{0} final : public {0}, private NextLayer {{
+    public:
+        template <class... BaseParams>
+        explicit zerocopy_{0}(BaseParams&&... params) : NextLayer(std::forward<BaseParams>(params)...) {{}}
+        {1}
+    }};)__";
+
+    sect.definition = fmt::format(stub_format, name(), fmt::join(proc_stubs, "\n"));
+
+    return {{std::move(sect)}};
+}
+
+std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
+                                                    const procedure& proc) {
+    std::string ret_type_name;
+    if (proc.return_types.empty()) {
+        ret_type_name = "void";
+    } else {
+        auto ret_type = get_type(mod(), proc.return_types.at(0));
+        ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
+        if (ret_type->is_reference_type(mod())) {
+            ret_type_name = fmt::format("{}*", ret_type_name);
+        }
+    }
+
+    std::vector<std::string> param_names(proc.parameters.size());
+    std::transform(
+        proc.parameters.begin(),
+        proc.parameters.end(),
+        param_names.begin(),
+        [this, &proc](auto& param) { return fmt::format("&{}", param.first); });
+    if (proc.results_struct->is_reference_type(mod())) {
+        param_names.emplace(param_names.begin(), "&response_builder");
+    }
+
+    auto tuple_make = fmt::format("auto params_tuple_ = std::make_tuple({0});",
+                                  fmt::join(param_names, ", "));
+
+    constexpr auto void_def_format = R"__({0} override {{
+        {1}
+        auto result_ = NextLayer::execute({2}, &params_tuple_, nullptr);
+    }})__";
+
+    constexpr auto def_format = R"__({0} override {{
+        {1}
+        using ret_t = {3};
+        std::aligned_storage_t<sizeof(ret_t), alignof(ret_t)> return_;
+        auto result_ = NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
+        return *reinterpret_cast<{3}{4}>(&return_);
+    }})__";
+
+    auto [sig, deps] = make_proc_signature(mod(), proc_name, proc);
+
+    return fmt::format(proc.return_types.empty() ? void_def_format : def_format,
+                       sig,
+                       tuple_make,
+                       get().proc_index(proc).value(),
+                       ret_type_name,
+                       proc.results_struct->is_reference_type(mod()) ? "" : "*");
 }
 } // namespace lidl::cpp
