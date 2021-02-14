@@ -88,7 +88,7 @@ sections struct_body_gen::generate() {
             {}
         private:
             {}
-            raw_t raw;)__";
+            [[maybe_unused]] raw_t raw;)__";
 
     section def;
     def.add_key({m_symbol, section_type::definition});

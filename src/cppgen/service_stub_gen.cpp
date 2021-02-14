@@ -417,7 +417,7 @@ std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
         {1}
         using ret_t = {3};
         std::aligned_storage_t<sizeof(ret_t), alignof(ret_t)> return_;
-        auto result_ = NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
+        [[maybe_unused]] auto result_ = NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
         return {4}*reinterpret_cast<ret_t*>(&return_);
     }})__";
 
