@@ -90,7 +90,7 @@ struct service : public base {
     void for_each_proc(module& mod, const FnT& fn) const {
         if (extends) {
             auto base_sym = get_symbol(extends->base);
-            auto base_serv = std::get<const service*>(base_sym);
+            auto base_serv = dynamic_cast<const service*>(base_sym);
             base_serv->for_each_proc(mod, fn);
         }
 
