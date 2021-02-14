@@ -7,6 +7,7 @@
 #include <lidl/binary_writer.hpp>
 #include <lidl/layout.hpp>
 #include <lidl/source_info.hpp>
+#include <lidl/scope.hpp>
 #include <memory>
 #include <optional>
 #include <string>
