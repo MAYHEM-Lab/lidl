@@ -1,3 +1,12 @@
+$lidlmeta:
+  imports:
+    - ./vec3f
+
+imported:
+  type: structure
+  members:
+    v: gfx.vec3f
+
 not_raw:
   type: structure
   members:
