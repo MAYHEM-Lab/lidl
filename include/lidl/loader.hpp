@@ -11,11 +11,9 @@ namespace lidl {
 class module_loader;
 struct load_context;
 
-struct loader_factory {
-    virtual std::unique_ptr<module_loader> make_loader(std::string_view import_name) = 0;
-    virtual ~loader_factory() = default;
-};
-
+// Instances of this type is used to locate modules with their name.
+// Currently we only have a local path resolver, however, in the future, it'll be possible
+// to import modules with a URL etc. and for those, we'll need other implementations.
 struct import_resolver {
     virtual auto
     resolve_import(load_context& ctx, std::string_view import_name, std::string_view wd)

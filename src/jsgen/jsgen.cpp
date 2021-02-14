@@ -12,7 +12,7 @@
 namespace lidl::js {
 namespace {
 bool is_anonymous(const module& mod, symbol t) {
-    return !recursive_definition_lookup(*mod.symbols, t);
+    return !recursive_definition_lookup(mod.symbols(), t);
 }
 
 class jsgen {
@@ -28,7 +28,7 @@ public:
             //            if (is_anonymous(*m_module, &s)) {
             //                continue;
             //            }
-            auto sym       = *mod().symbols->definition_lookup(&s);
+            auto sym       = *mod().symbols().definition_lookup(&s);
             auto name      = local_name(sym);
             auto generator = struct_gen(
                 mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
@@ -40,7 +40,7 @@ public:
             //            if (is_anonymous(*m_module, &s)) {
             //                continue;
             //            }
-            auto sym       = *mod().symbols->definition_lookup(&s);
+            auto sym       = *mod().symbols().definition_lookup(&s);
             auto name      = local_name(sym);
             auto generator = union_gen(
                 mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
@@ -52,7 +52,7 @@ public:
             if (is_anonymous(mod(), &s)) {
                 continue;
             }
-            auto sym  = *mod().symbols->definition_lookup(&s);
+            auto sym  = *mod().symbols().definition_lookup(&s);
             auto name = local_name(sym);
             auto generator =
                 enum_gen(mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);

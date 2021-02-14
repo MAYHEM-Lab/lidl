@@ -17,7 +17,7 @@ name pointerify(const symbol_handle& ptr_sym, const name& n) {
 }
 
 bool reference_type_pass(const module& mod, name& n) {
-    auto ptr_sym     = recursive_name_lookup(*mod.symbols, "ptr").value();
+    auto ptr_sym     = recursive_name_lookup(mod.symbols(), "ptr").value();
 
     if (n.base == ptr_sym) {
         // The name is already a pointer
@@ -58,12 +58,12 @@ bool reference_type_pass(module& m) {
     bool changed = false;
 
     for (auto& s : m.structs) {
-        for (auto& [_, member] : s.members) {
+        for (auto& [_, member] : s.own_members()) {
             changed |= reference_type_pass(m, member.type_);
         }
     }
     for (auto& s : m.unions) {
-        for (auto& [_, member] : s.members) {
+        for (auto& [_, member] : s.own_members()) {
             changed |= reference_type_pass(m, member.type_);
         }
     }

@@ -26,13 +26,13 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
         ++index;
     }
 
-    for (auto& [member_name, mem] : genstr.struct_.members) {
-        if (!std::holds_alternative<forward_decl>(get_symbol(mem.type_.base))) {
+    for (auto& [member_name, mem] : genstr.struct_.all_members()) {
+        if (get_symbol(mem.type_.base) != &forward_decl) {
             // Generic parameters are forward declarations.
             // If a member does not have a forward declared type, we can safely skip it.
             member new_mem;
             new_mem.type_ = mem.type_;
-            newstr->members.emplace_back(member_name, std::move(new_mem));
+            newstr->add_member(std::string(member_name), std::move(new_mem));
             continue;
         }
 
@@ -47,7 +47,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
 
         member new_mem;
         new_mem.type_ = it->second;
-        newstr->members.emplace_back(member_name, std::move(new_mem));
+        newstr->add_member(std::string(member_name), std::move(new_mem));
     }
 
     return newstr;
@@ -69,17 +69,17 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
         ++index;
     }
 
-    for (auto& [member_name, mem] : genstr.union_.members) {
-        if (!std::holds_alternative<forward_decl>(get_symbol(mem.type_.base))) {
+    for (auto& [member_name, mem] : genstr.union_.all_members()) {
+        if (get_symbol(mem->type_.base) != &forward_decl) {
             // Generic parameters are forward declarations.
             // If a member does not have a forward declared type, we can safely skip it.
             member new_mem;
-            new_mem.type_ = mem.type_;
-            newstr->members.emplace_back(member_name, std::move(new_mem));
+            new_mem.type_ = mem->type_;
+            newstr->add_member(std::string(member_name), std::move(new_mem));
             continue;
         }
 
-        auto generic_param_name = local_name(mem.type_.base);
+        auto generic_param_name = local_name(mem->type_.base);
         auto it = actual.find(generic_param_name);
 
         if (it == actual.end()) {
@@ -93,7 +93,7 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
 
         member new_mem;
         new_mem.type_ = it->second;
-        newstr->members.emplace_back(member_name, std::move(new_mem));
+        newstr->add_member(std::string(member_name), std::move(new_mem));
     }
 
     return newstr;

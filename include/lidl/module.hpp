@@ -12,12 +12,11 @@
 #include <vector>
 
 namespace lidl {
-struct module {
+struct module : public base {
     std::string module_name;
     std::string name_space = "lidlmod";
 
     const module* parent           = nullptr;
-    std::shared_ptr<scope> symbols = std::make_shared<scope>();
 
     std::deque<std::unique_ptr<type>> basic_types;
     std::deque<std::unique_ptr<generic>> basic_generics;
@@ -42,7 +41,25 @@ struct module {
     mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
     module() = default;
 
+    void set_symbols(std::shared_ptr<scope> syms) {
+        m_symbols = syms;
+    }
+
+    scope& symbols() {
+        return *m_symbols;
+    }
+
+    scope& symbols() const {
+        return *m_symbols;
+    }
+
+    const scope * get_scope() const override {
+        return &symbols();
+    }
+
 private:
+    std::shared_ptr<scope> m_symbols = std::make_shared<scope>();
+
     friend const module& get_root_module();
 };
 

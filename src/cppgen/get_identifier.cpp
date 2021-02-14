@@ -71,9 +71,9 @@ std::string get_identifier(const module& mod, int64_t i) {
     return std::to_string(i);
 }
 
-std::string get_identifier(const module& mod, forward_decl) {
-    throw std::runtime_error("unresolved forward declaration");
-}
+//std::string get_identifier(const module& mod, forward_decl) {
+//    throw std::runtime_error("unresolved forward declaration");
+//}
 
 std::string get_identifier(const module& mod, const name& n) {
     auto base_name = get_identifier(mod, n.base);

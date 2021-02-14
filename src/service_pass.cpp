@@ -25,8 +25,8 @@ structure procedure_params_struct(const module& mod,
              */
             m.type_ = param_t->get_wire_type(mod);
         } else {
-            static auto string = std::get<const type*>(
-                get_symbol(*lidl::recursive_name_lookup(*mod.symbols, "string")));
+            static auto string = dynamic_cast<const type*>(
+                get_symbol(*lidl::recursive_name_lookup(mod.symbols(), "string")));
 
             if (param_t->is_reference_type(mod) &&
                 get_type(mod, param.type.args[0].as_name()) == string) {
@@ -37,7 +37,7 @@ structure procedure_params_struct(const module& mod,
 
             m.type_ = param.type;
         }
-        s.members.emplace_back(name, std::move(m));
+        s.add_member(name, std::move(m));
     }
 
     s.params_info = procedure_params_info{&servic, std::string(name), &proc};
@@ -65,7 +65,7 @@ structure procedure_results_struct(const module& mod,
         } else {
             m.type_ = param;
         }
-        s.members.emplace_back(fmt::format("ret{}", s.members.size()), std::move(m));
+        s.add_member(fmt::format("ret{}", s.all_members().size()), std::move(m));
 
         s.return_info = procedure_params_info{&servic, std::string(name), &proc};
     }
@@ -94,7 +94,7 @@ bool do_service_pass(module& mod, service& serv) {
     if (serv.procedure_params_union) {
         return false;
     }
-    std::string service_name(local_name(*mod.symbols->definition_lookup(&serv)));
+    std::string service_name(local_name(*mod.symbols().definition_lookup(&serv)));
     std::cerr << "Pass for service " << service_name << '\n';
 
     union_type procedure_params;
@@ -104,22 +104,21 @@ bool do_service_pass(module& mod, service& serv) {
         for (auto& [proc_name, proc] : s->procedures) {
             assert(proc.params_struct_name.base.is_valid());
             assert(proc.results_struct_name.base.is_valid());
-            procedure_params.members.emplace_back(proc_name,
-                                                  member{name{proc.params_struct_name}});
-            procedure_results.members.emplace_back(proc_name,
-                                                   member{name{proc.results_struct_name}});
+            procedure_params.add_member(proc_name, member{name{proc.params_struct_name}});
+            procedure_results.add_member(proc_name,
+                                         member{name{proc.results_struct_name}});
         }
     }
 
     mod.unions.push_back(std::move(procedure_params));
     auto handle =
-        define(*mod.symbols, fmt::format("{}_call", service_name), &mod.unions.back());
+        define(mod.symbols(), fmt::format("{}_call", service_name), &mod.unions.back());
     mod.unions.back().call_for  = &serv;
     serv.procedure_params_union = &mod.unions.back();
 
     mod.unions.push_back(std::move(procedure_results));
     auto res_handle =
-        define(*mod.symbols, fmt::format("{}_return", service_name), &mod.unions.back());
+        define(mod.symbols(), fmt::format("{}_return", service_name), &mod.unions.back());
     mod.unions.back().return_for = &serv;
     serv.procedure_results_union = &mod.unions.back();
 
@@ -141,29 +140,30 @@ bool service_proc_pass(module& mod) {
     bool changed = false;
 
     for (auto& serv : mod.services) {
-        std::string service_name(local_name(*mod.symbols->definition_lookup(&serv)));
+        std::string service_name(local_name(*mod.symbols().definition_lookup(&serv)));
 
         for (auto& [proc_name, proc] : serv.procedures) {
             if (proc.results_struct && proc.params_struct) {
                 continue;
             }
 
-            std::cerr << "Generating param and result structs for " << service_name << "::" << proc_name << '\n';
+            std::cerr << "Generating param and result structs for " << service_name
+                      << "::" << proc_name << '\n';
             auto proc_res = do_proc_pass(mod, serv, proc_name, proc);
             assert(proc_res);
             assert(proc.results_struct && proc.params_struct);
 
-            auto handle = define(*mod.symbols,
+            auto handle = define(mod.symbols(),
                                  fmt::format("{}_{}_params", service_name, proc_name),
                                  proc.params_struct);
             auto res_handle =
-                define(*mod.symbols,
+                define(mod.symbols(),
                        fmt::format("{}_{}_results", service_name, proc_name),
                        proc.results_struct);
 
             proc.params_struct_name  = name{handle};
             proc.results_struct_name = name{res_handle};
-            changed = true;
+            changed                  = true;
         }
     }
 

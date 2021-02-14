@@ -152,7 +152,7 @@ class yaml_loader : public module_loader {
         }
         for (auto&& e : members) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            s.members.emplace_back(key.as<std::string>(), read_member(val, scop));
+            s.add_member(key.as<std::string>(), read_member(val, scop));
         }
 
         return s;
@@ -166,9 +166,15 @@ class yaml_loader : public module_loader {
         if (!variants) {
             throw missing_node_error("variants", make_source_info(node));
         }
+
+
+        if (auto base_node = node["extends"]) {
+            u.set_base(read_type(base_node, scop));
+        }
+
         for (auto&& e : variants) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            u.members.emplace_back(key.as<std::string>(), read_member(val, scop));
+            u.add_member(key.as<std::string>(), read_member(val, scop));
         }
 
         auto raw = node["raw"];
@@ -205,7 +211,7 @@ class yaml_loader : public module_loader {
 
         if (auto returns = node["returns"]; returns) {
             for (auto&& ret : returns) {
-                result.return_types.push_back(read_type(ret, *mod.symbols));
+                result.return_types.push_back(read_type(ret, mod.symbols()));
             }
         }
         if (auto params = node["parameters"]; params) {
@@ -217,7 +223,7 @@ class yaml_loader : public module_loader {
                     throw std::runtime_error("wtf");
                 }
                 result.parameters.emplace_back(name.as<std::string>(),
-                                               read_parameter(val, *mod.symbols));
+                                               read_parameter(val, mod.symbols()));
             }
         }
         return result;
@@ -228,7 +234,7 @@ class yaml_loader : public module_loader {
         serv.src_info = make_source_info(node);
 
         if (auto&& base = node["extends"]; base) {
-            serv.extends = read_type(base, *mod.symbols);
+            serv.extends = read_type(base, mod.symbols());
         }
 
         for (auto&& procedure : node["procedures"]) {
@@ -244,11 +250,13 @@ class yaml_loader : public module_loader {
         enumeration e;
         e.src_info = make_source_info(node);
 
+        if (auto base_node = node["extends"]) {
+            e.set_base(read_type(base_node, scop));
+        }
+
         e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
         for (auto&& member : node["members"]) {
-            e.members.emplace_back(member.as<std::string>(),
-                                   enum_member{static_cast<int>(e.members.size()),
-                                               make_source_info(member)});
+            e.add_member(member.as<std::string>(), make_source_info(member));
         }
         return e;
     }
@@ -295,18 +303,20 @@ public:
 
             Expects(val["type"]);
 
-            if (val["type"].as<std::string>() == "structure") {
-                m_mod->symbols->declare(key.as<std::string>());
-            } else if (val["type"].as<std::string>() == "union") {
-                m_mod->symbols->declare(key.as<std::string>());
-            } else if (val["type"].as<std::string>() == "enumeration") {
-                m_mod->symbols->declare(key.as<std::string>());
-            } else if (val["type"].as<std::string>() == "generic<structure>") {
-                m_mod->symbols->declare(key.as<std::string>());
-            } else if (val["type"].as<std::string>() == "generic<union>") {
-                m_mod->symbols->declare(key.as<std::string>());
-            } else if (val["type"].as<std::string>() == "service") {
-                m_mod->symbols->declare(key.as<std::string>());
+            auto type_str = val["type"].as<std::string>();
+
+            if (type_str == "structure") {
+                m_mod->symbols().declare(key.as<std::string>());
+            } else if (type_str == "union") {
+                m_mod->symbols().declare(key.as<std::string>());
+            } else if (type_str == "enumeration") {
+                m_mod->symbols().declare(key.as<std::string>());
+            } else if (type_str == "generic<structure>") {
+                m_mod->symbols().declare(key.as<std::string>());
+            } else if (type_str == "generic<union>") {
+                m_mod->symbols().declare(key.as<std::string>());
+            } else if (type_str == "service") {
+                m_mod->symbols().declare(key.as<std::string>());
             }
         }
     }
@@ -325,26 +335,27 @@ public:
             Expects(val);
             Expects(val["type"]);
 
-            auto scope = m_mod->symbols->add_child_scope(name);
+            auto scope = m_mod->symbols().add_child_scope(name);
+            auto type_str = val["type"].as<std::string>();
 
-            if (val["type"].as<std::string>() == "structure") {
+            if (type_str == "structure") {
                 m_mod->structs.emplace_back(read_structure(val, *scope));
-                define(*m_mod->symbols, name, &m_mod->structs.back());
-            } else if (val["type"].as<std::string>() == "union") {
+                define(m_mod->symbols(), name, &m_mod->structs.back());
+            } else if (type_str == "union") {
                 m_mod->unions.emplace_back(read_union(val, *scope));
-                define(*m_mod->symbols, name, &m_mod->unions.back());
-            } else if (val["type"].as<std::string>() == "enumeration") {
+                define(m_mod->symbols(), name, &m_mod->unions.back());
+            } else if (type_str == "enumeration") {
                 m_mod->enums.emplace_back(read_enum(val, *scope));
-                define(*m_mod->symbols, name, &m_mod->enums.back());
-            } else if (val["type"].as<std::string>() == "generic<structure>") {
+                define(m_mod->symbols(), name, &m_mod->enums.back());
+            } else if (type_str == "generic<structure>") {
                 m_mod->generic_structs.emplace_back(read_generic_structure(val, *scope));
-                define(*m_mod->symbols, name, &m_mod->generic_structs.back());
-            } else if (val["type"].as<std::string>() == "generic<union>") {
+                define(m_mod->symbols(), name, &m_mod->generic_structs.back());
+            } else if (type_str == "generic<union>") {
                 m_mod->generic_unions.emplace_back(read_generic_union(val, *scope));
-                define(*m_mod->symbols, name, &m_mod->generic_unions.back());
-            } else if (val["type"].as<std::string>() == "service") {
+                define(m_mod->symbols(), name, &m_mod->generic_unions.back());
+            } else if (type_str == "service") {
                 m_mod->services.emplace_back(parse_service(val, *m_mod));
-                define(*m_mod->symbols, name, &m_mod->services.back());
+                define(m_mod->symbols(), name, &m_mod->services.back());
             }
         }
     }

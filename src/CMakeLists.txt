@@ -1,3 +1,7 @@
+if (NOT DISABLE_FRONTEND)
+  add_subdirectory(frontend)
+endif()
+
 add_subdirectory(codegen)
 add_subdirectory(cppgen)
 add_subdirectory(jsgen)
@@ -10,8 +14,10 @@ if(ENABLE_PYBINDGEN)
   add_subdirectory(pybindgen)
 endif()
 
-add_library(lidl_yaml yaml.cpp yaml.hpp)
-target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)
+if (NOT DISABLE_YAML)
+  add_library(lidl_yaml yaml.cpp yaml.hpp)
+  target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)
+endif()
 
 if(BUILD_TESTS)
   enable_testing()

@@ -1,40 +1,79 @@
 #pragma once
 
 #include <lidl/basic.hpp>
+#include <lidl/inheritance.hpp>
 #include <lidl/types.hpp>
 #include <stdexcept>
 
 namespace lidl {
-struct enum_member {
+struct enum_member : public base {
+    enum_member(int val, std::optional<source_info> src_info = {})
+        : base{std::move(src_info)}
+        , value(val) {
+    }
     int value;
-    std::optional<source_info> src_info;
 };
 
-struct enumeration : value_type {
+struct enumeration
+    : value_type
+    , public extendable<enumeration> {
 public:
     name underlying_type;
     std::vector<std::pair<std::string, enum_member>> members;
 
-    virtual raw_layout wire_layout(const module& mod) const override {
+    void add_member(std::string val, std::optional<source_info> src_info = {}) {
+        if (find_by_name(val) >= 0) {
+            // Member already exists
+            throw std::runtime_error("Duplicate member in enumeration!");
+        }
+        members.emplace_back(
+            std::move(val),
+            enum_member{static_cast<int>(all_members().size()), std::move(src_info)});
+        define(*m_scope, members.back().first, &members.back().second);
+    }
+
+    [[nodiscard]] raw_layout wire_layout(const module& mod) const override {
         return get_type(mod, underlying_type)->wire_layout(mod);
     }
 
-    std::vector<std::pair<std::string, enum_member>>::const_iterator
+    [[nodiscard]] std::vector<std::pair<std::string_view, const enum_member*>>
+    all_members() const {
+        std::vector<std::pair<std::string_view, const enum_member*>> res;
+        for (auto& s : inheritance_list()) {
+            for (auto& [name, proc] : s->members) {
+                res.emplace_back(name, &proc);
+            }
+        }
+        return res;
+    }
+
+    [[nodiscard]] std::vector<std::pair<std::string, enum_member>>::const_iterator
     find_by_value(int val) const {
         auto it = std::find_if(members.begin(), members.end(), [val](auto& member) {
             return member.second.value == val;
         });
+
+        if (it == members.end()) {
+            if (auto base = get_base()) {
+                return base->find_by_value(val);
+            }
+        }
+
         return it;
     }
 
-    int find_by_name(std::string_view name) const {
-        auto it = std::find_if(members.begin(), members.end(), [name](auto& member) {
+    [[nodiscard]] int find_by_name(std::string_view name) const {
+        auto mems = all_members();
+        auto it   = std::find_if(mems.begin(), mems.end(), [name](auto& member) {
             return member.first == name;
         });
-        return it->second.value;
+        if (it == mems.end()) {
+            return -1;
+        }
+        return it->second->value;
     }
 
-    virtual YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override;
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& reader) const override;
 
     int yaml2bin(const module& mod,
                  const YAML::Node& node,

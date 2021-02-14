@@ -6,6 +6,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(BUILD_TESTS "Build unit tests" ON)
 option(ENABLE_PYBINDGEN "Enable the experimental pybindgen backend" OFF)
 option(BUILD_TOOLS "Enable the build of accompanying tools. Disable to only get lidl as a library" ON)
+option(DISABLE_FRONTEND "Disable the lidl frontend" OFF)
+option(DISABLE_YAML "Disable the yaml frontend" OFF)
 
 add_library(
   lidl_core
@@ -40,7 +42,7 @@ add_library(
   include/lidl/base.hpp
   include/lidl/loader.hpp
   src/loader.cpp
-)
+        include/lidl/inheritance.hpp src/inheritance.cpp)
 target_compile_features(lidl_core PUBLIC cxx_std_17)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)

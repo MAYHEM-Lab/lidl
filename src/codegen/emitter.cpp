@@ -35,10 +35,12 @@ bool emitter::pass() {
 
         for (auto& sect : sects) {
             std::vector<std::string> key_names(sect.keys.size());
-            std::transform(sect.keys.begin(), sect.keys.end(), key_names.begin(), [&](auto& key) {
-              return key.to_string(*m_module);
-            });
-            std::cerr << "    Emitting " << fmt::format("{}\n", fmt::join(key_names, "\n             "));
+            std::transform(sect.keys.begin(),
+                           sect.keys.end(),
+                           key_names.begin(),
+                           [&](auto& key) { return key.to_string(*m_module); });
+            std::cerr << "    Emitting "
+                      << fmt::format("{}\n", fmt::join(key_names, "\n             "));
 
             m_stream << sect.definition << '\n';
 
@@ -63,9 +65,10 @@ std::string emitter::emit() {
         std::cerr << "The following dependencies could not be resolved:\n";
         for (auto& sect : m_not_generated) {
             std::vector<std::string> key_names(sect.keys.size());
-            std::transform(sect.keys.begin(), sect.keys.end(), key_names.begin(), [&](auto& key) {
-                return key.to_string(*m_module);
-            });
+            std::transform(sect.keys.begin(),
+                           sect.keys.end(),
+                           key_names.begin(),
+                           [&](auto& key) { return key.to_string(*m_module); });
             std::cerr << fmt::format("{}:\n", fmt::join(key_names, "\n"));
             for (auto& dep : sect.depends_on) {
                 if (std::find(m_satisfied.begin(), m_satisfied.end(), dep) !=
@@ -82,9 +85,9 @@ std::string emitter::emit() {
 
 void emitter::mark_module(const module& decl_mod) {
     if (&decl_mod != m_module) {
-        for (auto& sym_handle : decl_mod.symbols->all_handles()) {
+        for (auto& sym_handle : decl_mod.symbols().all_handles()) {
             auto sym = get_symbol(sym_handle);
-            if (std::get_if<const scope*>(&sym) || std::get_if<forward_decl>(&sym)) {
+            if (dynamic_cast<const scope*>(sym) || sym == &forward_decl) {
                 continue;
             }
 
@@ -104,4 +107,4 @@ emitter::emitter(const module& root_mod, const module& mod, sections all)
 
     mark_module(root_mod);
 }
-} // namespace lidl::cpp
+} // namespace lidl::codegen

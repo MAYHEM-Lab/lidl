@@ -39,7 +39,7 @@ private:
 struct span_type : view_type {
 public:
     span_type(const module& mod, const generic_instantiation& ins)
-        : view_type(name{recursive_name_lookup(*mod.symbols, "vector").value(),
+        : view_type(name{recursive_name_lookup(mod.symbols(), "vector").value(),
                          ins.get_name().args})
         , m_ins{ins} {
     }

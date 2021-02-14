@@ -65,12 +65,12 @@ TEST_CASE("bin2yaml") {
     auto& root   = root_module->add_child("", lidl::basic_module());
     auto& module = root_module->get_child("test");
 
-    auto bool_handle = recursive_full_name_lookup(*module.symbols, "bool").value();
-    auto i8_handle   = recursive_full_name_lookup(*module.symbols, "i8").value();
-    auto i32_handle  = recursive_full_name_lookup(*module.symbols, "i32").value();
-    auto str_handle  = recursive_full_name_lookup(*module.symbols, "string").value();
-    auto ptr_handle  = recursive_full_name_lookup(*module.symbols, "ptr").value();
-    auto vec_handle  = recursive_full_name_lookup(*module.symbols, "vector").value();
+    auto bool_handle = recursive_full_name_lookup(module.symbols(), "bool").value();
+    auto i8_handle   = recursive_full_name_lookup(module.symbols(), "i8").value();
+    auto i32_handle  = recursive_full_name_lookup(module.symbols(), "i32").value();
+    auto str_handle  = recursive_full_name_lookup(module.symbols(), "string").value();
+    auto ptr_handle  = recursive_full_name_lookup(module.symbols(), "ptr").value();
+    auto vec_handle  = recursive_full_name_lookup(module.symbols(), "vector").value();
 
     module.enums.emplace_back();
     auto& enumeration           = module.enums.back();
@@ -78,11 +78,11 @@ TEST_CASE("bin2yaml") {
     enumeration.members.emplace_back("foo", enum_member{0});
     enumeration.members.emplace_back("bar", enum_member{1});
     enumeration.members.emplace_back("baz", enum_member{2});
-    auto enum_handle = define(*module.symbols, "enum", &enumeration);
+    auto enum_handle = define(module.symbols(), "enum", &enumeration);
 
     module.unions.emplace_back();
     auto& un = module.unions.back();
-    un.members.emplace_back("foo", member{name{ptr_handle, {name{str_handle}}}});
+    un.add_member("foo", member{name{ptr_handle, {name{str_handle}}}});
 
     union_enum_pass(module);
 

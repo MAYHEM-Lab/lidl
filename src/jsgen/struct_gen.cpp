@@ -32,9 +32,9 @@ export class {name} extends {struct_base} {{
     {members}
 }})__";
 
-    std::vector<std::string> members(get().members.size());
-    std::transform(get().members.begin(),
-                   get().members.end(),
+    std::vector<std::string> members(get().own_members().size());
+    std::transform(get().own_members().begin(),
+                   get().own_members().end(),
                    members.begin(),
                    [this](auto& member_entry) {
                        return generate_member(member_entry.first, member_entry.second);
@@ -94,9 +94,9 @@ std::string struct_gen::generate_members() const {
     }}
 )__";
 
-    std::vector<std::string> member_offsets(get().members.size());
-    std::transform(get().members.begin(),
-                   get().members.end(),
+    std::vector<std::string> member_offsets(get().own_members().size());
+    std::transform(get().own_members().begin(),
+                   get().own_members().end(),
                    member_offsets.begin(),
                    [this](auto& member_entry) {
                        auto& t  = member_entry.second.type_;
@@ -121,20 +121,25 @@ std::string struct_gen::generate_ctor() const {
     }}
 )__";
 
-    std::vector<std::string> args(get().members.size() + 1);
+    std::vector<std::string> args(get().own_members().size() + 1);
     args.front() = "mb: lidl.MessageBuilder";
-    std::transform(
-        get().members.begin(), get().members.end(), args.begin() + 1, [this](auto& mem) {
-            auto& t = mem.second.type_;
-            return fmt::format("{}: {}", mem.first, get_local_user_obj_name(mod(), t));
-        });
+    std::transform(get().own_members().begin(),
+                   get().own_members().end(),
+                   args.begin() + 1,
+                   [this](auto& mem) {
+                       auto& t = mem.second.type_;
+                       return fmt::format(
+                           "{}: {}", mem.first, get_local_user_obj_name(mod(), t));
+                   });
 
-    std::vector<std::string> init(get().members.size());
-    std::transform(
-        get().members.begin(), get().members.end(), init.begin(), [this](auto& mem) {
-            auto& t = mem.second.type_;
-            return fmt::format("{}: {}", mem.first, mem.first);
-        });
+    std::vector<std::string> init(get().own_members().size());
+    std::transform(get().own_members().begin(),
+                   get().own_members().end(),
+                   init.begin(),
+                   [this](auto& mem) {
+                       auto& t = mem.second.type_;
+                       return fmt::format("{}: {}", mem.first, mem.first);
+                   });
 
     return fmt::format(format,
                        fmt::arg("args", fmt::join(args, ", ")),

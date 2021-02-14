@@ -1,0 +1,1 @@
+#include <lidl/inheritance.hpp>

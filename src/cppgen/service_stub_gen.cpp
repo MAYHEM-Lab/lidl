@@ -128,7 +128,7 @@ std::string remote_stub_generator::copy_proc_param(const procedure& proc,
     } else if (param_type->is_view(mod())) {
         auto wire_type_name = param_type->get_wire_type(mod());
         if (wire_type_name.base ==
-            recursive_full_name_lookup(*mod().symbols, "string").value()) {
+            recursive_full_name_lookup(mod().symbols(), "string").value()) {
 
             return fmt::format("lidl::create_string(mb, {})", param_name);
         }
@@ -160,7 +160,7 @@ return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __p
     } else if (ret_type->is_view(mod())) {
         auto wire_type_name = ret_type->get_wire_type(mod());
         if (wire_type_name.base !=
-            recursive_full_name_lookup(*mod().symbols, "string").value()) {
+            recursive_full_name_lookup(mod().symbols(), "string").value()) {
             throw std::runtime_error("Stubgen only supports string_views");
         }
 
@@ -202,7 +202,7 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
     auto params_struct_identifier = get_identifier(
         mod(),
         lidl::name{
-            recursive_definition_lookup(*mod().symbols, proc.params_struct).value()});
+            recursive_definition_lookup(mod().symbols(), proc.params_struct).value()});
 
     if (proc.params_struct->is_reference_type(mod())) {
         params_struct_identifier =
@@ -251,7 +251,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
 
 sections
 generate_service_descriptor(const module& mod, std::string_view, const service& service) {
-    auto serv_handle    = *recursive_definition_lookup(*mod.symbols, &service);
+    auto serv_handle    = *recursive_definition_lookup(mod.symbols(), &service);
     auto serv_full_name = get_identifier(mod, {serv_handle});
 
     std::ostringstream str;
@@ -261,10 +261,10 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     sect.depends_on.emplace_back(serv_handle, section_type::definition);
 
     auto params_union =
-        recursive_definition_lookup(*mod.symbols, service.procedure_params_union).value();
+        recursive_definition_lookup(mod.symbols(), service.procedure_params_union).value();
 
     auto results_union =
-        recursive_definition_lookup(*mod.symbols, service.procedure_results_union)
+        recursive_definition_lookup(mod.symbols(), service.procedure_results_union)
             .value();
 
     sect.add_dependency({params_union, section_type::definition});
@@ -276,9 +276,9 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
         all_procs.begin(), all_procs.end(), tuple_types.begin(), [&](auto& proc_pair) {
             auto& [proc_name, proc_ptr] = proc_pair;
             auto param_name             = get_identifier(
-                mod, name{*mod.symbols->definition_lookup(proc_ptr->params_struct)});
+                mod, name{*mod.symbols().definition_lookup(proc_ptr->params_struct)});
             auto res_name = get_identifier(
-                mod, name{*mod.symbols->definition_lookup(proc_ptr->results_struct)});
+                mod, name{*mod.symbols().definition_lookup(proc_ptr->results_struct)});
             return fmt::format(
                 "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
                 serv_full_name,
@@ -328,7 +328,7 @@ sections service_generator::generate() {
     str << fmt::format("    virtual ~{}() = default;\n", name());
     str << "};";
 
-    auto serv_handle    = *recursive_definition_lookup(*mod().symbols, &get());
+    auto serv_handle    = *recursive_definition_lookup(mod().symbols(), &get());
     auto serv_full_name = get_identifier(mod(), {serv_handle});
 
     def_sec.add_key({serv_handle, section_type::definition});

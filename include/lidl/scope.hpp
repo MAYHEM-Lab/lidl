@@ -1,40 +1,40 @@
 #pragma once
 
+#include <lidl/base.hpp>
 #include <lidl/basic.hpp>
-#include <lidl/types.hpp>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <variant>
 #include <vector>
 
-
 namespace lidl {
-
 struct forward_decl {};
-inline bool operator==(forward_decl, forward_decl) {
+inline bool operator==(const forward_decl&, const forward_decl&) {
     return false;
 }
 
+inline base forward_decl{};
+
 class scope;
 
-using symbol =
-    std::variant<const type*, const generic*, const service*, forward_decl, const scope*>;
+using symbol = const base*;
 
-class scope : public std::enable_shared_from_this<scope> {
+class scope
+    : public base
+    , public std::enable_shared_from_this<scope> {
 public:
-    scope() {
-        auto handle = declare("");
-        define(handle, this);
-        m_aliases.emplace("", handle);
-    }
-
     explicit scope(std::weak_ptr<const scope> parent)
         : m_parent(std::move(parent)) {
         auto handle = declare("");
         define(handle, this);
         m_aliases.emplace("", handle);
+    }
+
+    scope()
+        : scope(std::weak_ptr<const scope>()) {
     }
 
     symbol_handle declare(std::string_view name);
@@ -93,12 +93,17 @@ public:
 
     std::vector<symbol_handle> all_handles() {
         std::vector<symbol_handle> res;
-        for (int i = 0; i < m_syms.size(); ++i) {
-            res.push_back(symbol_handle{*this, i + 1});
+        for (size_t i = 0; i < m_syms.size(); ++i) {
+            res.push_back(symbol_handle{*this, static_cast<int>(i + 1)});
         }
         return res;
     }
 
+    const scope* get_scope() const override;
+
+    const std::vector<symbol>& all_symbols() const {
+        return m_syms;
+    }
 private:
     void set_parent(std::weak_ptr<scope> parent) {
         m_parent = std::move(parent);
@@ -119,7 +124,6 @@ private:
     std::unordered_map<std::string, symbol_handle> m_aliases;
     std::weak_ptr<const scope> m_parent;
     mutable std::vector<std::shared_ptr<scope>> m_children;
-    //    mutable std::vector<std::shared_ptr<scope>> m_children;
 };
 
 bool is_defined(const symbol_handle& handle);
@@ -138,6 +142,9 @@ std::vector<std::string_view> relative_name(const symbol_handle& sym, const scop
 std::optional<symbol_handle> recursive_name_lookup(const scope& s, std::string_view name);
 
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name);
+
+std::optional<symbol_handle>
+recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& name);
 
 std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
                                                         std::string_view name);

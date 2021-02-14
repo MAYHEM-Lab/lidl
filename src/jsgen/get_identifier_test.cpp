@@ -10,13 +10,13 @@ TEST_CASE("name for identifier works for integral types") {
     auto& m           = *basic_module;
 
         REQUIRE_EQ("new lidl.Uint8Class()",
-               get_local_type_name(m, name{*m.symbols->name_lookup("u8")}));
+               get_local_type_name(m, name{m.symbols().name_lookup("u8")}));
         REQUIRE_EQ("new lidl.Int8Class()",
-                   get_local_type_name(m, name{*m.symbols->name_lookup("i8")}));
+                   get_local_type_name(m, name{m.symbols().name_lookup("i8")}));
         REQUIRE_EQ("new lidl.FloatClass()",
-                   get_local_type_name(m, name{*m.symbols->name_lookup("f32")}));
+                   get_local_type_name(m, name{m.symbols().name_lookup("f32")}));
         REQUIRE_EQ("new lidl.DoubleClass()",
-                   get_local_type_name(m, name{*m.symbols->name_lookup("f64")}));
+                   get_local_type_name(m, name{m.symbols().name_lookup("f64")}));
 }
 
 TEST_CASE("Pointer names work") {
@@ -24,7 +24,7 @@ TEST_CASE("Pointer names work") {
     auto& m           = *basic_module;
 
     auto vec_of_u8_name = get_local_type_name(
-        m, name{*m.symbols->name_lookup("ptr"), {name{*m.symbols->name_lookup("u8")}}});
+        m, name{m.symbols().name_lookup("ptr"), {name{m.symbols().name_lookup("u8")}}});
     REQUIRE_EQ("new lidl.PtrClass(new lidl.Uint8Class())", vec_of_u8_name);
 }
 } // namespace

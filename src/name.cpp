@@ -1,21 +1,21 @@
 #include "lidl/basic.hpp"
 #include "lidl/scope.hpp"
 
-#include <lidl/module.hpp>
 #include <cassert>
 #include <lidl/generics.hpp>
+#include <lidl/module.hpp>
 
 
 namespace lidl {
 const type* get_type(const module& mod, const name& n) {
     auto base = get_symbol(n.base);
 
-    if (auto base_type = std::get_if<const type*>(&base); base_type) {
+    if (auto base_type = dynamic_cast<const type*>(base); base_type) {
         assert(n.args.empty());
-        return *base_type;
+        return base_type;
     }
 
-    auto base_type = std::get<const generic*>(base);
+    auto base_type = &dynamic_cast<const generic&>(*base);
     if (base_type->declaration.arity() != n.args.size()) {
         throw std::runtime_error(
             fmt::format("mismatched number of args and params for generic: "

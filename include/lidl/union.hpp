@@ -4,15 +4,40 @@
 
 #pragma once
 
+#include "inheritance.hpp"
+#include "scope.hpp"
+
 #include <algorithm>
+#include <cassert>
 #include <deque>
 #include <lidl/basic.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
 
 namespace lidl {
-struct union_type : public type {
-    std::deque<std::pair<std::string, member>> members;
+struct union_type : public type, public extendable<union_type> {
+    void add_member(std::string name, member mem) {
+        members.emplace_back(std::move(name), std::move(mem));
+        define(*m_scope, members.back().first, &members.back().second);
+    }
+
+    std::vector<std::pair<std::string_view, const member*>> all_members() const {
+        std::vector<std::pair<std::string_view, const member*>> res;
+        for (auto& s : inheritance_list()) {
+            for (auto& [name, proc] : s->members) {
+                res.emplace_back(name, &proc);
+            }
+        }
+        return res;
+    }
+
+    std::deque<std::pair<std::string, member>>& own_members() {
+        return members;
+    }
+
+    const std::deque<std::pair<std::string, member>>& own_members() const {
+        return members;
+    }
 
     /**
      * If a union is raw, the alternatives type and members are not generated and the
@@ -50,6 +75,8 @@ struct union_type : public type {
     compound_layout layout(const module& mod) const;
 
 private:
+    std::deque<std::pair<std::string, member>> members;
+
     mutable std::unique_ptr<const enumeration> m_enumeration;
 };
 

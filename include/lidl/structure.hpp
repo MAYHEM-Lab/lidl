@@ -9,7 +9,22 @@
 
 namespace lidl {
 struct structure : public type {
-    std::deque<std::pair<std::string, member>> members;
+    const std::deque<std::pair<std::string, member>>& all_members() const {
+        return members;
+    }
+
+    std::deque<std::pair<std::string, member>>& own_members() {
+        return members;
+    }
+
+    const std::deque<std::pair<std::string, member>>& own_members() const {
+        return members;
+    }
+
+    void add_member(std::string name, member mem) {
+        members.emplace_back(std::move(name), std::move(mem));
+        define(*m_scope, members.back().first, &members.back().second);
+    }
 
     /**
      * If this member has a value, this structure is generated to transport the parameters
@@ -35,5 +50,10 @@ struct structure : public type {
                   ibinary_writer& writer) const override;
 
     compound_layout layout(const module& mod) const;
+
+
+private:
+
+    std::deque<std::pair<std::string, member>> members;
 };
 } // namespace lidl

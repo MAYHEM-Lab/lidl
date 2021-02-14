@@ -16,7 +16,7 @@ scope* symbol_handle::get_scope() const {
 }
 
 symbol_handle scope::declare(std::string_view name) {
-    m_syms.emplace_back(forward_decl{});
+    m_syms.emplace_back(&forward_decl);
     auto res         = symbol_handle(*this, m_syms.size());
     auto [it, emres] = m_aliases.emplace(std::string(name), res);
     m_names.emplace_back();
@@ -62,13 +62,17 @@ std::optional<symbol_handle> scope::definition_lookup(symbol def) const {
                          std::distance(m_syms.begin(), it) + 1);
 }
 
+const scope* scope::get_scope() const {
+    return this;
+}
+
 bool is_defined(const symbol_handle& handle) {
     auto s = handle.get_scope();
     if (!s) {
         return false;
     }
     auto symbol = s->lookup(handle);
-    return std::get_if<forward_decl>(&symbol) == nullptr;
+    return symbol != &forward_decl;
 }
 
 symbol get_symbol(const symbol_handle& handle) {
@@ -103,7 +107,7 @@ std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
     std::vector<std::string_view> names;
     for (auto it = path.rbegin(); it + 1 != path.rend(); ++it) {
         auto handle = *(*it)->definition_lookup(*(it + 1));
-        auto name = (*it)->nameof(handle);
+        auto name   = (*it)->nameof(handle);
         if (name.empty()) {
             continue;
         }
@@ -128,7 +132,8 @@ std::optional<symbol_handle> recursive_name_lookup(const scope& s,
 
 const scope& root_scope(const scope& s) {
     auto ptr = &s;
-    for (; ptr->parent(); ptr = ptr->parent());
+    for (; ptr->parent(); ptr = ptr->parent())
+        ;
     return *ptr;
 }
 namespace {
@@ -136,14 +141,18 @@ std::optional<symbol_handle> do_recursive_definition_lookup(const scope& s, symb
     if (auto sym = s.definition_lookup(name); sym) {
         return sym;
     }
-    for (auto& child : s.children()) {
-        if (auto res = do_recursive_definition_lookup(*child, name)) {
+    for (auto& child : s.all_symbols()) {
+        auto child_scope = child->get_scope();
+        if (!child_scope || child_scope == &s) {
+            continue;
+        }
+        if (auto res = do_recursive_definition_lookup(*child_scope, name)) {
             return res;
         }
     }
     return std::nullopt;
 }
-}
+} // namespace
 
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name) {
     return do_recursive_definition_lookup(root_scope(s), name);
@@ -171,9 +180,8 @@ inline std::vector<std::string_view> split(std::string_view sv, std::string_view
 }
 } // namespace
 
-std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
-                                                        std::string_view name) {
-    auto parts      = split(name, ".");
+std::optional<symbol_handle>
+recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& parts) {
     auto cur_lookup = recursive_name_lookup(s, parts[0]);
     if (!cur_lookup) {
         return std::nullopt;
@@ -182,9 +190,18 @@ std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
         return cur_lookup;
     }
     for (auto it = parts.begin() + 1; it != parts.end(); ++it) {
-        auto cur_scope = std::get<const scope*>(get_symbol(*cur_lookup));
-        cur_lookup     = cur_scope->name_lookup(*it);
+        auto cur_scope = get_symbol(*cur_lookup)->get_scope();
+        if (!cur_scope) {
+            // scope does not exist
+            return std::nullopt;
+        }
+        cur_lookup = cur_scope->name_lookup(*it);
     }
     return cur_lookup;
+}
+
+std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
+                                                        std::string_view name) {
+    return recursive_full_name_lookup(s, split(name, "."));
 }
 } // namespace lidl

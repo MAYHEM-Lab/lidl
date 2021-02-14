@@ -48,22 +48,22 @@ std::string union_gen::generate_getter(std::string_view member_name,
 
 sections union_gen::generate() {
     std::vector<std::string> members;
-    for (auto& [name, member] : get().members) {
+    for (auto& [name, member] : get().all_members()) {
         members.push_back(raw_struct_gen::generate_field(
-            "m_" + name, get_identifier(mod(), member.type_)));
+            "m_" + std::string(name), get_identifier(mod(), member->type_)));
     }
 
     std::vector<std::string> ctors;
     auto enum_name   = fmt::format("alternatives", ctor_name());
     int member_index = 0;
-    for (auto& [member_name, member] : get().members) {
+    for (auto& [member_name, member] : get().all_members()) {
         std::string arg_names;
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto member_type = get_type(mod(), member.type_);
-        auto identifier  = get_user_identifier(mod(), member.type_);
-        if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
+        auto member_type = get_type(mod(), member->type_);
+        auto identifier  = get_user_identifier(mod(), member->type_);
+        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
             arg_names        = fmt::format("const {}& p_{}", identifier, member_name);
             initializer_list = fmt::format("m_{0}(p_{0})", member_name);
         } else {
@@ -84,7 +84,7 @@ sections union_gen::generate() {
     constexpr auto case_format = R"__(case {0}::{1}: return fn(val.{1}());)__";
 
     std::vector<std::string> cases;
-    for (auto& [name, mem] : get().members) {
+    for (auto& [name, mem] : get().all_members()) {
         cases.push_back(fmt::format(case_format, enum_name, name));
     }
 
@@ -128,17 +128,17 @@ template <class FunT>
         }};)__";
 
     std::vector<std::string> accessors;
-    for (auto& [mem_name, mem] : get().members) {
-        accessors.push_back(generate_getter(mem_name, mem, true));
-        accessors.push_back(generate_getter(mem_name, mem, false));
+    for (auto& [mem_name, mem] : get().all_members()) {
+        accessors.push_back(generate_getter(mem_name, *mem, true));
+        accessors.push_back(generate_getter(mem_name, *mem, false));
     }
 
+    auto enum_sym =
+        recursive_definition_lookup(mod().symbols(), &get().get_enum(mod())).value();
+    auto enum__name = local_name(enum_sym);
+    auto abs_name   = get_identifier(mod(), lidl::name{enum_sym});
 
-    enum_gen en(mod(),
-                {},
-                "alternatives",
-                std::string(absolute_name()) + "::alternatives",
-                get().get_enum(mod()));
+    enum_gen en(mod(), {}, enum__name, abs_name, get().get_enum(mod()));
     auto enum_res = en.generate();
     std::vector<section> defs;
     std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
@@ -180,8 +180,8 @@ template <class FunT>
     // s.add_dependency({enum_name, section_type::definition});
 
     // Member types must be defined before us
-    for (auto& [name, member] : get().members) {
-        auto deps = codegen::def_keys_from_name(mod(), member.type_);
+    for (auto& [name, member] : get().all_members()) {
+        auto deps = codegen::def_keys_from_name(mod(), member->type_);
         for (auto& key : deps) {
             s.add_dependency(key);
         }
@@ -200,7 +200,7 @@ template <class FunT>
     }})__";
 
     std::vector<std::string> eq_members;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         eq_members.push_back(
             fmt::format("case {3}::alternatives::{2}: return {0}.{2}() == {1}.{2}();",
                         "left",
@@ -225,27 +225,27 @@ template <class FunT>
 
 sections union_gen::generate_traits() {
     std::vector<std::string> members;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         members.push_back(fmt::format(
             "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
     }
 
     std::vector<std::string> names;
-    for (auto& [name, member] : get().members) {
-        names.emplace_back(get_user_identifier(mod(), member.type_));
+    for (auto& [name, member] : get().all_members()) {
+        names.emplace_back(get_user_identifier(mod(), member->type_));
     }
 
     std::vector<std::string> ctors;
     std::vector<std::string> ctor_names;
     int member_index = 0;
-    for (auto& [member_name, member] : get().members) {
+    for (auto& [member_name, member] : get().all_members()) {
         std::string arg_names;
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto member_type = get_type(mod(), member.type_);
-        auto identifier  = get_user_identifier(mod(), member.type_);
-        if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
+        auto member_type = get_type(mod(), member->type_);
+        auto identifier  = get_user_identifier(mod(), member->type_);
+        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
             arg_names = fmt::format("const {}& p_{}", identifier, member_name);
         } else {
             arg_names = fmt::format("const {}* p_{}", identifier, member_name);
@@ -257,16 +257,16 @@ sections union_gen::generate_traits() {
                 return ::lidl::create<{0}>(builder, {3});
             }})__";
 
-        ctors.push_back(fmt::format(
+        ctors.emplace_back(fmt::format(
             format, absolute_name(), member_name, arg_names, initializer_list));
-        ctor_names.push_back("&union_traits::ctor_" + member_name);
+        ctor_names.emplace_back("&union_traits::ctor_" + std::string(member_name));
     }
 
     constexpr auto format = R"__(template <>
             struct union_traits<{0}> {{
                 static constexpr auto members = std::make_tuple({4});
                 using types = meta::list<{1}>;
-                static constexpr const char* name = "{0}";
+                static constexpr std::string_view name = "{0}";
                 {2}
                 static constexpr auto ctors = std::make_tuple({3});
             }};)__";
@@ -289,7 +289,7 @@ sections union_gen::generate_traits() {
             R"__(template <> struct service_call_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
+        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;
@@ -309,7 +309,7 @@ sections union_gen::generate_traits() {
             R"__(template <> struct service_return_union<{}> : {} {{
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, serv);
+        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;

@@ -11,8 +11,8 @@ sections enum_gen::generate() {
 }
 sections enum_gen::do_generate() {
     std::vector<std::string> members;
-    for (auto& [name, member] : get().members) {
-        members.push_back(fmt::format("{} = {}", name, member.value));
+    for (auto& [name, member] : get().all_members()) {
+        members.push_back(fmt::format("{} = {}", name, member->value));
     }
 
     constexpr auto format = R"__(enum class {} : {} {{
@@ -33,15 +33,15 @@ sections enum_gen::do_generate() {
 
 sections enum_gen::generate_traits() {
     std::vector<std::string> names;
-    for (auto& [name, val] : get().members) {
+    for (auto& [name, val] : get().all_members()) {
         names.emplace_back(fmt::format("\"{}\"", name));
     }
 
     constexpr auto format = R"__(
             template <>
             struct enum_traits<{0}> {{
-                static constexpr inline std::array<const char*, {1}> names {{{2}}};
-                static constexpr const char* name = "{0}";
+                static constexpr inline std::array<std::string_view, {1}> names {{{2}}};
+                static constexpr std::string_view name = "{0}";
             }};
         )__";
 

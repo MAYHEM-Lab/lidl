@@ -83,10 +83,6 @@ std::string get_obj_identifier(const module& mod, int64_t i) {
     return std::to_string(i);
 }
 
-std::string get_obj_identifier(const module& mod, forward_decl) {
-    throw std::runtime_error("unresolved forward declaration");
-}
-
 std::string get_local_obj_identifier(const module& mod, const symbol_handle& handle) {
     return do_get_obj_identifier(std::vector<std::string_view>{local_name(handle)});
 }
@@ -133,10 +129,6 @@ std::string get_type_identifier(const module& mod, const symbol_handle& handle) 
 
 std::string get_type_identifier(const module& mod, int64_t i) {
     return std::to_string(i);
-}
-
-std::string get_type_identifier(const module& mod, forward_decl) {
-    throw std::runtime_error("unresolved forward declaration");
 }
 
 std::string get_local_type_identifier(const module& mod, const symbol_handle& handle) {

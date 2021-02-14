@@ -24,22 +24,20 @@ struct parameter {
     std::optional<source_info> src_info;
 };
 
-struct procedure {
+struct procedure : public base {
     std::deque<name> return_types;
     std::deque<std::pair<std::string, parameter>> parameters;
     const structure* params_struct = nullptr;
     const structure* results_struct = nullptr;
     name params_struct_name;
     name results_struct_name;
-
-    std::optional<source_info> src_info;
 };
 
 struct property : member {
     using member::member;
 };
 
-struct service {
+struct service : public base {
     std::optional<name> extends;
     std::deque<std::pair<std::string, property>> properties;
     std::deque<std::pair<std::string, procedure>> procedures;
@@ -78,7 +76,7 @@ struct service {
 
                 auto base_sym = get_symbol(s->extends->base);
 
-                s = std::get<const lidl::service*>(base_sym);
+                s = dynamic_cast<const lidl::service*>(base_sym);
             } else {
                 s = nullptr;
             }
@@ -87,8 +85,6 @@ struct service {
 
         return inheritance;
     }
-
-    std::optional<source_info> src_info;
 
     template <class FnT>
     void for_each_proc(module& mod, const FnT& fn) const {

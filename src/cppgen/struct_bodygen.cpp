@@ -4,7 +4,7 @@ namespace lidl::cpp {
 using codegen::sections;
 sections raw_struct_gen::generate() {
     std::vector<std::string> members;
-    for (auto& [name, member] : get().members) {
+    for (auto& [name, member] : get().all_members()) {
         get_type(mod(), member.type_)->wire_layout(mod());
         members.push_back(generate_field(name, get_identifier(mod(), member.type_)));
     }
@@ -22,7 +22,7 @@ sections raw_struct_gen::generate() {
         fmt::format(format, name(), fmt::join(ctor, "\n"), fmt::join(members, "\n"));
 
     // Member types must be defined before us
-    for (auto& [name, member] : get().members) {
+    for (auto& [name, member] : get().all_members()) {
         auto deps = codegen::def_keys_from_name(mod(), member.type_);
         for (auto& key : deps) {
             def_sect.add_dependency(key);
@@ -43,14 +43,14 @@ bool raw_struct_gen::is_constexpr() const {
 }
 
 std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
-    if (get().members.empty()) {
+    if (get().all_members().empty()) {
         return {};
     }
 
     std::vector<std::string> arg_names;
     std::vector<std::string> initializer_list;
 
-    for (auto& [member_name, member] : get().members) {
+    for (auto& [member_name, member] : get().all_members()) {
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);
 
@@ -73,7 +73,7 @@ std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
 
 sections struct_body_gen::generate() {
     std::vector<std::string> accessors;
-    for (auto& [name, member] : str().members) {
+    for (auto& [name, member] : str().all_members()) {
         accessors.push_back(generate_getter(name, member, true));
         accessors.push_back(generate_getter(name, member, false));
     }
@@ -104,7 +104,7 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
     std::vector<std::string> arg_names;
     std::vector<std::string> initializer_list;
 
-    for (auto& [member_name, member] : str().members) {
+    for (auto& [member_name, member] : str().all_members()) {
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);
         initializer_list.push_back(fmt::format("p_{}", member_name));

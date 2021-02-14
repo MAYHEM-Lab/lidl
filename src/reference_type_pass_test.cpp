@@ -8,8 +8,8 @@ TEST_CASE("reference type pass works with a string") {
     auto basic_module = lidl::basic_module();
     auto& m = *basic_module;
 
-    auto ptr_sym = *m.symbols->name_lookup("ptr");
-    auto str_sym = *m.symbols->name_lookup("string");
+    auto ptr_sym = m.symbols().name_lookup("ptr");
+    auto str_sym = m.symbols().name_lookup("string");
 
     structure s;
     s.members.emplace_back("foo", member{str_sym});
@@ -31,9 +31,9 @@ TEST_CASE("reference type pass works with a vector of strings") {
     auto basic_module = lidl::basic_module();
     auto& m = *basic_module;
 
-    auto ptr_sym = *m.symbols->name_lookup("ptr");
-    auto str_sym = *m.symbols->name_lookup("string");
-    auto vec_sym = *m.symbols->name_lookup("vector");
+    auto ptr_sym = m.symbols().name_lookup("ptr");
+    auto str_sym = m.symbols().name_lookup("string");
+    auto vec_sym = m.symbols().name_lookup("vector");
 
     auto vec_of_str_name = name{vec_sym, std::vector<generic_argument>{name{str_sym}}};
 

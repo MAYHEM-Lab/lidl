@@ -136,7 +136,7 @@ public:
     explicit generic_instantiation(name n)
         : m_name(std::move(n)) {
         auto base      = get_symbol(m_name.base);
-        auto base_type = std::get<const generic*>(base);
+        auto base_type = &dynamic_cast<const generic&>(*base);
         m_actual       = base_type;
     }
 

@@ -33,7 +33,7 @@ sections struct_gen::do_generate() {
     }})__";
 
     std::vector<std::string> members;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         members.push_back(
             fmt::format("{0}.{2}() == {1}.{2}()", "left", "right", memname));
     }
@@ -49,20 +49,20 @@ sections struct_gen::do_generate() {
 
 sections struct_gen::generate_traits() {
     std::vector<std::string> member_types;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         auto identifier = get_user_identifier(mod(), member.type_);
         member_types.push_back(identifier);
     }
 
     std::vector<std::string> members;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         members.push_back(fmt::format(
             "member_info{{\"{1}\", &{0}::{1}, &{0}::{1}}}", absolute_name(), memname));
     }
 
     std::vector<std::string> ctor_types{""};
     std::vector<std::string> ctor_args{""};
-    for (auto& [member_name, member] : get().members) {
+    for (auto& [member_name, member] : get().all_members()) {
         auto member_type = get_type(mod(), member.type_);
         auto identifier  = get_user_identifier(mod(), member.type_);
         ctor_args.push_back(fmt::format("p_{}", member_name));
@@ -101,7 +101,7 @@ sections struct_gen::generate_traits() {
 
     std::vector<std::string> tuple_elements;
     int idx = 0;
-    for (auto& [memname, member] : get().members) {
+    for (auto& [memname, member] : get().all_members()) {
         tuple_elements.push_back(fmt::format(
             "template <> struct tuple_element<{}, {}> {{ using type = {}; }};",
             idx++,
@@ -123,7 +123,7 @@ sections struct_gen::generate_traits() {
             static constexpr auto params_for = &{}::{};
         }};)__";
 
-        auto serv_handle    = *recursive_definition_lookup(*mod().symbols, info.serv);
+        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), info.serv);
         auto serv_full_name = get_identifier(mod(), {serv_handle});
 
         section rpc_traits_sect;

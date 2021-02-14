@@ -15,7 +15,7 @@ module& module::get_child(std::string_view child_name) {
 module& module::add_child(std::string_view child_name, std::unique_ptr<module> child) {
     children.emplace_back(std::string(child_name), std::move(child));
     auto& mod = *children.back().second;
-    symbols->add_child_scope(std::string(child_name), mod.symbols);
+    m_symbols->add_child_scope(std::string(child_name), mod.m_symbols);
     mod.parent = this;
     mod.name_space = child_name;
     mod.module_name = child_name;

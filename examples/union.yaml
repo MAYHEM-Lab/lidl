@@ -10,3 +10,16 @@ raw:
   variants:
     x: i32
     y: string
+
+
+base_union:
+  type: union
+  variants:
+    foo: i32
+    bar: u32
+
+child_union:
+  type: union
+  extends: base_union
+  variants:
+    baz: f32

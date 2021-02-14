@@ -30,7 +30,7 @@ namespace lidl::cpp {
 using codegen::sections;
 namespace {
 bool is_anonymous(const module& mod, symbol t) {
-    return !recursive_definition_lookup(*mod.symbols, t);
+    return !recursive_definition_lookup(mod.symbols(), t);
 }
 
 void declare_template(const module& mod,
@@ -67,7 +67,7 @@ struct cppgen {
                 continue;
             }
 
-            auto name = local_name(*mod().symbols->definition_lookup(&generic));
+            auto name = local_name(*mod().symbols().definition_lookup(&generic));
             declare_template(mod(), name, generic, forward_decls);
         }
 
@@ -76,7 +76,7 @@ struct cppgen {
                 continue;
             }
 
-            auto name = local_name(*mod().symbols->definition_lookup(&generic));
+            auto name = local_name(*mod().symbols().definition_lookup(&generic));
             declare_template(mod(), name, generic, forward_decls);
         }
 
@@ -85,7 +85,7 @@ struct cppgen {
                 continue;
             }
 
-            auto name = local_name(*mod().symbols->definition_lookup(&s));
+            auto name = local_name(*mod().symbols().definition_lookup(&s));
             forward_decls << "class " << name << ";\n";
         }
 
@@ -93,7 +93,7 @@ struct cppgen {
             if (is_anonymous(mod(), &s)) {
                 continue;
             }
-            auto name = local_name(*mod().symbols->definition_lookup(&s));
+            auto name = local_name(*mod().symbols().definition_lookup(&s));
             forward_decls << "class " << name << ";\n";
         }
         forward_decls << "}\n";
@@ -103,7 +103,7 @@ struct cppgen {
                 continue;
             }
 
-            auto sym  = *m_module->symbols->definition_lookup(&e);
+            auto sym  = *m_module->symbols().definition_lookup(&e);
             auto name = local_name(sym);
             enum_gen generator(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), e);
@@ -111,15 +111,15 @@ struct cppgen {
         }
 
         for (auto& ins : mod().instantiations) {
-            auto sym  = *recursive_definition_lookup(*mod().symbols, &ins.generic_type());
-            auto name = local_name(sym);
+            auto sym = *recursive_definition_lookup(mod().symbols(), &ins.generic_type());
+            auto name      = local_name(sym);
             auto generator = generic_gen(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), ins);
             m_sections.merge_before(generator.generate());
         }
 
         for (auto& u : mod().unions) {
-            auto sym  = *mod().symbols->definition_lookup(&u);
+            auto sym  = *mod().symbols().definition_lookup(&u);
             auto name = local_name(sym);
             if (u.raw) {
                 auto generator = raw_union_gen(
@@ -136,7 +136,7 @@ struct cppgen {
             if (is_anonymous(*m_module, &s)) {
                 continue;
             }
-            auto sym  = *mod().symbols->definition_lookup(&s);
+            auto sym  = *mod().symbols().definition_lookup(&s);
             auto name = local_name(sym);
             auto generator =
                 struct_gen(mod(), sym, name, get_identifier(mod(), lidl::name{sym}), s);
@@ -145,11 +145,11 @@ struct cppgen {
 
         for (auto& service : mod().services) {
             Expects(!is_anonymous(mod(), &service));
-            auto sym  = *mod().symbols->definition_lookup(&service);
+            auto sym = *mod().symbols().definition_lookup(&service);
 
-            auto name = local_name(sym);
-            auto generator =
-                service_generator(mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+            auto name      = local_name(sym);
+            auto generator = service_generator(
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
             auto stub_generator = remote_stub_generator(
                 mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
             auto svc_generator = svc_stub_generator(
@@ -188,11 +188,10 @@ private:
         }
 
         section sec;
-        for (auto& s : mod().symbols->all_handles()) {
+        for (auto& s : mod().symbols().all_handles()) {
             auto sym = get_symbol(s);
             using std::get_if;
-            if (get_if<const type*>(&sym) || get_if<const generic*>(&sym) ||
-                get_if<const service*>(&sym)) {
+            if (!dynamic_cast<const scope*>(sym) && sym != &forward_decl) {
                 symbol_names.push_back(get_identifier(mod(), {s}));
                 sec.add_dependency({s, section_type::definition});
             }

@@ -23,7 +23,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
     module tmpmod;
     tmpmod.name_space = mod().name_space;
     // TODO: Create an unrelated module here
-    tmpmod.symbols = mod().symbols->add_child_scope("tmp");
+    tmpmod.set_symbols(mod().symbols().add_child_scope("tmp"));
     tmpmod.structs.emplace_back(
         *dynamic_cast<structure*>(str.instantiate(mod(), get()).get()));
     run_passes_until_stable(tmpmod);
@@ -37,7 +37,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     module tmpmod;
     tmpmod.name_space = mod().name_space;
     // TODO: Create an unrelated module here
-    tmpmod.symbols = mod().symbols->add_child_scope("tmp");
+    tmpmod.set_symbols(mod().symbols().add_child_scope("tmp"));
     tmpmod.unions.emplace_back(
         std::move(*dynamic_cast<union_type*>(u.instantiate(mod(), get()).get())));
     run_passes_until_stable(tmpmod);

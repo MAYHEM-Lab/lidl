@@ -2,17 +2,17 @@
 
 #include <gsl/span>
 #include <iostream>
+#include <lidl/base.hpp>
+#include <lidl/basic.hpp>
 #include <lidl/binary_writer.hpp>
 #include <lidl/layout.hpp>
 #include <lidl/source_info.hpp>
-#include <lidl/base.hpp>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <yaml-cpp/yaml.h>
-#include <lidl/basic.hpp>
 
 namespace lidl {
 enum class type_categories {
@@ -50,7 +50,13 @@ public:
 
     virtual ~type() = default;
 
-    std::optional<source_info> src_info;
+
+    const scope* get_scope() const override {
+        return m_scope.get();
+    }
+
+protected:
+    std::shared_ptr<scope> m_scope = std::make_shared<scope>();
 };
 
 struct value_type : type {

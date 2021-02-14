@@ -1,0 +1,14 @@
+$lidlmeta:
+  name: lidl::examples
+
+base_enum:
+  type: enumeration
+  members:
+    - foo
+    - bar
+
+child_enum:
+  type: enumeration
+  extends: base_enum
+  members:
+    - baz

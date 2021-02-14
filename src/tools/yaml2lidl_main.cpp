@@ -5,8 +5,9 @@
 #include "passes.hpp"
 
 #include <fstream>
-#include <lidl/buffer.hpp>
+#include <lidl/loader.hpp>
 #include <lidl/module.hpp>
+#include <lidlrt/buffer.hpp>
 #include <yaml-cpp/yaml.h>
 #include <yaml.hpp>
 

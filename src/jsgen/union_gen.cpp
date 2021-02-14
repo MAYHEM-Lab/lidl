@@ -33,12 +33,12 @@ export class {name} extends {struct_base} {{
     {members}
 }})__";
 
-    std::vector<std::string> members(get().members.size());
-    std::transform(get().members.begin(),
-                   get().members.end(),
+    std::vector<std::string> members(get().all_members().size());
+    std::transform(get().all_members().begin(),
+                   get().all_members().end(),
                    members.begin(),
                    [this](auto& member_entry) {
-                       return generate_member(member_entry.first, member_entry.second);
+                       return generate_member(member_entry.first, *member_entry.second);
                    });
 
     std::string struct_base = "lidl.StructObject";
@@ -107,16 +107,16 @@ std::string union_gen::generate_members() const {
     auto layout       = get().layout(mod());
     auto value_offset = layout.offset_of("val").value();
 
-    std::vector<std::string> member_offsets(get().members.size() + 1);
+    std::vector<std::string> member_offsets(get().all_members().size() + 1);
     member_offsets[0] = fmt::format("{} : {{ offset: {}, type: {} }}",
                                     "discriminator",
                                     0,
                                     fmt::format("new {}VariantsClass()", name()));
-    std::transform(get().members.begin(),
-                   get().members.end(),
+    std::transform(get().all_members().begin(),
+                   get().all_members().end(),
                    member_offsets.begin() + 1,
                    [this, value_offset](auto& member_entry) {
-                       auto& t = member_entry.second.type_;
+                       auto& t = member_entry.second->type_;
                        return fmt::format("{} : {{ offset: {}, type: {} }}",
                                           member_entry.first,
                                           value_offset,
@@ -132,12 +132,14 @@ std::string union_gen::generate_ctor() const {
     }}
 )__";
 
-    std::vector<std::string> types(get().members.size());
-    std::transform(
-        get().members.begin(), get().members.end(), types.begin(), [this](auto& mem) {
-            auto& t = mem.second.type_;
-            return fmt::format("{}", get_local_user_obj_name(mod(), t));
-        });
+    std::vector<std::string> types(get().all_members().size());
+    std::transform(get().all_members().begin(),
+                   get().all_members().end(),
+                   types.begin(),
+                   [this](auto& mem) {
+                       auto& t = mem.second->type_;
+                       return fmt::format("{}", get_local_user_obj_name(mod(), t));
+                   });
 
     std::vector<std::string> args(2);
     args.front() = "mb: lidl.MessageBuilder";

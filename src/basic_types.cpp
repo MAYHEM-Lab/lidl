@@ -59,12 +59,12 @@ std::unique_ptr<module> basic_module() {
 
     auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
         basic_mod->basic_types.emplace_back(std::move(t));
-        return define(*basic_mod->symbols, name, basic_mod->basic_types.back().get());
+        return define(basic_mod->symbols(), name, basic_mod->basic_types.back().get());
     };
 
     auto add_generic = [&](std::string_view name, std::unique_ptr<generic> t) {
         basic_mod->basic_generics.emplace_back(std::move(t));
-        define(*basic_mod->symbols, name, basic_mod->basic_generics.back().get());
+        define(basic_mod->symbols(), name, basic_mod->basic_generics.back().get());
     };
 
     add_type("bool", std::make_unique<bool_type>());
