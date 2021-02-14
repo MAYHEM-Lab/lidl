@@ -104,6 +104,8 @@ public:
     const std::vector<symbol>& all_symbols() const {
         return m_syms;
     }
+
+    void dump(std::ostream& str, int indent = 0) const;
 private:
     void set_parent(std::weak_ptr<scope> parent) {
         m_parent = std::move(parent);

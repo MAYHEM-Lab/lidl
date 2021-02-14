@@ -133,6 +133,8 @@ template <class FunT>
         accessors.push_back(generate_getter(mem_name, *mem, false));
     }
 
+    mod().symbols().dump(std::cerr);
+
     auto enum_sym =
         recursive_definition_lookup(mod().symbols(), &get().get_enum(mod())).value();
     auto enum__name = local_name(enum_sym);

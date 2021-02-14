@@ -204,4 +204,23 @@ std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
                                                         std::string_view name) {
     return recursive_full_name_lookup(s, split(name, "."));
 }
+
+namespace {
+std::ostream& indent(std::ostream& str, int level, char character = ' ') {
+    for (int i = 0; i < level; ++i) {
+        str << character;
+    }
+    return str;
+}
+}
+
+void scope::dump(std::ostream& str, int indent_level) const {
+    for (int i = 0; i < m_syms.size(); ++i) {
+        if (m_syms[i] == this) continue;
+        indent(str, indent_level) << m_names[i][0] << ":";
+        if (auto scop = m_syms[i]->get_scope()) {
+            scop->dump(str, indent_level + 1);
+        }
+    }
+}
 } // namespace lidl
