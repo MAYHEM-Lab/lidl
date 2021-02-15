@@ -144,16 +144,16 @@ struct cppgen {
         }
 
         for (auto& service : mod().services) {
-            Expects(!is_anonymous(mod(), &service));
-            auto sym = *mod().symbols().definition_lookup(&service);
+            Expects(!is_anonymous(mod(), service.get()));
+            auto sym = *mod().symbols().definition_lookup(service.get());
 
             auto name      = local_name(sym);
             auto generator = service_generator(
-                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), *service);
             auto stub_generator = remote_stub_generator(
-                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), *service);
             auto svc_generator = svc_stub_generator(
-                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), service);
+                mod(), sym, name, get_identifier(mod(), lidl::name{sym}), *service);
 
             m_sections.merge_before(generator.generate());
             m_sections.merge_before(stub_generator.generate());

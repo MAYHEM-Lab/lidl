@@ -34,13 +34,13 @@ bool emitter::pass() {
         }
 
         for (auto& sect : sects) {
-            std::vector<std::string> key_names(sect.keys.size());
-            std::transform(sect.keys.begin(),
-                           sect.keys.end(),
-                           key_names.begin(),
-                           [&](auto& key) { return key.to_string(*m_module); });
-            std::cerr << "    Emitting "
-                      << fmt::format("{}\n", fmt::join(key_names, "\n             "));
+//            std::vector<std::string> key_names(sect.keys.size());
+//            std::transform(sect.keys.begin(),
+//                           sect.keys.end(),
+//                           key_names.begin(),
+//                           [&](auto& key) { return key.to_string(*m_module); });
+//            std::cerr << "    Emitting "
+//                      << fmt::format("{}\n", fmt::join(key_names, "\n             "));
 
             m_stream << sect.definition << '\n';
 

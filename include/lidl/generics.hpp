@@ -62,8 +62,11 @@ generic_parameters
 struct module;
 class generic_instantiation;
 struct generic : public base {
-    explicit generic(generic_parameters decl)
-        : declaration(std::move(decl)) {
+    explicit generic(generic_parameters decl,
+                     base* parent                       = nullptr,
+                     std::optional<source_info> src_loc = {})
+        : base(parent, std::move(src_loc))
+        , declaration(std::move(decl)) {
     }
 
     generic(generic&&) = default;
@@ -108,9 +111,10 @@ struct generic : public base {
 };
 
 struct generic_structure : generic {
-    explicit generic_structure(generic_parameters decl, structure s)
-        : generic(std::move(decl))
-        , struct_(static_cast<structure&&>(s)) {
+    explicit generic_structure(generic_parameters decl,
+                               base* parent                       = nullptr,
+                               std::optional<source_info> src_loc = {})
+        : generic(std::move(decl), parent, std::move(src_loc)) {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
@@ -120,9 +124,10 @@ struct generic_structure : generic {
 };
 
 struct generic_union : generic {
-    explicit generic_union(generic_parameters decl, union_type s)
-        : generic(std::move(decl))
-        , union_(std::move(s)) {
+    explicit generic_union(generic_parameters decl,
+                           base* parent                       = nullptr,
+                           std::optional<source_info> src_loc = {})
+        : generic(std::move(decl), parent, std::move(src_loc)) {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,

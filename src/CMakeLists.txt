@@ -3,8 +3,18 @@ if (NOT DISABLE_FRONTEND)
 endif()
 
 add_subdirectory(codegen)
-add_subdirectory(cppgen)
-add_subdirectory(jsgen)
+
+list(FIND ENABLE_BACKENDS "cpp" CPP_BACKEND_ENABLED)
+if (CPP_BACKEND_ENABLED GREATER_EQUAL 0)
+  message(STATUS "Enabling C++ backend")
+  add_subdirectory(cppgen)
+endif()
+
+list(FIND ENABLE_BACKENDS "js" CPP_BACKEND_ENABLED)
+if (CPP_BACKEND_ENABLED GREATER_EQUAL 0)
+  message(STATUS "Enabling Typescript backend")
+  add_subdirectory(jsgen)
+endif()
 
 if(BUILD_TOOLS)
   add_subdirectory(tools)

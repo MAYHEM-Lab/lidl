@@ -55,7 +55,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
 
 std::unique_ptr<type> generic_union::instantiate(const module& mod,
                                       const generic_instantiation& ins) const {
-    auto newstr = std::make_unique<union_type>();
+    auto newstr = std::make_unique<union_type>(const_cast<module*>(&mod));
 
     auto& genstr = dynamic_cast<const generic_union&>(ins.generic_type());
 

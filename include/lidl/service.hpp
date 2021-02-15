@@ -6,28 +6,37 @@
 
 #include "scope.hpp"
 
+#include <cassert>
 #include <deque>
+#include <lidl/inheritance.hpp>
 #include <lidl/types.hpp>
 #include <lidl/union.hpp>
-#include <cassert>
 
 namespace lidl {
-enum class param_flags {
-    in = 1,
-    out = 2,
+enum class param_flags
+{
+    in     = 1,
+    out    = 2,
     in_out = 3
 };
 
-struct parameter {
+struct parameter : public base {
+    using base::base;
     lidl::name type;
     param_flags flags = param_flags::in;
-    std::optional<source_info> src_info;
 };
 
 struct procedure : public base {
+    using base::base;
     std::deque<name> return_types;
     std::deque<std::pair<std::string, parameter>> parameters;
-    const structure* params_struct = nullptr;
+
+    void add_parameter(std::string name, parameter proc) {
+        parameters.emplace_back(std::move(name), std::move(proc));
+        define(get_scope(), parameters.back().first, &parameters.back().second);
+    }
+
+    const structure* params_struct  = nullptr;
     const structure* results_struct = nullptr;
     name params_struct_name;
     name results_struct_name;
@@ -37,18 +46,33 @@ struct property : member {
     using member::member;
 };
 
-struct service : public base {
-    std::optional<name> extends;
+struct service
+    : public base
+    , public extendable<service> {
+    using base::base;
+
+    void add_procedure(std::string name, std::unique_ptr<procedure> proc) {
+        procedures.emplace_back(std::move(name), std::move(proc));
+        define(get_scope(), procedures.back().first, procedures.back().second.get());
+    }
+
     std::deque<std::pair<std::string, property>> properties;
-    std::deque<std::pair<std::string, procedure>> procedures;
-    const union_type* procedure_params_union = nullptr;
-    const union_type* procedure_results_union = nullptr;
+    std::optional<union_type> procedure_params_union;
+    std::optional<union_type> procedure_results_union;
+
+    auto& own_procedures() {
+        return procedures;
+    }
+
+    auto& own_procedures() const {
+        return procedures;
+    }
 
     std::vector<std::pair<std::string_view, const procedure*>> all_procedures() const {
         std::vector<std::pair<std::string_view, const procedure*>> res;
         for (auto& s : inheritance_list()) {
             for (auto& [name, proc] : s->procedures) {
-                res.emplace_back(name, &proc);
+                res.emplace_back(name, proc.get());
             }
         }
         return res;
@@ -65,31 +89,10 @@ struct service : public base {
         return std::distance(all_proc.begin(), iter);
     }
 
-    std::vector<const service*> inheritance_list() const {
-        std::vector<const service*> inheritance;
-
-        for (const service* s = this; s;) {
-            inheritance.emplace_back(s);
-
-            if (s->extends) {
-                assert(s->extends->args.empty());
-
-                auto base_sym = get_symbol(s->extends->base);
-
-                s = dynamic_cast<const lidl::service*>(base_sym);
-            } else {
-                s = nullptr;
-            }
-        }
-        std::reverse(inheritance.begin(), inheritance.end());
-
-        return inheritance;
-    }
-
-    template <class FnT>
+    template<class FnT>
     void for_each_proc(module& mod, const FnT& fn) const {
         if (extends) {
-            auto base_sym = get_symbol(extends->base);
+            auto base_sym  = get_symbol(extends->base);
             auto base_serv = dynamic_cast<const service*>(base_sym);
             base_serv->for_each_proc(mod, fn);
         }
@@ -98,7 +101,10 @@ struct service : public base {
             fn(*this, name, proc);
         }
     }
+
+private:
+    std::deque<std::pair<std::string, std::unique_ptr<procedure>>> procedures;
 };
 
-inline const service common_base {};
+inline const service common_base{};
 } // namespace lidl

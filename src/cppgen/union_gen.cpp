@@ -52,9 +52,13 @@ sections union_gen::generate() {
         members.push_back(raw_struct_gen::generate_field(
             "m_" + std::string(name), get_identifier(mod(), member->type_)));
     }
+    
+    auto enum_sym =
+        recursive_definition_lookup(mod().symbols(), &get().get_enum(mod())).value();
+    auto enum_name = local_name(enum_sym);
+    auto abs_name   = get_identifier(mod(), lidl::name{enum_sym});
 
     std::vector<std::string> ctors;
-    auto enum_name   = fmt::format("alternatives", ctor_name());
     int member_index = 0;
     for (auto& [member_name, member] : get().all_members()) {
         std::string arg_names;
@@ -133,14 +137,7 @@ template <class FunT>
         accessors.push_back(generate_getter(mem_name, *mem, false));
     }
 
-    mod().symbols().dump(std::cerr);
-
-    auto enum_sym =
-        recursive_definition_lookup(mod().symbols(), &get().get_enum(mod())).value();
-    auto enum__name = local_name(enum_sym);
-    auto abs_name   = get_identifier(mod(), lidl::name{enum_sym});
-
-    enum_gen en(mod(), {}, enum__name, abs_name, get().get_enum(mod()));
+    enum_gen en(mod(), enum_sym, enum_name, abs_name, get().get_enum(mod()));
     auto enum_res = en.generate();
     std::vector<section> defs;
     std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),

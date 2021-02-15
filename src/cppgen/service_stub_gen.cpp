@@ -81,6 +81,19 @@ std::pair<std::string, std::vector<section_key_t>> make_proc_signature(
 }
 } // namespace
 
+struct foo {
+    struct bar;
+
+    void a() {
+        bar b;
+        b.x;
+    }
+};
+
+struct foo::bar {
+    int x;
+};
+
 using codegen::sections;
 sections remote_stub_generator::generate() {
     section sect;
@@ -261,11 +274,12 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     sect.depends_on.emplace_back(serv_handle, section_type::definition);
 
     auto params_union =
-        recursive_definition_lookup(mod.symbols(), service.procedure_params_union).value();
-
-    auto results_union =
-        recursive_definition_lookup(mod.symbols(), service.procedure_results_union)
+        recursive_definition_lookup(service.get_scope(), &*service.procedure_params_union)
             .value();
+
+    auto results_union = recursive_definition_lookup(service.get_scope(),
+                                                     &*service.procedure_results_union)
+                             .value();
 
     sect.add_dependency({params_union, section_type::definition});
     sect.add_dependency({results_union, section_type::definition});
@@ -320,8 +334,8 @@ sections service_generator::generate() {
         inheritance.empty()
             ? ""
             : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
-    for (auto& [name, proc] : get().procedures) {
-        auto deps = generate_procedure(mod(), name, proc, str);
+    for (auto& [name, proc] : get().own_procedures()) {
+        auto deps = generate_procedure(mod(), name, *proc, str);
         def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
         str << '\n';
     }

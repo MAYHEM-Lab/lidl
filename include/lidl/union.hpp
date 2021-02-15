@@ -13,12 +13,18 @@
 #include <lidl/basic.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
+#include <lidl/enumeration.hpp>
 
 namespace lidl {
 struct union_type : public type, public extendable<union_type> {
+    using type::type;
+
     void add_member(std::string name, member mem) {
+        if (mem.parent() != this) {
+            throw std::runtime_error("bad parent");
+        }
         members.emplace_back(std::move(name), std::move(mem));
-        define(*m_scope, members.back().first, &members.back().second);
+        define(get_scope(), members.back().first, &members.back().second);
     }
 
     std::vector<std::pair<std::string_view, const member*>> all_members() const {
@@ -57,7 +63,6 @@ struct union_type : public type, public extendable<union_type> {
 
     const enumeration& get_enum(const module& m) const;
 
-    union_type()                  = default;
     union_type(const union_type&) = default;
     union_type(union_type&&)      = default;
     union_type& operator=(union_type&&) = default;

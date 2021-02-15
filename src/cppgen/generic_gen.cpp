@@ -22,30 +22,36 @@ std::string generic_gen::full_name() {
 sections generic_gen::do_generate(const generic_structure& str) {
     module tmpmod;
     tmpmod.name_space = mod().name_space;
-    // TODO: Create an unrelated module here
-    tmpmod.set_symbols(mod().symbols().add_child_scope("tmp"));
+    define(mod().symbols(), "foo_" + full_name(), &tmpmod);
     tmpmod.structs.emplace_back(
         *dynamic_cast<structure*>(str.instantiate(mod(), get()).get()));
     run_passes_until_stable(tmpmod);
 
     struct_gen gen(
         tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.structs.back());
-    return std::move(gen.generate());
+    auto res = std::move(gen.generate());
+    mod().symbols().undefine("foo_" + full_name());
+
+    return res;
 }
 
 sections generic_gen::do_generate(const generic_union& u) {
-    module tmpmod;
+    module tmpmod(const_cast<generic_union*>(&u), u.src_info);
     tmpmod.name_space = mod().name_space;
-    // TODO: Create an unrelated module here
-    tmpmod.set_symbols(mod().symbols().add_child_scope("tmp"));
+    define(mod().symbols(), "foo_" + full_name(), &tmpmod);
     tmpmod.unions.emplace_back(
         std::move(*dynamic_cast<union_type*>(u.instantiate(mod(), get()).get())));
+    auto& un = tmpmod.unions.back();
+    define(tmpmod.symbols(), name(), &tmpmod.unions.back());
     run_passes_until_stable(tmpmod);
 
     union_gen gen(
         tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.unions.back());
 
-    return std::move(gen.generate());
+    auto res = std::move(gen.generate());
+    mod().symbols().undefine("foo_" + full_name());
+
+    return res;
 }
 
 namespace {

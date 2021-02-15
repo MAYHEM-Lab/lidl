@@ -3,6 +3,7 @@
 #include <cassert>
 #include <lidl/scope.hpp>
 #include <optional>
+#include <algorithm>
 
 namespace lidl {
 template<class T>

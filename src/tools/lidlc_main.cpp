@@ -14,15 +14,25 @@
 #include <yaml.hpp>
 
 namespace lidl {
+#if defined(ENABLE_CPP)
 namespace cpp {
 std::unique_ptr<codegen::backend> make_backend();
 }
+#endif
+#if defined(ENABLE_JS)
 namespace js {
 std::unique_ptr<codegen::backend> make_backend();
 }
+#endif
 std::unordered_map<std::string_view, std::function<std::unique_ptr<codegen::backend>()>>
-    backends{{"cpp", cpp::make_backend}, {"js", js::make_backend},
-             /* {"ts", js::generate}*/};
+    backends {
+#if defined(ENABLE_CPP)
+    {"cpp", cpp::make_backend},
+#endif
+#if defined(ENABLE_JS)
+        {"js", js::make_backend}, {"ts", js::make_backend},
+#endif
+};
 
 struct lidlc_args {
     std::istream* input_stream;
@@ -34,17 +44,6 @@ struct lidlc_args {
 };
 
 void run(const lidlc_args& args) {
-    auto backend_maker = backends.find(args.backend);
-    if (backend_maker == backends.end()) {
-        std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
-        std::vector<std::string_view> names(backends.size());
-        std::transform(backends.begin(), backends.end(), names.begin(), [](auto& be) {
-            return be.first;
-        });
-        std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
-        return;
-    }
-
     auto importer = std::make_unique<lidl::path_resolver>();
     for (auto& path : args.import_paths) {
         importer->add_import_path(path);
@@ -56,12 +55,26 @@ void run(const lidlc_args& args) {
         auto mod = ctx.do_import(*args.origin, "");
 
         if (args.just_details) {
+            std::cerr << "Symbols:\n";
+            mod->parent->symbols().dump(std::cerr);
+            std::cerr << "---\n";
             YAML::Node res;
             res["imports"] = {};
             for (auto& [path, _] : ctx.import_mapping) {
                 res["imports"].push_back(path);
             }
             std::cout << res << '\n';
+            return;
+        }
+
+        auto backend_maker = backends.find(args.backend);
+        if (backend_maker == backends.end()) {
+            std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
+            std::vector<std::string_view> names(backends.size());
+            std::transform(backends.begin(), backends.end(), names.begin(), [](auto& be) {
+              return be.first;
+            });
+            std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
             return;
         }
 
@@ -99,7 +112,7 @@ int main(int argc, char** argv) {
         lyra::opt(out_path,
                   "output file")["-o"]["--output-file"]("Output file to write to.")
             .optional() |
-        lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.").required() |
+        lyra::opt(backend, "backend")["-g"]["--backend"]("Backend to use.") |
         lyra::opt(build_details, "build details")["-d"].optional() |
         lyra::opt(version)["--version"]("Print lidl version") | lyra::help(help);
     auto res = cli.parse({argc, argv});
@@ -140,8 +153,8 @@ int main(int argc, char** argv) {
 
     if (!out_path.empty()) {
         args.output_stream = new std::ofstream{out_path};
-        if (!args.input_stream->good()) {
-            throw std::runtime_error("File not found: " + input_path);
+        if (!args.output_stream->good()) {
+            throw std::runtime_error("File not found: " + out_path);
         }
     }
 
@@ -153,4 +166,11 @@ int main(int argc, char** argv) {
     lidl::run(args);
 
     args.output_stream->flush();
+
+    if (!input_path.empty()) {
+        delete args.input_stream;
+    }
+    if (!out_path.empty()) {
+        delete args.output_stream;
+    }
 }

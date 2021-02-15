@@ -1,8 +1,19 @@
 add_executable(lidlc lidlc_main.cpp)
-target_link_libraries(lidlc PUBLIC lidl_core lidl_yaml lidl_cppgen lidl_jsgen BFG::Lyra)
+target_link_libraries(lidlc PUBLIC lidl_core lidl_yaml lidl_codegen BFG::Lyra)
 target_include_directories(lidlc PRIVATE "..")
+
+if (TARGET lidl_cppgen)
+  target_link_libraries(lidlc PRIVATE lidl_cppgen)
+  target_compile_definitions(lidlc PRIVATE ENABLE_CPP)
+endif()
+
+if (TARGET lidl_jsgen)
+  target_link_libraries(lidlc PRIVATE lidl_jsgen)
+  target_compile_definitions(lidlc PRIVATE ENABLE_JS)
+endif()
+
 if(UNIX AND NOT APPLE)
-  target_link_options(lidlc PRIVATE -static-libgcc -static-libstdc++ -static)
+  #target_link_options(lidlc PRIVATE -static-libgcc -static-libstdc++ -static)
 endif()
 
 add_executable(lidl2yaml bin2yaml_main.cpp)

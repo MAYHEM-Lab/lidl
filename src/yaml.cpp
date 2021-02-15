@@ -59,7 +59,7 @@ class yaml_loader : public module_loader {
     }
 
     std::vector<generic_argument> parse_generic_args(const YAML::Node& node,
-                                                     const scope& s) {
+                                                     const base& s) {
         std::vector<std::string> arg_strs;
         if (node) {
             arg_strs = node.as<std::vector<std::string>>();
@@ -68,7 +68,7 @@ class yaml_loader : public module_loader {
         std::vector<generic_argument> args;
 
         for (auto& arg : arg_strs) {
-            auto arg_lookup = recursive_full_name_lookup(s, arg);
+            auto arg_lookup = recursive_full_name_lookup(s.get_scope(), arg);
             if (!arg_lookup) {
                 args.emplace_back(std::stoll(arg));
                 continue;
@@ -79,10 +79,10 @@ class yaml_loader : public module_loader {
         return args;
     }
 
-    name read_type(const YAML::Node& type_node, const scope& s) {
+    name read_type(const YAML::Node& type_node, const base& s) {
         if (type_node.IsScalar()) {
             auto type_name = type_node.as<std::string>();
-            auto lookup    = recursive_full_name_lookup(s, type_name);
+            auto lookup    = recursive_full_name_lookup(s.get_scope(), type_name);
             if (!lookup) {
                 throw unknown_type_error(type_name, make_source_info(type_node));
             }
@@ -95,7 +95,7 @@ class yaml_loader : public module_loader {
 
             auto base_name = name_node.as<std::string>();
 
-            auto lookup = recursive_full_name_lookup(s, base_name);
+            auto lookup = recursive_full_name_lookup(s.get_scope(), base_name);
             if (!lookup) {
                 throw unknown_type_error(base_name, make_source_info(type_node));
             }
@@ -107,9 +107,11 @@ class yaml_loader : public module_loader {
         throw std::runtime_error("shouldn't reach here");
     }
 
-    parameter read_parameter(const YAML::Node& param_node, const scope& s) {
-        auto type = read_type(param_node, s);
-        return parameter{type, param_flags::in, make_source_info(param_node)};
+    parameter read_parameter(const YAML::Node& param_node, procedure& s) {
+        auto p  = parameter{&s, make_source_info(param_node)};
+        p.type  = read_type(param_node, p);
+        p.flags = param_flags::in;
+        return p;
     }
 
     static void read_member_attributes(const YAML::Node& attrib_node, member& mem) {
@@ -121,12 +123,11 @@ class yaml_loader : public module_loader {
         }
     }
 
-    member read_member(const YAML::Node& node, const scope& s) {
-        member m;
-        m.src_info = make_source_info(node);
+    member read_member(const YAML::Node& node, base& s) {
+        member m(&s, make_source_info(node));
 
         if (node.IsScalar()) {
-            m.type_ = read_type(node, s);
+            m.type_ = read_type(node, m);
             return m;
         }
 
@@ -138,13 +139,12 @@ class yaml_loader : public module_loader {
             throw missing_node_error("type", make_source_info(node));
         }
 
-        m.type_ = read_type(type_name, s);
+        m.type_ = read_type(type_name, m);
         return m;
     }
 
-    structure read_structure(const YAML::Node& node, scope& scop) {
-        structure s;
-        s.src_info = make_source_info(node);
+    structure read_structure(const YAML::Node& node, base& scop) {
+        structure s(&scop, make_source_info(node));
 
         auto members = node["members"];
         if (!members) {
@@ -152,29 +152,27 @@ class yaml_loader : public module_loader {
         }
         for (auto&& e : members) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            s.add_member(key.as<std::string>(), read_member(val, scop));
+            s.add_member(key.as<std::string>(), read_member(val, s));
         }
 
         return s;
     }
 
-    union_type read_union(const YAML::Node& node, scope& scop) {
-        union_type u;
-        u.src_info = make_source_info(node);
+    union_type read_union(const YAML::Node& node, base& scop) {
+        union_type u(&scop, make_source_info(node));
 
         auto variants = node["variants"];
         if (!variants) {
             throw missing_node_error("variants", make_source_info(node));
         }
 
-
         if (auto base_node = node["extends"]) {
-            u.set_base(read_type(base_node, scop));
+            u.set_base(read_type(base_node, u));
         }
 
         for (auto&& e : variants) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            u.add_member(key.as<std::string>(), read_member(val, scop));
+            u.add_member(key.as<std::string>(), read_member(val, u));
         }
 
         auto raw = node["raw"];
@@ -183,35 +181,38 @@ class yaml_loader : public module_loader {
         return u;
     }
 
-    generic_structure read_generic_structure(const YAML::Node& node, scope& gen_scope) {
+    generic_structure read_generic_structure(const YAML::Node& node, base& gen_scope) {
         auto params = parse_parameters(node["parameters"]);
-        for (auto& [name, param] : params) {
-            gen_scope.declare(name);
+
+        generic_structure genstr{std::move(params), &gen_scope, make_source_info(node)};
+
+        for (auto& [name, param] : genstr.declaration) {
+            genstr.get_scope().declare(name);
         }
 
-        auto str = read_structure(node, gen_scope);
-
-        return generic_structure{std::move(params), std::move(str)};
+        genstr.struct_ = read_structure(node, genstr);
+        return genstr;
     }
 
-    generic_union read_generic_union(const YAML::Node& node, scope& scop) {
+    generic_union read_generic_union(const YAML::Node& node, base& scop) {
         auto params = parse_parameters(node["parameters"]);
-        for (auto& [name, param] : params) {
-            scop.declare(name);
+
+        generic_union genstr{std::move(params), &scop, make_source_info(node)};
+
+        for (auto& [name, param] : genstr.declaration) {
+            genstr.get_scope().declare(name);
         }
 
-        auto str = read_union(node, scop);
-
-        return generic_union{std::move(params), std::move(str)};
+        genstr.union_ = read_union(node, genstr);
+        return genstr;
     }
 
-    procedure parse_procedure(const YAML::Node& node, const module& mod) {
-        procedure result;
-        result.src_info = make_source_info(node);
+    std::unique_ptr<procedure> parse_procedure(const YAML::Node& node, service& serv) {
+        auto result = std::make_unique<procedure>(&serv, make_source_info(node));
 
         if (auto returns = node["returns"]; returns) {
             for (auto&& ret : returns) {
-                result.return_types.push_back(read_type(ret, mod.symbols()));
+                result->return_types.push_back(read_type(ret, *result));
             }
         }
         if (auto params = node["parameters"]; params) {
@@ -222,39 +223,36 @@ class yaml_loader : public module_loader {
                     std::cerr << param << '\n';
                     throw std::runtime_error("wtf");
                 }
-                result.parameters.emplace_back(name.as<std::string>(),
-                                               read_parameter(val, mod.symbols()));
+                result->add_parameter(name.as<std::string>(),
+                                      read_parameter(val, *result));
             }
         }
         return result;
     }
 
-    service parse_service(const YAML::Node& node, const module& mod) {
-        service serv;
-        serv.src_info = make_source_info(node);
+    std::unique_ptr<service> parse_service(const YAML::Node& node, module& mod) {
+        auto serv = std::make_unique<service>(&mod, make_source_info(node));
 
         if (auto&& base = node["extends"]; base) {
-            serv.extends = read_type(base, mod.symbols());
+            serv->extends = read_type(base, *serv);
         }
 
         for (auto&& procedure : node["procedures"]) {
             auto& [name, val] =
                 static_cast<const std::pair<YAML::Node, YAML::Node>&>(procedure);
-            serv.procedures.emplace_back(name.as<std::string>(),
-                                         parse_procedure(val, mod));
+            serv->add_procedure(name.as<std::string>(), parse_procedure(val, *serv));
         }
         return serv;
     }
 
-    enumeration read_enum(const YAML::Node& node, const scope& scop) {
-        enumeration e;
-        e.src_info = make_source_info(node);
+    enumeration read_enum(const YAML::Node& node, base& scop) {
+        enumeration e(&scop, make_source_info(node));
 
         if (auto base_node = node["extends"]) {
-            e.set_base(read_type(base_node, scop));
+            e.set_base(read_type(base_node, e));
         }
 
-        e.underlying_type = name{recursive_full_name_lookup(scop, "i8").value()};
+        e.underlying_type = name{recursive_full_name_lookup(e.get_scope(), "i8").value()};
         for (auto&& member : node["members"]) {
             e.add_member(member.as<std::string>(), make_source_info(member));
         }
@@ -335,27 +333,26 @@ public:
             Expects(val);
             Expects(val["type"]);
 
-            auto scope = m_mod->symbols().add_child_scope(name);
             auto type_str = val["type"].as<std::string>();
 
             if (type_str == "structure") {
-                m_mod->structs.emplace_back(read_structure(val, *scope));
+                m_mod->structs.emplace_back(read_structure(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->structs.back());
             } else if (type_str == "union") {
-                m_mod->unions.emplace_back(read_union(val, *scope));
+                m_mod->unions.emplace_back(read_union(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->unions.back());
             } else if (type_str == "enumeration") {
-                m_mod->enums.emplace_back(read_enum(val, *scope));
+                m_mod->enums.emplace_back(read_enum(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->enums.back());
             } else if (type_str == "generic<structure>") {
-                m_mod->generic_structs.emplace_back(read_generic_structure(val, *scope));
+                m_mod->generic_structs.emplace_back(read_generic_structure(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->generic_structs.back());
             } else if (type_str == "generic<union>") {
-                m_mod->generic_unions.emplace_back(read_generic_union(val, *scope));
+                m_mod->generic_unions.emplace_back(read_generic_union(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->generic_unions.back());
             } else if (type_str == "service") {
                 m_mod->services.emplace_back(parse_service(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->services.back());
+                define(m_mod->symbols(), name, m_mod->services.back().get());
             }
         }
     }

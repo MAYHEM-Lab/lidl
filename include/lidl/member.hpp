@@ -7,8 +7,13 @@
 
 namespace lidl {
 struct member : public base {
-    member() = default;
-    explicit member(name type) : type_{std::move(type)} {}
+    using base::base;
+    explicit member(name type,
+                    base* parent                        = nullptr,
+                    std::optional<source_info> src_info = {})
+        : base(parent, std::move(src_info))
+        , type_{std::move(type)} {
+    }
 
     name type_;
     bool nullable = false;

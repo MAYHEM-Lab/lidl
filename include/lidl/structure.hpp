@@ -9,6 +9,8 @@
 
 namespace lidl {
 struct structure : public type {
+    using type::type;
+
     const std::deque<std::pair<std::string, member>>& all_members() const {
         return members;
     }
@@ -23,7 +25,7 @@ struct structure : public type {
 
     void add_member(std::string name, member mem) {
         members.emplace_back(std::move(name), std::move(mem));
-        define(*m_scope, members.back().first, &members.back().second);
+        define(get_scope(), members.back().first, &members.back().second);
     }
 
     /**
@@ -51,9 +53,7 @@ struct structure : public type {
 
     compound_layout layout(const module& mod) const;
 
-
 private:
-
     std::deque<std::pair<std::string, member>> members;
 };
 } // namespace lidl

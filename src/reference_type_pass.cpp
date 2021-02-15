@@ -68,11 +68,11 @@ bool reference_type_pass(module& m) {
         }
     }
     for (auto& s : m.services) {
-        for (auto& [_, proc] : s.procedures) {
-            for (auto& ret_type : proc.return_types) {
+        for (auto& [_, proc] : s->own_procedures()) {
+            for (auto& ret_type : proc->return_types) {
                 changed |= reference_type_pass(m, ret_type);
             }
-            for (auto& [_name, param] : proc.parameters) {
+            for (auto& [_name, param] : proc->parameters) {
                 changed |= reference_type_pass(m, param.type);
             }
         }

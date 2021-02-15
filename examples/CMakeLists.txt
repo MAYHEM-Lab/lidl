@@ -17,7 +17,7 @@ add_lidlc(tests tests.yaml)
 #target_link_libraries(lidl_example PUBLIC lidl_rt lidl_gen)
 #add_lidlc(lidl_gen lidl.yaml)
 
-add_executable(service_example service.cpp tcp_server.cpp)
+add_executable(service_example service.cpp)
 target_link_libraries(service_example PUBLIC lidl_rt service)
 add_lidlc(service service.yaml)
 

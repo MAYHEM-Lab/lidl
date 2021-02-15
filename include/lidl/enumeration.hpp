@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <lidl/basic.hpp>
 #include <lidl/inheritance.hpp>
 #include <lidl/types.hpp>
@@ -7,10 +8,7 @@
 
 namespace lidl {
 struct enum_member : public base {
-    enum_member(int val, std::optional<source_info> src_info = {})
-        : base{std::move(src_info)}
-        , value(val) {
-    }
+    enum_member(enumeration& en, int val, std::optional<source_info> src_info = {});
     int value;
 };
 
@@ -18,18 +16,21 @@ struct enumeration
     : value_type
     , public extendable<enumeration> {
 public:
+    using value_type::value_type;
+
     name underlying_type;
-    std::vector<std::pair<std::string, enum_member>> members;
+    std::deque<std::pair<std::string, enum_member>> members;
 
     void add_member(std::string val, std::optional<source_info> src_info = {}) {
         if (find_by_name(val) >= 0) {
             // Member already exists
             throw std::runtime_error("Duplicate member in enumeration!");
         }
-        members.emplace_back(
-            std::move(val),
-            enum_member{static_cast<int>(all_members().size()), std::move(src_info)});
-        define(*m_scope, members.back().first, &members.back().second);
+        members.emplace_back(std::move(val),
+                             enum_member{*this,
+                                         static_cast<int>(all_members().size()),
+                                         std::move(src_info)});
+        define(get_scope(), members.back().first, &members.back().second);
     }
 
     [[nodiscard]] raw_layout wire_layout(const module& mod) const override {
@@ -47,7 +48,7 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::vector<std::pair<std::string, enum_member>>::const_iterator
+    [[nodiscard]] std::deque<std::pair<std::string, enum_member>>::const_iterator
     find_by_value(int val) const {
         auto it = std::find_if(members.begin(), members.end(), [val](auto& member) {
             return member.second.value == val;

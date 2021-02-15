@@ -13,6 +13,7 @@
 
 namespace lidl {
 struct module : public base {
+    using base::base;
     std::string module_name;
     std::string name_space = "lidlmod";
 
@@ -28,7 +29,7 @@ struct module : public base {
     std::deque<generic_structure> generic_structs;
     std::deque<generic_union> generic_unions;
 
-    std::deque<service> services;
+    std::vector<std::unique_ptr<service>> services;
     mutable std::deque<generic_instantiation> instantiations;
 
     const generic_instantiation& create_or_get_instantiation(const name& ins) const;
@@ -41,25 +42,15 @@ struct module : public base {
     mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
     module() = default;
 
-    void set_symbols(std::shared_ptr<scope> syms) {
-        m_symbols = syms;
-    }
-
     scope& symbols() {
-        return *m_symbols;
+        return get_scope();
     }
 
     scope& symbols() const {
-        return *m_symbols;
-    }
-
-    const scope * get_scope() const override {
-        return &symbols();
+        return const_cast<scope&>(get_scope());
     }
 
 private:
-    std::shared_ptr<scope> m_symbols = std::make_shared<scope>();
-
     friend const module& get_root_module();
 };
 

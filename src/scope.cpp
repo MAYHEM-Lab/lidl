@@ -1,48 +1,45 @@
 #include "lidl/basic.hpp"
 
 #include <cassert>
+#include <iostream>
+#include <lidl/base.hpp>
 #include <lidl/scope.hpp>
 #include <stdexcept>
 
 
 namespace lidl {
+base forward_decl{};
+
 symbol_handle::symbol_handle(scope& s, int id)
     : m_id(id)
-    , m_scope(s.weak_from_this()) {
+    , m_scope(&s) {
 }
 
 scope* symbol_handle::get_scope() const {
-    return m_scope.lock().get();
+    return m_scope;
 }
 
 symbol_handle scope::declare(std::string_view name) {
     m_syms.emplace_back(&forward_decl);
     auto res         = symbol_handle(*this, m_syms.size());
     auto [it, emres] = m_aliases.emplace(std::string(name), res);
-    m_names.emplace_back();
-    m_names.back().push_back(it->first);
+    assert(emres);
+    m_names.emplace_back(it->first);
     return res;
 }
 
 std::string_view scope::nameof(symbol_handle sym) const {
-    return m_names[sym.get_id() - 1][0];
+    return m_names[sym.get_id() - 1];
 }
 
 void scope::define(symbol_handle sym, symbol def) {
     assert(!is_defined(sym));
-    redefine(sym, def);
-}
-
-void scope::redefine(symbol_handle sym, symbol def) {
     mutable_lookup(sym) = def;
 }
 
 std::optional<symbol_handle> scope::name_lookup(std::string_view name) const {
     auto it = m_aliases.find(std::string(name));
     if (it == m_aliases.end()) {
-        if (m_sibling) {
-            return m_sibling->name_lookup(name);
-        }
         return std::nullopt;
     }
     return it->second;
@@ -52,18 +49,11 @@ std::optional<symbol_handle> scope::definition_lookup(symbol def) const {
     auto it = std::find(m_syms.begin(), m_syms.end(), def);
 
     if (it == m_syms.end()) {
-        if (m_sibling) {
-            return m_sibling->definition_lookup(def);
-        }
         return std::nullopt;
     }
 
     return symbol_handle(const_cast<scope&>(*this),
                          std::distance(m_syms.begin(), it) + 1);
-}
-
-const scope* scope::get_scope() const {
-    return this;
 }
 
 bool is_defined(const symbol_handle& handle) {
@@ -98,16 +88,18 @@ std::string_view local_name(const symbol_handle& handle) {
 }
 
 std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
-    std::vector<const scope*> path;
-    path.push_back(sym.get_scope());
+    std::vector<const base*> path;
+    path.push_back(&sym.get_scope()->object());
     while (path.back()->parent()) {
         path.push_back(path.back()->parent());
     }
 
     std::vector<std::string_view> names;
     for (auto it = path.rbegin(); it + 1 != path.rend(); ++it) {
-        auto handle = *(*it)->definition_lookup(*(it + 1));
-        auto name   = (*it)->nameof(handle);
+        auto handle_res = (*it)->get_scope().definition_lookup(*(it + 1));
+        assert(handle_res);
+        auto handle = *handle_res;
+        auto name   = (*it)->get_scope().nameof(handle);
         if (name.empty()) {
             continue;
         }
@@ -124,15 +116,21 @@ std::optional<symbol_handle> recursive_name_lookup(const scope& s,
     if (auto sym = s.name_lookup(name); sym) {
         return sym;
     }
-    if (s.parent()) {
-        return recursive_name_lookup(*s.parent(), name);
+    if (auto empty = s.name_lookup("")) {
+        auto sym = get_symbol(*empty);
+        if (auto res = recursive_name_lookup(sym->get_scope(), name)) {
+            return res;
+        }
+    }
+    if (s.object().parent()) {
+        return recursive_name_lookup(*s.parent_scope(), name);
     }
     return std::nullopt;
 }
 
 const scope& root_scope(const scope& s) {
     auto ptr = &s;
-    for (; ptr->parent(); ptr = ptr->parent())
+    for (; ptr->parent_scope(); ptr = ptr->parent_scope())
         ;
     return *ptr;
 }
@@ -142,11 +140,11 @@ std::optional<symbol_handle> do_recursive_definition_lookup(const scope& s, symb
         return sym;
     }
     for (auto& child : s.all_symbols()) {
-        auto child_scope = child->get_scope();
-        if (!child_scope || child_scope == &s) {
+        if (!child) {
             continue;
         }
-        if (auto res = do_recursive_definition_lookup(*child_scope, name)) {
+        auto& child_scope = child->get_scope();
+        if (auto res = do_recursive_definition_lookup(child_scope, name)) {
             return res;
         }
     }
@@ -186,16 +184,13 @@ recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& 
     if (!cur_lookup) {
         return std::nullopt;
     }
-    if (parts.size() == 1) {
-        return cur_lookup;
-    }
+
     for (auto it = parts.begin() + 1; it != parts.end(); ++it) {
-        auto cur_scope = get_symbol(*cur_lookup)->get_scope();
-        if (!cur_scope) {
-            // scope does not exist
+        auto& cur_scope = get_symbol(*cur_lookup)->get_scope();
+        cur_lookup      = cur_scope.name_lookup(*it);
+        if (!cur_lookup) {
             return std::nullopt;
         }
-        cur_lookup = cur_scope->name_lookup(*it);
     }
     return cur_lookup;
 }
@@ -212,15 +207,35 @@ std::ostream& indent(std::ostream& str, int level, char character = ' ') {
     }
     return str;
 }
-}
+} // namespace
 
 void scope::dump(std::ostream& str, int indent_level) const {
     for (int i = 0; i < m_syms.size(); ++i) {
-        if (m_syms[i] == this) continue;
-        indent(str, indent_level) << m_names[i][0] << ":";
-        if (auto scop = m_syms[i]->get_scope()) {
-            scop->dump(str, indent_level + 1);
-        }
+        if (!m_syms[i])
+            continue;
+        indent(str, indent_level) << "- " << m_names[i] << "\n";
+        m_syms[i]->get_scope().dump(str, indent_level + 1);
     }
+}
+
+void scope::undefine(std::string_view name) {
+    auto it = m_aliases.find(std::string(name));
+    assert(it != m_aliases.end());
+
+    auto handle = it->second;
+
+    auto scope_ptr = dynamic_cast<const scope*>(lookup(handle));
+    assert(scope_ptr);
+
+    m_syms[handle.get_id() - 1]  = nullptr;
+    m_names[handle.get_id() - 1] = {};
+    m_aliases.erase(it);
+}
+
+const scope* scope::parent_scope() const {
+    if (auto par_obj = object().parent()) {
+        return &par_obj->get_scope();
+    }
+    return nullptr;
 }
 } // namespace lidl

@@ -6,8 +6,8 @@
 #include <lidl/basic.hpp>
 #include <lidl/binary_writer.hpp>
 #include <lidl/layout.hpp>
-#include <lidl/source_info.hpp>
 #include <lidl/scope.hpp>
+#include <lidl/source_info.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -16,7 +16,8 @@
 #include <yaml-cpp/yaml.h>
 
 namespace lidl {
-enum class type_categories {
+enum class type_categories
+{
     value,
     reference,
     view
@@ -25,6 +26,8 @@ enum class type_categories {
 struct module;
 struct type : public base {
 public:
+    using base::base;
+
     virtual raw_layout wire_layout(const module& mod) const = 0;
 
     virtual type_categories category(const module& mod) const = 0;
@@ -48,25 +51,19 @@ public:
     virtual name get_wire_type(const module& mod) const {
         throw std::runtime_error("get_wire_type not implemented");
     }
-
-    virtual ~type() = default;
-
-
-    const scope* get_scope() const override {
-        return m_scope.get();
-    }
-
-protected:
-    std::shared_ptr<scope> m_scope = std::make_shared<scope>();
 };
 
 struct value_type : type {
+    using type::type;
+
     type_categories category(const module& mod) const override {
         return type_categories::value;
     }
 };
 
 struct reference_type : type {
+    using type::type;
+
     type_categories category(const module& mod) const override {
         return type_categories::reference;
     }
