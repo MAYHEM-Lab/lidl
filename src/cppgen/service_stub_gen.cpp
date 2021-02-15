@@ -5,6 +5,8 @@
 #include "service_stub_gen.hpp"
 
 #include "cppgen.hpp"
+#include "struct_gen.hpp"
+#include "union_gen.hpp"
 
 #include <lidl/basic.hpp>
 #include <lidl/view_types.hpp>
@@ -80,19 +82,6 @@ std::pair<std::string, std::vector<section_key_t>> make_proc_signature(
     return {sig, dependencies};
 }
 } // namespace
-
-struct foo {
-    struct bar;
-
-    void a() {
-        bar b;
-        b.x;
-    }
-};
-
-struct foo::bar {
-    int x;
-};
 
 using codegen::sections;
 sections remote_stub_generator::generate() {
@@ -214,8 +203,8 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
 
     auto params_struct_identifier = get_identifier(
         mod(),
-        lidl::name{
-            recursive_definition_lookup(mod().symbols(), proc.params_struct).value()});
+        lidl::name{recursive_definition_lookup(mod().symbols(), proc.params_struct.get())
+                       .value()});
 
     if (proc.params_struct->is_reference_type(mod())) {
         params_struct_identifier =
@@ -289,10 +278,13 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     std::transform(
         all_procs.begin(), all_procs.end(), tuple_types.begin(), [&](auto& proc_pair) {
             auto& [proc_name, proc_ptr] = proc_pair;
-            auto param_name             = get_identifier(
-                mod, name{*mod.symbols().definition_lookup(proc_ptr->params_struct)});
-            auto res_name = get_identifier(
-                mod, name{*mod.symbols().definition_lookup(proc_ptr->results_struct)});
+            auto param_name =
+                get_identifier(mod,
+                               name{*proc_ptr->get_scope().definition_lookup(
+                                   proc_ptr->params_struct.get())});
+            auto res_name = get_identifier(mod,
+                                           name{*proc_ptr->get_scope().definition_lookup(
+                                               proc_ptr->results_struct.get())});
             return fmt::format(
                 "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
                 serv_full_name,
@@ -334,9 +326,39 @@ sections service_generator::generate() {
         inheritance.empty()
             ? ""
             : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
+
+    sections res;
+
     for (auto& [name, proc] : get().own_procedures()) {
         auto deps = generate_procedure(mod(), name, *proc, str);
         def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
+
+        {
+            auto sym = *proc->get_scope().definition_lookup(proc->params_struct.get());
+            auto union_name = local_name(sym);
+            std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+            auto generator = struct_gen(mod(),
+                                        sym,
+                                        union_name,
+                                        get_identifier(mod(), lidl::name{sym}),
+                                        *proc->params_struct);
+            res.merge_before(generator.generate());
+        }
+
+        {
+            auto sym = *proc->get_scope().definition_lookup(proc->results_struct.get());
+            auto union_name = local_name(sym);
+            std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+            auto generator = struct_gen(mod(),
+                                        sym,
+                                        union_name,
+                                        get_identifier(mod(), lidl::name{sym}),
+                                        *proc->results_struct);
+            res.merge_before(generator.generate());
+        }
+
         str << '\n';
     }
     str << fmt::format("    virtual ~{}() = default;\n", name());
@@ -349,7 +371,33 @@ sections service_generator::generate() {
     def_sec.definition = str.str();
     def_sec.name_space = mod().name_space;
 
-    auto res = sections{{std::move(def_sec)}};
+    res.add(std::move(def_sec));
+
+    {
+        auto sym = *get().get_scope().definition_lookup(&*get().procedure_params_union);
+        auto union_name = local_name(sym);
+        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+        auto generator = union_gen(mod(),
+                                   sym,
+                                   union_name,
+                                   get_identifier(mod(), lidl::name{sym}),
+                                   *get().procedure_params_union);
+        res.merge_before(generator.generate());
+    }
+
+    {
+        auto sym = *get().get_scope().definition_lookup(&*get().procedure_results_union);
+        auto union_name = local_name(sym);
+        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+        auto generator = union_gen(mod(),
+                                   sym,
+                                   union_name,
+                                   get_identifier(mod(), lidl::name{sym}),
+                                   *get().procedure_results_union);
+        res.merge_before(generator.generate());
+    }
 
     res.merge_before(generate_service_descriptor(mod(), name(), get()));
     return res;

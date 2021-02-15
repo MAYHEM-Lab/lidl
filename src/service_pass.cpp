@@ -7,13 +7,13 @@
 
 namespace lidl {
 namespace {
-structure procedure_params_struct(const module& mod,
-                                  const service& servic,
-                                  std::string_view name,
-                                  procedure& proc) {
-    structure s(&proc, proc.src_info);
+std::unique_ptr<structure> procedure_params_struct(const module& mod,
+                                                   const service& servic,
+                                                   std::string_view name,
+                                                   procedure& proc) {
+    auto s = std::make_unique<structure>(&proc, proc.src_info);
     for (auto& [name, param] : proc.parameters) {
-        member m;
+        member m(s.get(), param.src_info);
         auto param_t = get_type(mod, param.type);
         if (param_t->is_view(mod)) {
             /**
@@ -37,21 +37,21 @@ structure procedure_params_struct(const module& mod,
 
             m.type_ = param.type;
         }
-        s.add_member(name, std::move(m));
+        s->add_member(name, std::move(m));
     }
 
-    s.params_info = procedure_params_info{&servic, std::string(name), &proc};
+    s->params_info = procedure_params_info{&servic, std::string(name), &proc};
 
     return s;
 }
 
-structure procedure_results_struct(const module& mod,
-                                   const service& servic,
-                                   std::string_view name,
-                                   const procedure& proc) {
-    structure s;
+std::unique_ptr<structure> procedure_results_struct(const module& mod,
+                                                    const service& servic,
+                                                    std::string_view name,
+                                                    procedure& proc) {
+    auto s = std::make_unique<structure>(&proc, proc.src_info);
     for (auto& param : proc.return_types) {
-        member m;
+        member m(s.get(), proc.src_info);
         auto param_t = get_type(mod, param);
         if (param_t->is_view(mod)) {
             /**
@@ -65,9 +65,9 @@ structure procedure_results_struct(const module& mod,
         } else {
             m.type_ = param;
         }
-        s.add_member(fmt::format("ret{}", s.all_members().size()), std::move(m));
+        s->add_member(fmt::format("ret{}", s->all_members().size()), std::move(m));
 
-        s.return_info = procedure_params_info{&servic, std::string(name), &proc};
+        s->return_info = procedure_params_info{&servic, std::string(name), &proc};
     }
 
     return s;
@@ -81,11 +81,8 @@ bool do_proc_pass(module& mod,
         return false;
     }
 
-    mod.structs.emplace_back(procedure_params_struct(mod, serv, proc_name, proc));
-    proc.params_struct = &mod.structs.back();
-
-    mod.structs.emplace_back(procedure_results_struct(mod, serv, proc_name, proc));
-    proc.results_struct = &mod.structs.back();
+    proc.params_struct  = procedure_params_struct(mod, serv, proc_name, proc);
+    proc.results_struct = procedure_results_struct(mod, serv, proc_name, proc);
 
     return true;
 }
@@ -118,7 +115,7 @@ bool do_service_pass(module& mod, service& serv) {
         }
     }
 
-    procedure_params.call_for   = &serv;
+    procedure_params.call_for = &serv;
     define(serv.get_scope(), "call_union", &procedure_params);
 
     procedure_results.return_for = &serv;
@@ -156,13 +153,13 @@ bool service_proc_pass(module& mod) {
             assert(proc_res);
             assert(proc->results_struct && proc->params_struct);
 
-            auto handle = define(mod.symbols(),
-                                 fmt::format("{}_{}_params", service_name, proc_name),
-                                 proc->params_struct);
-            auto res_handle =
-                define(mod.symbols(),
-                       fmt::format("{}_{}_results", service_name, proc_name),
-                       proc->results_struct);
+            auto handle     = define(proc->get_scope(),
+                                 fmt::format("{}_params", proc_name),
+                                 proc->params_struct.get());
+            auto res_handle = define(proc->get_scope(),
+                                     fmt::format("{}_results", proc_name),
+                                     proc->results_struct.get());
+
 
             proc->params_struct_name  = name{handle};
             proc->results_struct_name = name{res_handle};

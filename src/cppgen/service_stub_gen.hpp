@@ -9,8 +9,6 @@ public:
     using generator_base::generator_base;
 
     codegen::sections generate() override;
-
-private:
 };
 
 class svc_stub_generator : public codegen::generator_base<service> {

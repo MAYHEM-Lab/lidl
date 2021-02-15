@@ -5,7 +5,6 @@
 #include <lidl/basic.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
-#include <lidl/service.hpp>
 
 namespace lidl {
 struct structure : public type {

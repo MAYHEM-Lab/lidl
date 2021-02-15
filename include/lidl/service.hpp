@@ -9,6 +9,7 @@
 #include <cassert>
 #include <deque>
 #include <lidl/inheritance.hpp>
+#include <lidl/structure.hpp>
 #include <lidl/types.hpp>
 #include <lidl/union.hpp>
 
@@ -36,8 +37,8 @@ struct procedure : public base {
         define(get_scope(), parameters.back().first, &parameters.back().second);
     }
 
-    const structure* params_struct  = nullptr;
-    const structure* results_struct = nullptr;
+    std::unique_ptr<structure> params_struct;
+    std::unique_ptr<structure> results_struct;
     name params_struct_name;
     name results_struct_name;
 };
