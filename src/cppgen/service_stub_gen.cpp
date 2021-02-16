@@ -280,13 +280,17 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
             auto& [proc_name, proc_ptr] = proc_pair;
             auto param_name =
                 get_identifier(mod,
-                               name{*proc_ptr->get_scope().definition_lookup(
-                                   proc_ptr->params_struct.get())});
-            auto res_name = get_identifier(mod,
-                                           name{*proc_ptr->get_scope().definition_lookup(
-                                               proc_ptr->results_struct.get())});
+                               name{recursive_definition_lookup(
+                                        mod.get_scope(), proc_ptr->params_struct.get())
+                                        .value()});
+
+            auto res_name =
+                get_identifier(mod,
+                               name{recursive_definition_lookup(
+                                        mod.get_scope(), proc_ptr->results_struct.get())
+                                        .value()});
             return fmt::format(
-                "::lidl::procedure_descriptor<&{0}::{1}, {2}, {3}>{{\"{1}\"}}",
+                "::lidl::procedure_descriptor<&service_type::{1}, {2}, {3}>{{\"{1}\"}}",
                 serv_full_name,
                 proc_name,
                 param_name,
@@ -294,6 +298,7 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
         });
     str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
                        serv_full_name);
+    str << fmt::format("using service_type = {};\n", serv_full_name);
     str << fmt::format("static constexpr inline auto procedures = std::make_tuple({});\n",
                        fmt::join(tuple_types, ", "));
     str << fmt::format("static constexpr inline std::string_view name = \"{}\";\n",
@@ -329,39 +334,109 @@ sections service_generator::generate() {
 
     sections res;
 
+    std::vector<std::string> sub_type_names;
     for (auto& [name, proc] : get().own_procedures()) {
         auto deps = generate_procedure(mod(), name, *proc, str);
         def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
 
         {
-            auto sym = *proc->get_scope().definition_lookup(proc->params_struct.get());
+            auto sym = *get().get_scope().definition_lookup(proc->params_struct.get());
             auto union_name = local_name(sym);
+            auto abs_name   = get_identifier(mod(), lidl::name{sym});
+
+            sub_type_names.emplace_back(union_name);
+
             std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
 
             auto generator = struct_gen(mod(),
                                         sym,
+                                        abs_name.substr(mod().name_space.size() + 2),
                                         union_name,
-                                        get_identifier(mod(), lidl::name{sym}),
+                                        abs_name,
                                         *proc->params_struct);
-            res.merge_before(generator.generate());
+            auto subres    = generator.generate();
+            for (auto& x : subres.get_sections()) {
+                x.add_dependency(def_key());
+            }
+            res.merge_before(std::move(subres));
         }
 
         {
-            auto sym = *proc->get_scope().definition_lookup(proc->results_struct.get());
+            auto sym = *get().get_scope().definition_lookup(proc->results_struct.get());
             auto union_name = local_name(sym);
+            auto abs_name   = get_identifier(mod(), lidl::name{sym});
+
+            sub_type_names.emplace_back(union_name);
+
             std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
 
             auto generator = struct_gen(mod(),
                                         sym,
+                                        abs_name.substr(mod().name_space.size() + 2),
                                         union_name,
-                                        get_identifier(mod(), lidl::name{sym}),
+                                        abs_name,
                                         *proc->results_struct);
-            res.merge_before(generator.generate());
+            auto subres    = generator.generate();
+            for (auto& x : subres.get_sections()) {
+                x.add_dependency(def_key());
+            }
+            res.merge_before(std::move(subres));
         }
 
         str << '\n';
     }
+
+    {
+        auto sym = *get().get_scope().definition_lookup(&*get().procedure_params_union);
+        auto union_name = local_name(sym);
+        auto abs_name   = get_identifier(mod(), lidl::name{sym});
+        sub_type_names.emplace_back(union_name);
+
+        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+        auto generator = union_gen(mod(),
+                                   sym,
+                                   abs_name.substr(mod().name_space.size() + 2),
+                                   union_name,
+                                   abs_name,
+                                   *get().procedure_params_union);
+        auto subres    = generator.generate();
+        for (auto& x : subres.get_sections()) {
+            x.add_dependency(def_key());
+        }
+        res.merge_before(std::move(subres));
+    }
+
+    {
+        auto sym = *get().get_scope().definition_lookup(&*get().procedure_results_union);
+        auto union_name = local_name(sym);
+        auto abs_name   = get_identifier(mod(), lidl::name{sym});
+        sub_type_names.emplace_back(union_name);
+
+        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
+
+        auto generator = union_gen(mod(),
+                                   sym,
+                                   abs_name.substr(mod().name_space.size() + 2),
+                                   union_name,
+                                   abs_name,
+                                   *get().procedure_results_union);
+        auto subres    = generator.generate();
+        for (auto& x : subres.get_sections()) {
+            x.add_dependency(def_key());
+        }
+        res.merge_before(std::move(subres));
+    }
+
     str << fmt::format("    virtual ~{}() = default;\n", name());
+
+    std::vector<std::string> sub_structs(sub_type_names);
+    std::transform(sub_type_names.begin(),
+                   sub_type_names.end(),
+                   sub_structs.begin(),
+                   [](auto& name) { return fmt::format("class {};", name); });
+    str << fmt::format("{}", fmt::join(sub_structs, "\n"));
+
     str << "};";
 
     auto serv_handle    = *recursive_definition_lookup(mod().symbols(), &get());
@@ -372,32 +447,6 @@ sections service_generator::generate() {
     def_sec.name_space = mod().name_space;
 
     res.add(std::move(def_sec));
-
-    {
-        auto sym = *get().get_scope().definition_lookup(&*get().procedure_params_union);
-        auto union_name = local_name(sym);
-        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
-
-        auto generator = union_gen(mod(),
-                                   sym,
-                                   union_name,
-                                   get_identifier(mod(), lidl::name{sym}),
-                                   *get().procedure_params_union);
-        res.merge_before(generator.generate());
-    }
-
-    {
-        auto sym = *get().get_scope().definition_lookup(&*get().procedure_results_union);
-        auto union_name = local_name(sym);
-        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
-
-        auto generator = union_gen(mod(),
-                                   sym,
-                                   union_name,
-                                   get_identifier(mod(), lidl::name{sym}),
-                                   *get().procedure_results_union);
-        res.merge_before(generator.generate());
-    }
 
     res.merge_before(generate_service_descriptor(mod(), name(), get()));
     return res;

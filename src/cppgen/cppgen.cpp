@@ -90,10 +90,10 @@ struct cppgen {
         }
 
         for (auto& s : mod().unions) {
-            if (is_anonymous(mod(), &s)) {
+            if (is_anonymous(mod(), s.get())) {
                 continue;
             }
-            auto name = local_name(*mod().symbols().definition_lookup(&s));
+            auto name = local_name(*mod().symbols().definition_lookup(s.get()));
             forward_decls << "class " << name << ";\n";
         }
         forward_decls << "}\n";
@@ -119,15 +119,15 @@ struct cppgen {
         }
 
         for (auto& u : mod().unions) {
-            auto sym  = *mod().symbols().definition_lookup(&u);
+            auto sym  = *mod().symbols().definition_lookup(u.get());
             auto name = local_name(sym);
-            if (u.raw) {
+            if (u->raw) {
                 auto generator = raw_union_gen(
-                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), u);
+                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), *u);
                 m_sections.merge_before(generator.generate());
             } else {
                 auto generator = union_gen(
-                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), u);
+                    mod(), sym, name, get_identifier(mod(), lidl::name{sym}), *u);
                 m_sections.merge_before(generator.generate());
             }
         }

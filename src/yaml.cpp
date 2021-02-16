@@ -158,8 +158,8 @@ class yaml_loader : public module_loader {
         return s;
     }
 
-    union_type read_union(const YAML::Node& node, base& scop) {
-        union_type u(&scop, make_source_info(node));
+    std::unique_ptr<union_type> read_union(const YAML::Node& node, base& scop) {
+        auto u = std::make_unique<union_type>(&scop, make_source_info(node));
 
         auto variants = node["variants"];
         if (!variants) {
@@ -167,16 +167,16 @@ class yaml_loader : public module_loader {
         }
 
         if (auto base_node = node["extends"]) {
-            u.set_base(read_type(base_node, u));
+            u->set_base(read_type(base_node, *u));
         }
 
         for (auto&& e : variants) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            u.add_member(key.as<std::string>(), read_member(val, u));
+            u->add_member(key.as<std::string>(), read_member(val, *u));
         }
 
         auto raw = node["raw"];
-        u.raw    = raw && raw.as<bool>();
+        u->raw    = raw && raw.as<bool>();
 
         return u;
     }
@@ -340,7 +340,7 @@ public:
                 define(m_mod->symbols(), name, &m_mod->structs.back());
             } else if (type_str == "union") {
                 m_mod->unions.emplace_back(read_union(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->unions.back());
+                define(m_mod->symbols(), name, m_mod->unions.back().get());
             } else if (type_str == "enumeration") {
                 m_mod->enums.emplace_back(read_enum(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->enums.back());

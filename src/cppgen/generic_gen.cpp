@@ -39,14 +39,14 @@ sections generic_gen::do_generate(const generic_union& u) {
     module tmpmod(const_cast<generic_union*>(&u), u.src_info);
     tmpmod.name_space = mod().name_space;
     define(mod().symbols(), "foo_" + full_name(), &tmpmod);
+    auto instantiated = u.instantiate(mod(), get());
     tmpmod.unions.emplace_back(
-        std::move(*dynamic_cast<union_type*>(u.instantiate(mod(), get()).get())));
-    auto& un = tmpmod.unions.back();
-    define(tmpmod.symbols(), name(), &tmpmod.unions.back());
+        std::unique_ptr<union_type>(static_cast<union_type*>(instantiated.release())));
+    auto& un = *tmpmod.unions.back();
+    define(tmpmod.symbols(), name(), &un);
     run_passes_until_stable(tmpmod);
 
-    union_gen gen(
-        tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.unions.back());
+    union_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
 
     auto res = std::move(gen.generate());
     mod().symbols().undefine("foo_" + full_name());

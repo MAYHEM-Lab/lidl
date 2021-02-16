@@ -23,7 +23,7 @@ struct module : public base {
     std::deque<std::unique_ptr<generic>> basic_generics;
 
     std::deque<structure> structs;
-    std::deque<union_type> unions;
+    std::vector<std::unique_ptr<union_type>> unions;
     std::deque<enumeration> enums;
 
     std::deque<generic_structure> generic_structs;

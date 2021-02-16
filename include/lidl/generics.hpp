@@ -127,13 +127,13 @@ struct generic_union : generic {
     explicit generic_union(generic_parameters decl,
                            base* parent                       = nullptr,
                            std::optional<source_info> src_loc = {})
-        : generic(std::move(decl), parent, std::move(src_loc)) {
+        : generic(std::move(decl), parent, std::move(src_loc)), union_{nullptr}  {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
                                       const generic_instantiation& ins) const override;
 
-    union_type union_;
+    std::unique_ptr<union_type> union_;
 };
 
 class generic_instantiation final : public type {

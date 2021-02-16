@@ -8,10 +8,10 @@
 namespace lidl {
 namespace {
 std::unique_ptr<structure> procedure_params_struct(const module& mod,
-                                                   const service& servic,
+                                                   service& servic,
                                                    std::string_view name,
                                                    procedure& proc) {
-    auto s = std::make_unique<structure>(&proc, proc.src_info);
+    auto s = std::make_unique<structure>(&servic, proc.src_info);
     for (auto& [name, param] : proc.parameters) {
         member m(s.get(), param.src_info);
         auto param_t = get_type(mod, param.type);
@@ -46,10 +46,10 @@ std::unique_ptr<structure> procedure_params_struct(const module& mod,
 }
 
 std::unique_ptr<structure> procedure_results_struct(const module& mod,
-                                                    const service& servic,
+                                                    service& servic,
                                                     std::string_view name,
                                                     procedure& proc) {
-    auto s = std::make_unique<structure>(&proc, proc.src_info);
+    auto s = std::make_unique<structure>(&servic, proc.src_info);
     for (auto& param : proc.return_types) {
         member m(s.get(), proc.src_info);
         auto param_t = get_type(mod, param);
@@ -153,10 +153,10 @@ bool service_proc_pass(module& mod) {
             assert(proc_res);
             assert(proc->results_struct && proc->params_struct);
 
-            auto handle     = define(proc->get_scope(),
+            auto handle     = define(serv->get_scope(),
                                  fmt::format("{}_params", proc_name),
                                  proc->params_struct.get());
-            auto res_handle = define(proc->get_scope(),
+            auto res_handle = define(serv->get_scope(),
                                      fmt::format("{}_results", proc_name),
                                      proc->results_struct.get());
 

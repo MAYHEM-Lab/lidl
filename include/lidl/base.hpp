@@ -17,10 +17,6 @@ public:
 
     virtual ~base() = default;
 
-    void set_parent(base* parent) const {
-        m_parent_elem = parent;
-    }
-
     const base* parent() const {
         return m_parent_elem;
     }

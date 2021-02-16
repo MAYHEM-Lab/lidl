@@ -2,7 +2,7 @@
 
 #include <array>
 #include <iostream>
-#include <lidl/builder.hpp>
+#include <lidlrt/builder.hpp>
 
 constexpr gfx::vec3f v(1, 2, 3);
 

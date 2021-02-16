@@ -45,8 +45,8 @@ public:
 std::vector<uint8_t> get_request() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<lidl_example::scientific_calculator_call>(
-        builder, lidl_example::calculator_multiply_params(3, 5));
+    lidl::create<lidl_example::scientific_calculator::call_union>(
+        builder, lidl_example::calculator::multiply_params(3, 5));
     buf.resize(builder.size());
     return buf;
 }
@@ -54,9 +54,9 @@ std::vector<uint8_t> get_request() {
 std::vector<uint8_t> get_echo_req() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<lidl_example::repeat_call>(
+    lidl::create<lidl_example::repeat::call_union>(
         builder,
-        lidl::create<lidl_example::repeat_echo_params>(
+        lidl::create<lidl_example::repeat::echo_params>(
             builder, lidl::create_string(builder, "foobar")));
     buf.resize(builder.size());
     return buf;
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     auto req = get_request();
     //    std::cout.write((const char*)req.data(), req.size());
     std::cout << lidl::nameof(
-                     lidl::get_root<lidl_example::scientific_calculator_call>(req)
+                     lidl::get_root<lidl_example::scientific_calculator::call_union>(req)
                          .alternative())
               << '\n';
 
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     handler(c, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& res = lidl::get_root<lidl_example::scientific_calculator_return>(
+    auto& res = lidl::get_root<lidl_example::scientific_calculator::return_union>(
                     resp_builder.get_buffer())
                     .multiply();
     std::cout << res.ret0() << '\n';
@@ -111,6 +111,7 @@ int main(int argc, char** argv) {
     std::cout << resp_builder.size() << '\n';
 
     auto& rep_res =
-        lidl::get_root<lidl_example::repeat_return>(resp_builder.get_buffer()).echo();
+        lidl::get_root<lidl_example::repeat::return_union>(resp_builder.get_buffer())
+            .echo();
     std::cout << rep_res.ret0().string_view() << '\n';
 }

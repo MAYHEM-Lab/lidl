@@ -110,20 +110,23 @@ compound_layout union_type::layout(const module& mod) const {
 }
 
 enumeration enum_for_union(const module& m, const union_type& u) {
-    enumeration e(const_cast<union_type*>(&u));
-    auto i8handle     = recursive_name_lookup(e.get_scope(), "i8");
+    enumeration e(const_cast<union_type*>(&u), u.src_info);
+    auto i8handle = recursive_name_lookup(e.get_scope(), "i8");
     assert(i8handle);
     e.underlying_type = name{i8handle.value()};
 
     // TODO: since the enumerations are anonymous, we can't set inheritance relationship
     // between them yet...
-    //    if (auto base = u.get_base()) {
-    //        auto base_enum = base->get_enum(m);
-    //    }
+    if (auto base = u.get_base()) {
+        auto& base_enum = base->get_enum(m);
+        auto enum_sym =
+            recursive_definition_lookup(base->get_scope(), &base_enum).value();
+        e.set_base({enum_sym});
+    }
 
     //    static_cast<base*>(&e)->get_scope()->set_parent(u.get_scope()->shared_from_this());
 
-    for (auto& [name, _] : u.all_members()) {
+    for (auto& [name, _] : u.own_members()) {
         e.add_member(std::string(name));
     }
     return e;
