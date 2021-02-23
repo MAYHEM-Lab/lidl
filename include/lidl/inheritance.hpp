@@ -4,6 +4,7 @@
 #include <lidl/scope.hpp>
 #include <optional>
 #include <algorithm>
+#include <stdexcept>
 
 namespace lidl {
 template<class T>

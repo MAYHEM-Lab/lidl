@@ -8,6 +8,7 @@
 #include "cppgen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
+#include <lidl/module.hpp>
 
 namespace lidl::cpp {
 using codegen::section;
@@ -20,7 +21,7 @@ std::string generic_gen::full_name() {
 }
 
 sections generic_gen::do_generate(const generic_structure& str) {
-    module tmpmod(const_cast<generic_structure*>(&str), str.src_info);
+    lidl::module tmpmod(const_cast<generic_structure*>(&str), str.src_info);
     tmpmod.name_space = mod().name_space;
     define(mod().symbols(), "foo_" + full_name(), &tmpmod);
     auto instantiated = str.instantiate(mod(), get());
@@ -39,7 +40,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
 }
 
 sections generic_gen::do_generate(const generic_union& u) {
-    module tmpmod(const_cast<generic_union*>(&u), u.src_info);
+    lidl::module tmpmod(const_cast<generic_union*>(&u), u.src_info);
     tmpmod.name_space = mod().name_space;
     define(mod().symbols(), "foo_" + full_name(), &tmpmod);
     auto instantiated = u.instantiate(mod(), get());
