@@ -58,7 +58,7 @@ bool reference_type_pass(module& m) {
     bool changed = false;
 
     for (auto& s : m.structs) {
-        for (auto& [_, member] : s.own_members()) {
+        for (auto& [_, member] : s->own_members()) {
             changed |= reference_type_pass(m, member.type_);
         }
     }

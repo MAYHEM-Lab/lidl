@@ -17,16 +17,16 @@ struct module : public base {
     std::string module_name;
     std::string name_space = "lidlmod";
 
-    const module* parent           = nullptr;
+    const module* parent = nullptr;
 
     std::deque<std::unique_ptr<type>> basic_types;
     std::deque<std::unique_ptr<generic>> basic_generics;
 
-    std::deque<structure> structs;
+    std::vector<std::unique_ptr<structure>> structs;
     std::vector<std::unique_ptr<union_type>> unions;
     std::deque<enumeration> enums;
 
-    std::deque<generic_structure> generic_structs;
+    std::vector<std::unique_ptr<generic_structure>> generic_structs;
     std::deque<generic_union> generic_unions;
 
     std::vector<std::unique_ptr<service>> services;

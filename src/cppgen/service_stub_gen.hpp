@@ -11,7 +11,7 @@ public:
     codegen::sections generate() override;
 };
 
-class svc_stub_generator : public codegen::generator_base<service> {
+class zerocopy_stub_generator : public codegen::generator_base<service> {
 public:
     using generator_base::generator_base;
 
@@ -19,7 +19,6 @@ public:
 
 private:
     std::string make_procedure_stub(std::string_view proc_name, const procedure& proc);
-    std::string make_params_tuple(std::string_view proc_name, const procedure& proc);
 };
 
 class remote_stub_generator : public codegen::generator_base<service> {

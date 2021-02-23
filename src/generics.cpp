@@ -26,7 +26,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
         ++index;
     }
 
-    for (auto& [member_name, mem] : genstr.struct_.all_members()) {
+    for (auto& [member_name, mem] : genstr.struct_->all_members()) {
         if (get_symbol(mem.type_.base) != &forward_decl) {
             // Generic parameters are forward declarations.
             // If a member does not have a forward declared type, we can safely skip it.

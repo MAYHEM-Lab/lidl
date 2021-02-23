@@ -113,18 +113,24 @@ std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
 
 std::optional<symbol_handle> recursive_name_lookup(const scope& s,
                                                    std::string_view name) {
-    if (auto sym = s.name_lookup(name); sym) {
+    std::cerr << &s.object() << " - " << name << '\n';
+    if (auto sym = s.name_lookup(name)) {
         return sym;
     }
+
     if (auto empty = s.name_lookup("")) {
         auto sym = get_symbol(*empty);
+        assert(sym);
         if (auto res = recursive_name_lookup(sym->get_scope(), name)) {
             return res;
         }
     }
+
     if (s.object().parent()) {
+        assert(s.parent_scope());
         return recursive_name_lookup(*s.parent_scope(), name);
     }
+
     return std::nullopt;
 }
 
@@ -223,9 +229,6 @@ void scope::undefine(std::string_view name) {
     assert(it != m_aliases.end());
 
     auto handle = it->second;
-
-    auto scope_ptr = dynamic_cast<const scope*>(lookup(handle));
-    assert(scope_ptr);
 
     m_syms[handle.get_id() - 1]  = nullptr;
     m_names[handle.get_id() - 1] = {};

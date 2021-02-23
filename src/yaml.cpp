@@ -143,8 +143,8 @@ class yaml_loader : public module_loader {
         return m;
     }
 
-    structure read_structure(const YAML::Node& node, base& scop) {
-        structure s(&scop, make_source_info(node));
+    std::unique_ptr<structure> read_structure(const YAML::Node& node, base& scop) {
+        auto s = std::make_unique<structure>(&scop, make_source_info(node));
 
         auto members = node["members"];
         if (!members) {
@@ -152,7 +152,7 @@ class yaml_loader : public module_loader {
         }
         for (auto&& e : members) {
             auto& [key, val] = static_cast<const std::pair<YAML::Node, YAML::Node>&>(e);
-            s.add_member(key.as<std::string>(), read_member(val, s));
+            s->add_member(key.as<std::string>(), read_member(val, *s));
         }
 
         return s;
@@ -176,21 +176,23 @@ class yaml_loader : public module_loader {
         }
 
         auto raw = node["raw"];
-        u->raw    = raw && raw.as<bool>();
+        u->raw   = raw && raw.as<bool>();
 
         return u;
     }
 
-    generic_structure read_generic_structure(const YAML::Node& node, base& gen_scope) {
+    std::unique_ptr<generic_structure> read_generic_structure(const YAML::Node& node,
+                                                              base& gen_scope) {
         auto params = parse_parameters(node["parameters"]);
 
-        generic_structure genstr{std::move(params), &gen_scope, make_source_info(node)};
+        auto genstr = std::make_unique<generic_structure>(
+            std::move(params), &gen_scope, make_source_info(node));
 
-        for (auto& [name, param] : genstr.declaration) {
-            genstr.get_scope().declare(name);
+        for (auto& [name, param] : genstr->declaration) {
+            genstr->get_scope().declare(name);
         }
 
-        genstr.struct_ = read_structure(node, genstr);
+        genstr->struct_ = read_structure(node, *genstr);
         return genstr;
     }
 
@@ -337,7 +339,7 @@ public:
 
             if (type_str == "structure") {
                 m_mod->structs.emplace_back(read_structure(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->structs.back());
+                define(m_mod->symbols(), name, m_mod->structs.back().get());
             } else if (type_str == "union") {
                 m_mod->unions.emplace_back(read_union(val, *m_mod));
                 define(m_mod->symbols(), name, m_mod->unions.back().get());
@@ -346,7 +348,7 @@ public:
                 define(m_mod->symbols(), name, &m_mod->enums.back());
             } else if (type_str == "generic<structure>") {
                 m_mod->generic_structs.emplace_back(read_generic_structure(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->generic_structs.back());
+                define(m_mod->symbols(), name, m_mod->generic_structs.back().get());
             } else if (type_str == "generic<union>") {
                 m_mod->generic_unions.emplace_back(read_generic_union(val, *m_mod));
                 define(m_mod->symbols(), name, &m_mod->generic_unions.back());

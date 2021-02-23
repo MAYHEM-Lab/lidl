@@ -3,9 +3,9 @@
 #include "generator.hpp"
 
 #include <algorithm>
+#include <sections.hpp>
 #include <sstream>
 #include <string>
-#include <sections.hpp>
 
 namespace lidl::codegen {
 struct emitter {
@@ -23,11 +23,17 @@ private:
 
     bool pass();
 
+    bool is_defined(const section& sect) {
+        return std::all_of(sect.keys.begin(), sect.keys.end(), [&](auto& n) {
+            return std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
+                   m_satisfied.end();
+        });
+    }
+
     bool is_satisfied(const section& sect) {
         return std::all_of(sect.depends_on.begin(), sect.depends_on.end(), [&](auto& n) {
             return std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
                    m_satisfied.end();
-            //            return m_satisfied.find(n) != m_satisfied.end();
         });
     }
 
@@ -37,4 +43,4 @@ private:
     std::vector<section> m_generated;
     std::vector<section_key_t> m_satisfied;
 };
-} // namespace lidl::cpp
+} // namespace lidl::codegen

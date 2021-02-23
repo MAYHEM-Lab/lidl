@@ -120,7 +120,7 @@ struct generic_structure : generic {
     std::unique_ptr<type> instantiate(const module& mod,
                                       const generic_instantiation& ins) const override;
 
-    structure struct_;
+    std::unique_ptr<structure> struct_;
 };
 
 struct generic_union : generic {

@@ -123,10 +123,6 @@ std::string remote_stub_generator::copy_proc_param(const procedure& proc,
     auto param_type = get_type(mod(), param.type);
     if (param_type->is_reference_type(mod())) {
         throw std::runtime_error("Reference types are not supported in stubs yet!");
-        //        return fmt::format(
-        //            "lidl::create<{}>(mb, {})",
-        //            get_identifier(mod(),
-        //            std::get<lidl::name>(param_type_name.args[0])), param_name);
     } else if (param_type->is_view(mod())) {
         auto wire_type_name = param_type->get_wire_type(mod());
         if (wire_type_name.base ==
@@ -337,6 +333,7 @@ sections service_generator::generate() {
     std::vector<std::string> sub_type_names;
     for (auto& [name, proc] : get().own_procedures()) {
         auto deps = generate_procedure(mod(), name, *proc, str);
+        str << '\n';
         def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
 
         {
@@ -345,8 +342,6 @@ sections service_generator::generate() {
             auto abs_name   = get_identifier(mod(), lidl::name{sym});
 
             sub_type_names.emplace_back(union_name);
-
-            std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
 
             auto generator = struct_gen(mod(),
                                         sym,
@@ -368,8 +363,6 @@ sections service_generator::generate() {
 
             sub_type_names.emplace_back(union_name);
 
-            std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
-
             auto generator = struct_gen(mod(),
                                         sym,
                                         abs_name.substr(mod().name_space.size() + 2),
@@ -382,8 +375,6 @@ sections service_generator::generate() {
             }
             res.merge_before(std::move(subres));
         }
-
-        str << '\n';
     }
 
     {
@@ -391,8 +382,6 @@ sections service_generator::generate() {
         auto union_name = local_name(sym);
         auto abs_name   = get_identifier(mod(), lidl::name{sym});
         sub_type_names.emplace_back(union_name);
-
-        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
 
         auto generator = union_gen(mod(),
                                    sym,
@@ -413,8 +402,6 @@ sections service_generator::generate() {
         auto abs_name   = get_identifier(mod(), lidl::name{sym});
         sub_type_names.emplace_back(union_name);
 
-        std::cerr << fmt::format("Generating {}::{}\n", this->name(), union_name);
-
         auto generator = union_gen(mod(),
                                    sym,
                                    abs_name.substr(mod().name_space.size() + 2),
@@ -428,7 +415,7 @@ sections service_generator::generate() {
         res.merge_before(std::move(subres));
     }
 
-    str << fmt::format("    virtual ~{}() = default;\n", name());
+    str << fmt::format("virtual ~{}() = default;\n", name());
 
     std::vector<std::string> sub_structs(sub_type_names);
     std::transform(sub_type_names.begin(),
@@ -452,7 +439,7 @@ sections service_generator::generate() {
     return res;
 }
 
-codegen::sections svc_stub_generator::generate() {
+codegen::sections zerocopy_stub_generator::generate() {
     section sect;
 
     // We depend on the definition for the service.
@@ -481,7 +468,7 @@ codegen::sections svc_stub_generator::generate() {
     return {{std::move(sect)}};
 }
 
-std::string svc_stub_generator::make_procedure_stub(std::string_view proc_name,
+std::string zerocopy_stub_generator::make_procedure_stub(std::string_view proc_name,
                                                     const procedure& proc) {
     std::string ret_type_name;
     if (proc.return_types.empty()) {

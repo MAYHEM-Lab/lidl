@@ -46,8 +46,10 @@ add_library(
   include/lidl/base.hpp
   include/lidl/loader.hpp
   src/loader.cpp
-        include/lidl/inheritance.hpp src/inheritance.cpp src/base.cpp)
-target_compile_features(lidl_core PUBLIC cxx_std_17)
+  include/lidl/inheritance.hpp
+  src/inheritance.cpp
+  src/base.cpp)
+target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
 target_link_libraries(lidl_core PUBLIC fmt GSL yaml-cpp)
 target_compile_definitions(lidl_core PUBLIC LIDL_VERSION_STRING=\"${PROJECT_VERSION}\")

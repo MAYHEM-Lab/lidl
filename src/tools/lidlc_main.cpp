@@ -49,46 +49,36 @@ void run(const lidlc_args& args) {
         importer->add_import_path(path);
     }
 
-    try {
-        lidl::load_context ctx;
-        ctx.set_importer(std::move(importer));
-        auto mod = ctx.do_import(*args.origin, "");
+    lidl::load_context ctx;
+    ctx.set_importer(std::move(importer));
+    auto mod = ctx.do_import(*args.origin, "");
 
-        if (args.just_details) {
-            std::cerr << "Symbols:\n";
-            mod->parent->symbols().dump(std::cerr);
-            std::cerr << "---\n";
-            YAML::Node res;
-            res["imports"] = {};
-            for (auto& [path, _] : ctx.import_mapping) {
-                res["imports"].push_back(path);
-            }
-            std::cout << res << '\n';
-            return;
+    if (args.just_details) {
+        std::cerr << "Symbols:\n";
+        mod->parent->symbols().dump(std::cerr);
+        std::cerr << "---\n";
+        YAML::Node res;
+        res["imports"] = {};
+        for (auto& [path, _] : ctx.import_mapping) {
+            res["imports"].push_back(path);
         }
-
-        auto backend_maker = backends.find(args.backend);
-        if (backend_maker == backends.end()) {
-            std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
-            std::vector<std::string_view> names(backends.size());
-            std::transform(backends.begin(), backends.end(), names.begin(), [](auto& be) {
-              return be.first;
-            });
-            std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
-            return;
-        }
-
-        try {
-            auto backend = backend_maker->second();
-            backend->generate(*mod, *args.output_stream);
-        } catch (std::exception& err) {
-            std::cerr << "Code generation failed: " << err.what() << '\n';
-            return;
-        }
-    } catch (std::exception& err) {
-        std::cerr << "Module loading failed: " << err.what() << '\n';
+        std::cout << res << '\n';
         return;
     }
+
+    auto backend_maker = backends.find(args.backend);
+    if (backend_maker == backends.end()) {
+        std::cerr << fmt::format("Unknown backend: {}\n", args.backend);
+        std::vector<std::string_view> names(backends.size());
+        std::transform(backends.begin(), backends.end(), names.begin(), [](auto& be) {
+            return be.first;
+        });
+        std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
+        return;
+    }
+
+    auto backend = backend_maker->second();
+    backend->generate(*mod, *args.output_stream);
 }
 } // namespace lidl
 

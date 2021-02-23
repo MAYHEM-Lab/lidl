@@ -20,15 +20,18 @@ std::string generic_gen::full_name() {
 }
 
 sections generic_gen::do_generate(const generic_structure& str) {
-    module tmpmod;
+    module tmpmod(const_cast<generic_structure*>(&str), str.src_info);
     tmpmod.name_space = mod().name_space;
     define(mod().symbols(), "foo_" + full_name(), &tmpmod);
+    auto instantiated = str.instantiate(mod(), get());
     tmpmod.structs.emplace_back(
-        *dynamic_cast<structure*>(str.instantiate(mod(), get()).get()));
+        std::unique_ptr<structure>(static_cast<structure*>(instantiated.release())));
+    auto& un = *tmpmod.structs.back();
+    define(tmpmod.symbols(), name(), &un);
+
     run_passes_until_stable(tmpmod);
 
-    struct_gen gen(
-        tmpmod, symbol(), local_full_name(), name(), full_name(), tmpmod.structs.back());
+    struct_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
     auto res = std::move(gen.generate());
     mod().symbols().undefine("foo_" + full_name());
 
