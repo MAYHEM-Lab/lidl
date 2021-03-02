@@ -10,3 +10,6 @@
 [submodule "3rd_party/pybind11"]
 	path = 3rd_party/pybind11
 	url = https://github.com/pybind/pybind11
+[submodule "3rd_party/lexy"]
+	path = 3rd_party/lexy
+	url = https://github.com/foonathan/lexy.git

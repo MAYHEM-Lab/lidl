@@ -9,3 +9,5 @@ endif()
 if (ENABLE_PYBINDGEN)
   add_subdirectory(pybind11 EXCLUDE_FROM_ALL)
 endif()
+
+add_subdirectory(lexy EXCLUDE_FROM_ALL)
