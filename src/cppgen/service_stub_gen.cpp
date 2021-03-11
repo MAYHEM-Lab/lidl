@@ -34,8 +34,11 @@ std::string decide_param_type_decoration(const module& mod, const parameter& par
     }
 }
 
-std::pair<std::string, std::vector<section_key_t>> make_proc_signature(
-    const module& mod, std::string_view proc_name, const procedure& proc) {
+std::pair<std::string, std::vector<section_key_t>>
+make_proc_signature(const module& mod,
+                    std::string_view proc_name,
+                    const procedure& proc,
+                    bool async = false) {
     std::vector<section_key_t> dependencies;
 
     std::vector<std::string> params;
@@ -73,6 +76,10 @@ std::pair<std::string, std::vector<section_key_t>> make_proc_signature(
         } else if (ret_type->is_view(mod)) {
             params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
         }
+    }
+
+    if (async) {
+        ret_type_name = fmt::format("tos::Task<{}>", ret_type_name);
     }
 
     constexpr auto decl_format = "{} {}({})";
@@ -241,8 +248,9 @@ std::string remote_stub_generator::make_procedure_stub(std::string_view proc_nam
 std::vector<section_key_t> generate_procedure(const module& mod,
                                               std::string_view proc_name,
                                               const procedure& proc,
-                                              std::ostream& str) {
-    auto [sig, keys] = make_proc_signature(mod, proc_name, proc);
+                                              std::ostream& str,
+                                              bool async = false) {
+    auto [sig, keys] = make_proc_signature(mod, proc_name, proc, async);
     str << "virtual " << sig << " = 0;";
     return keys;
 }
@@ -439,6 +447,50 @@ sections service_generator::generate() {
     return res;
 }
 
+sections async_service_generator::generate() {
+    std::vector<std::string> inheritance;
+    if (auto& base = get().extends; base) {
+        inheritance.emplace_back(get_identifier(mod(), {*base}));
+    } else {
+        inheritance.emplace_back(fmt::format("::lidl::service_base", name()));
+    }
+
+    std::stringstream str;
+
+    section def_sec;
+
+    str << fmt::format(
+        "class async_{}{} {{\npublic:\n",
+        name(),
+        inheritance.empty()
+            ? ""
+            : fmt::format(" : public {}", fmt::join(inheritance, ", public ")));
+
+    sections res;
+
+    std::vector<std::string> sub_type_names;
+    for (auto& [name, proc] : get().own_procedures()) {
+        auto deps = generate_procedure(mod(), name, *proc, str, true);
+        str << '\n';
+        def_sec.depends_on.insert(def_sec.depends_on.end(), deps.begin(), deps.end());
+    }
+
+    str << fmt::format("virtual ~async_{}() = default;\n", name());
+
+    str << "};";
+
+    auto serv_handle    = *recursive_definition_lookup(mod().symbols(), &get());
+    auto serv_full_name = get_identifier(mod(), {serv_handle});
+
+    def_sec.add_key({"async_" + serv_full_name, section_type::definition});
+    def_sec.definition = str.str();
+    def_sec.name_space = mod().name_space;
+
+    res.add(std::move(def_sec));
+
+    return res;
+}
+
 codegen::sections zerocopy_stub_generator::generate() {
     section sect;
 
@@ -469,7 +521,7 @@ codegen::sections zerocopy_stub_generator::generate() {
 }
 
 std::string zerocopy_stub_generator::make_procedure_stub(std::string_view proc_name,
-                                                    const procedure& proc) {
+                                                         const procedure& proc) {
     std::string ret_type_name;
     if (proc.return_types.empty()) {
         ret_type_name = "void";

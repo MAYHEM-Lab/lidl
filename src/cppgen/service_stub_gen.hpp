@@ -11,6 +11,13 @@ public:
     codegen::sections generate() override;
 };
 
+class async_service_generator : public codegen::generator_base<service> {
+public:
+    using generator_base::generator_base;
+
+    codegen::sections generate() override;
+};
+
 class zerocopy_stub_generator : public codegen::generator_base<service> {
 public:
     using generator_base::generator_base;

@@ -60,6 +60,8 @@ struct cppgen {
         for (auto& service : mod().services) {
             m_sections.merge_before(do_generate<service_generator>(mod(), service.get()));
             m_sections.merge_before(
+                do_generate<async_service_generator>(mod(), service.get()));
+            m_sections.merge_before(
                 do_generate<remote_stub_generator>(mod(), service.get()));
             m_sections.merge_before(
                 do_generate<zerocopy_stub_generator>(mod(), service.get()));
@@ -70,6 +72,7 @@ struct cppgen {
         str << "#pragma once\n\n#include <lidlrt/lidl.hpp>\n";
         if (!mod().services.empty()) {
             str << "#include <lidlrt/service.hpp>\n";
+            str << "#include <tos/task.hpp>\n";
         }
         str << '\n';
 
