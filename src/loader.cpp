@@ -12,6 +12,10 @@ namespace lidl {
 std::unique_ptr<module_loader> make_yaml_loader(load_context& root,
                                                 std::istream& file,
                                                 std::optional<std::string> origin);
+std::unique_ptr<module_loader> make_frontend_loader(load_context& root,
+                                                    std::istream& file,
+                                                    std::optional<std::string> origin);
+
 
 namespace fs = std::filesystem;
 
@@ -64,7 +68,7 @@ std::pair<std::unique_ptr<module_loader>, std::string> path_resolver::resolve_im
         return {nullptr, ""};
     }
 
-    if (found->extension() != ".yaml") {
+    if (found->extension() != ".yaml" && found->extension() != ".lidl") {
         return {nullptr, found->string()};
     }
 
@@ -74,7 +78,11 @@ std::pair<std::unique_ptr<module_loader>, std::string> path_resolver::resolve_im
         return {nullptr, found->string()};
     }
 
-    return {make_yaml_loader(ctx, import_file, found->string()), found->string()};
+    if (found->extension() == ".yaml") {
+        return {make_yaml_loader(ctx, import_file, found->string()), found->string()};
+    }
+
+    return {make_frontend_loader(ctx, import_file, found->string()), found->string()};
 }
 
 load_context::load_context() {

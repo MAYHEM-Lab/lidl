@@ -16,17 +16,17 @@ if (CPP_BACKEND_ENABLED GREATER_EQUAL 0)
   add_subdirectory(jsgen)
 endif()
 
+if (NOT DISABLE_YAML)
+  add_library(lidl_yaml yaml.cpp yaml.hpp)
+  target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)
+endif()
+
 if(BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 
 if(ENABLE_PYBINDGEN)
   add_subdirectory(pybindgen)
-endif()
-
-if (NOT DISABLE_YAML)
-  add_library(lidl_yaml yaml.cpp yaml.hpp)
-  target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)
 endif()
 
 if(BUILD_TESTS)

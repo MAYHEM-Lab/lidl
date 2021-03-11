@@ -53,6 +53,11 @@ void run(const lidlc_args& args) {
     ctx.set_importer(std::move(importer));
     auto mod = ctx.do_import(*args.origin, "");
 
+    if (!mod) {
+        std::cerr << "Module parsing failed!\n";
+        exit(1);
+    }
+
     if (args.just_details) {
         std::cerr << "Symbols:\n";
         mod->parent->symbols().dump(std::cerr);
@@ -74,7 +79,7 @@ void run(const lidlc_args& args) {
             return be.first;
         });
         std::cerr << fmt::format("Possible backends: {}", fmt::join(names, ", "));
-        return;
+        exit(1);
     }
 
     auto backend = backend_maker->second();

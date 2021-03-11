@@ -1,6 +1,14 @@
 add_executable(lidlc lidlc_main.cpp)
-target_link_libraries(lidlc PUBLIC lidl_core lidl_yaml lidl_codegen BFG::Lyra)
+target_link_libraries(lidlc PUBLIC lidl_core lidl_codegen BFG::Lyra)
 target_include_directories(lidlc PRIVATE "..")
+
+if (TARGET lidl_yaml)
+  target_link_libraries(lidlc PUBLIC lidl_yaml)
+endif()
+
+if (TARGET lidl_frontend)
+  target_link_libraries(lidlc PUBLIC lidl_frontend)
+endif()
 
 if (TARGET lidl_cppgen)
   target_link_libraries(lidlc PRIVATE lidl_cppgen)

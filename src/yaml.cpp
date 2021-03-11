@@ -304,20 +304,7 @@ public:
             Expects(val["type"]);
 
             auto type_str = val["type"].as<std::string>();
-
-            if (type_str == "structure") {
-                m_mod->symbols().declare(key.as<std::string>());
-            } else if (type_str == "union") {
-                m_mod->symbols().declare(key.as<std::string>());
-            } else if (type_str == "enumeration") {
-                m_mod->symbols().declare(key.as<std::string>());
-            } else if (type_str == "generic<structure>") {
-                m_mod->symbols().declare(key.as<std::string>());
-            } else if (type_str == "generic<union>") {
-                m_mod->symbols().declare(key.as<std::string>());
-            } else if (type_str == "service") {
-                m_mod->symbols().declare(key.as<std::string>());
-            }
+            m_mod->symbols().declare(key.as<std::string>());
         }
     }
 
