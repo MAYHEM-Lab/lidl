@@ -1,7 +1,8 @@
+#include "passes.hpp"
+
 #include <doctest.h>
 #include <gsl/span>
 #include <lidl/module.hpp>
-#include "passes.hpp"
 
 namespace lidl {
 namespace {
@@ -33,20 +34,20 @@ TEST_CASE("yaml2bin") {
     auto& root   = root_module->add_child("", lidl::basic_module());
     auto& module = root_module->get_child("test");
 
-    auto bool_handle = recursive_full_name_lookup(*module.symbols, "bool").value();
-    auto i8_handle   = recursive_full_name_lookup(*module.symbols, "i8").value();
-    auto i32_handle  = recursive_full_name_lookup(*module.symbols, "i32").value();
-    auto str_handle  = recursive_full_name_lookup(*module.symbols, "string").value();
-    auto ptr_handle  = recursive_full_name_lookup(*module.symbols, "ptr").value();
-    auto vec_handle  = recursive_full_name_lookup(*module.symbols, "vector").value();
+    auto bool_handle = recursive_full_name_lookup(module.symbols(), "bool").value();
+    auto i8_handle   = recursive_full_name_lookup(module.symbols(), "i8").value();
+    auto i32_handle  = recursive_full_name_lookup(module.symbols(), "i32").value();
+    auto str_handle  = recursive_full_name_lookup(module.symbols(), "string").value();
+    auto ptr_handle  = recursive_full_name_lookup(module.symbols(), "ptr").value();
+    auto vec_handle  = recursive_full_name_lookup(module.symbols(), "vector").value();
 
     module.enums.emplace_back();
-    auto& enumeration           = module.enums.back();
-    enumeration.underlying_type = name{i8_handle};
-    enumeration.members.emplace_back("foo", enum_member{0});
-    enumeration.members.emplace_back("bar", enum_member{1});
-    enumeration.members.emplace_back("baz", enum_member{2});
-    auto enum_handle = define(*module.symbols, "enum", &enumeration);
+    auto& enumeration            = module.enums.back();
+    enumeration->underlying_type = name{i8_handle};
+    enumeration->add_member("foo");
+    enumeration->add_member("bar");
+    enumeration->add_member("baz");
+    auto enum_handle = define(module.symbols(), "enum", enumeration.get());
 
     module.unions.emplace_back();
     auto& un = module.unions.back();

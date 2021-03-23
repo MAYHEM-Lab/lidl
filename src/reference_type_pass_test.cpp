@@ -43,7 +43,7 @@ TEST_CASE("reference type pass works with a vector of strings") {
 
     reference_type_pass(m);
 
-    auto& mem = std::get<member>(m.structs[0].members[0]);
+    auto& mem = std::get<member>(m.structs[0]->members[0]);
 
     REQUIRE_EQ(ptr_sym, mem.type_.base);
     REQUIRE_EQ(1, mem.type_.args.size());
