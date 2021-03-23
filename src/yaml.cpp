@@ -304,7 +304,6 @@ public:
 
             Expects(val["type"]);
 
-            auto type_str = val["type"].as<std::string>();
             m_mod->symbols().declare(key.as<std::string>());
         }
     }
