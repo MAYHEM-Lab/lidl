@@ -100,7 +100,7 @@ std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
         assert(handle_res);
         auto handle = *handle_res;
         auto name   = (*it)->get_scope().nameof(handle);
-        if (name.empty()) {
+        if (name.empty() || name.starts_with("#")) {
             continue;
         }
         names.push_back(name);

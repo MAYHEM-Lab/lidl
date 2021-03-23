@@ -8,6 +8,7 @@
 #include "cppgen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
+
 #include <lidl/module.hpp>
 
 namespace lidl::cpp {
@@ -21,39 +22,39 @@ std::string generic_gen::full_name() {
 }
 
 sections generic_gen::do_generate(const generic_structure& str) {
-    lidl::module tmpmod(const_cast<generic_structure*>(&str), str.src_info);
+    lidl::module tmpmod(const_cast<module*>(&mod()), str.src_info);
     tmpmod.name_space = mod().name_space;
-    define(mod().symbols(), "foo_" + full_name(), &tmpmod);
-    auto instantiated = str.instantiate(mod(), get());
+    define(mod().symbols(), "#", &tmpmod);
+    auto instantiated = str.instantiate(tmpmod, get());
     tmpmod.structs.emplace_back(
         std::unique_ptr<structure>(static_cast<structure*>(instantiated.release())));
     auto& un = *tmpmod.structs.back();
-    define(tmpmod.symbols(), name(), &un);
+    define(tmpmod.symbols(), local_full_name(), &un);
 
     run_passes_until_stable(tmpmod);
 
     struct_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
-    auto res = std::move(gen.generate());
-    mod().symbols().undefine("foo_" + full_name());
+    auto res = gen.generate();
+    mod().symbols().undefine("#");
 
     return res;
 }
 
 sections generic_gen::do_generate(const generic_union& u) {
-    lidl::module tmpmod(const_cast<generic_union*>(&u), u.src_info);
+    lidl::module tmpmod(const_cast<module*>(&mod()), u.src_info);
     tmpmod.name_space = mod().name_space;
-    define(mod().symbols(), "foo_" + full_name(), &tmpmod);
-    auto instantiated = u.instantiate(mod(), get());
+    define(mod().symbols(), "#", &tmpmod);
+    auto instantiated = u.instantiate(tmpmod, get());
     tmpmod.unions.emplace_back(
         std::unique_ptr<union_type>(static_cast<union_type*>(instantiated.release())));
     auto& un = *tmpmod.unions.back();
-    define(tmpmod.symbols(), name(), &un);
+    define(tmpmod.symbols(), local_full_name(), &un);
     run_passes_until_stable(tmpmod);
 
     union_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
 
-    auto res = std::move(gen.generate());
-    mod().symbols().undefine("foo_" + full_name());
+    auto res = gen.generate();
+    mod().symbols().undefine("#");
 
     return res;
 }
