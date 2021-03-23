@@ -45,7 +45,7 @@ type_categories union_type::category(const module& mod) const {
 
 const enumeration& union_type::get_enum(const module& m) const {
     if (!m_enumeration) {
-        m_enumeration = std::make_unique<enumeration>(enum_for_union(m, *this));
+        m_enumeration = enum_for_union(m, *this);
         define(const_cast<union_type*>(this)->get_scope(),
                "alternatives",
                m_enumeration.get());
@@ -109,11 +109,11 @@ compound_layout union_type::layout(const module& mod) const {
     return overall_computer;
 }
 
-enumeration enum_for_union(const module& m, const union_type& u) {
-    enumeration e(const_cast<union_type*>(&u), u.src_info);
-    auto i8handle = recursive_name_lookup(e.get_scope(), "i8");
+std::unique_ptr<enumeration> enum_for_union(const module& m, const union_type& u) {
+    auto e = std::make_unique<enumeration>(const_cast<union_type*>(&u), u.src_info);
+    auto i8handle = recursive_name_lookup(e->get_scope(), "i8");
     assert(i8handle);
-    e.underlying_type = name{i8handle.value()};
+    e->underlying_type = name{i8handle.value()};
 
     // TODO: since the enumerations are anonymous, we can't set inheritance relationship
     // between them yet...
@@ -121,13 +121,13 @@ enumeration enum_for_union(const module& m, const union_type& u) {
         auto& base_enum = base->get_enum(m);
         auto enum_sym =
             recursive_definition_lookup(base->get_scope(), &base_enum).value();
-        e.set_base({enum_sym});
+        e->set_base({enum_sym});
     }
 
     //    static_cast<base*>(&e)->get_scope()->set_parent(u.get_scope()->shared_from_this());
 
     for (auto& [name, _] : u.own_members()) {
-        e.add_member(std::string(name));
+        e->add_member(std::string(name));
     }
     return e;
 }

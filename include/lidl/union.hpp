@@ -84,5 +84,5 @@ private:
     mutable std::unique_ptr<const enumeration> m_enumeration;
 };
 
-enumeration enum_for_union(const module& m, const union_type& u);
+std::unique_ptr<enumeration> enum_for_union(const module& m, const union_type& u);
 } // namespace lidl
