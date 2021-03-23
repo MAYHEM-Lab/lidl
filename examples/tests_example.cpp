@@ -1,3 +1,4 @@
+#include "vec3f_generated.hpp"
 #include "tests_generated.hpp"
 
 #include <array>
