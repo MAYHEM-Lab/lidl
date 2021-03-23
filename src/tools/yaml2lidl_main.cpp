@@ -54,18 +54,26 @@ void yaml2lidl(yaml2lidl_args args) {
         exit(1);
     }
 
-    std::ifstream schema(args.schema_path);
-    auto& mod = yaml::load_module(*root_mod, schema);
+    auto importer = std::make_unique<lidl::path_resolver>();
+    //    for (auto& path : args.import_paths) {
+    //        importer->add_import_path(path);
+    //    }
 
-    run_passes_until_stable(mod);
+    lidl::load_context ctx;
+    ctx.set_importer(std::move(importer));
+    auto mod = ctx.do_import(args.schema_path, "");
 
-    auto root = std::get<const type*>(
-        get_symbol(*recursive_name_lookup(*mod.symbols, args.root_type)));
+    if (!mod) {
+        std::cerr << "Module parsing failed!\n";
+        exit(1);
+    }
+    auto root = dynamic_cast<const type*>(
+        get_symbol(*recursive_name_lookup(mod->symbols(), args.root_type)));
 
     ostream_writer output;
     output.str = &std::cout;
 
-    root->yaml2bin(mod, yaml_root, output);
+    root->yaml2bin(*mod, yaml_root, output);
 }
 
 int main(int argc, char** argv) {

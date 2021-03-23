@@ -5,8 +5,9 @@
 #include "passes.hpp"
 
 #include <fstream>
-#include <lidlrt/buffer.hpp>
+#include <lidl/loader.hpp>
 #include <lidl/module.hpp>
+#include <lidlrt/buffer.hpp>
 #include <yaml-cpp/yaml.h>
 #include <yaml.hpp>
 
@@ -47,11 +48,22 @@ int main(int argc, char** argv) {
     using namespace lidl;
     auto root_mod = std::make_unique<module>();
     root_mod->add_child("", basic_module());
-    std::ifstream schema(argv[1]);
-    auto& mod = yaml::load_module(*root_mod, schema);
-    run_passes_until_stable(mod);
-    auto root = std::get<const type*>(
-        get_symbol(recursive_name_lookup(*mod.symbols, argv[2]).value()));
+
+    auto importer = std::make_unique<lidl::path_resolver>();
+    //    for (auto& path : args.import_paths) {
+    //        importer->add_import_path(path);
+    //    }
+
+    lidl::load_context ctx;
+    ctx.set_importer(std::move(importer));
+    auto mod = ctx.do_import(argv[1], "");
+
+    if (!mod) {
+        std::cerr << "Module parsing failed!\n";
+        exit(1);
+    }
+    auto root = dynamic_cast<const type*>(
+        get_symbol(recursive_name_lookup(mod->symbols(), argv[2]).value()));
 
     std::ifstream datafile(argv[3], std::ios::binary);
     std::vector<uint8_t> data(std::istreambuf_iterator<char>(datafile),
@@ -59,9 +71,9 @@ int main(int argc, char** argv) {
 
     lidl::memory_reader reader(data);
 
-    reader.seek(-root->wire_layout(mod).size());
+    reader.seek(-root->wire_layout(*mod).size());
 
-    auto yaml = root->bin2yaml(mod, reader);
+    auto yaml = root->bin2yaml(*mod, reader);
 
     yaml["$lidlmeta"]["root_type"] = argv[2];
 
