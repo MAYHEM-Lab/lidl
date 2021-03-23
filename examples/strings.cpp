@@ -2,8 +2,8 @@
 
 #include <array>
 #include <iostream>
-#include <lidl/builder.hpp>
-#include <lidl/string.hpp>
+#include <lidlrt/builder.hpp>
+#include <lidlrt/string.hpp>
 
 int main() {
     std::array<uint8_t, 64> x;
