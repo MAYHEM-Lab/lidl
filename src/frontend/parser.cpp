@@ -20,8 +20,9 @@ constexpr auto ws = dsl::whitespace(dsl::ascii::blank | dsl::newline | dsl::p<co
 
 struct identifier {
     static constexpr auto rule =
-        ws + dsl::capture(dsl::ascii::alpha +
-                          dsl::while_(dsl::ascii::alnum / dsl::lit_c<'_'>));
+        ws +
+        dsl::capture(dsl::ascii::alpha +
+                     dsl::while_(dsl::ascii::alnum / dsl::lit_c<'_'> / dsl::lit_c<'.'>));
     static constexpr auto value = lexy::as_string<std::string>;
 };
 
@@ -37,7 +38,7 @@ struct name {
         };
 
         static constexpr auto rule = dsl::angle_bracketed.opt_list(
-            dsl::p<name_arg>, dsl::trailing_sep(dsl::comma));
+            ws + dsl::p<name_arg>, dsl::trailing_sep(dsl::comma));
         static constexpr auto value =
             lexy::as_list<std::vector<std::variant<int64_t, ast::name>>>;
     };
@@ -105,6 +106,37 @@ struct enumeration {
     static constexpr auto value = lexy::as_aggregate<ast::enumeration>;
 };
 
+struct metadata {
+    struct import_list {
+        struct import {
+            static constexpr auto rule = dsl::quoted(dsl::code_point);
+
+            static constexpr auto value =
+                lexy::as_string<std::string, lexy::utf8_encoding>;
+        };
+
+        static constexpr auto rule =
+            dsl::list(dsl::if_(LEXY_LIT("import") >> ws + dsl::p<import> + ws),
+                      dsl::sep(dsl::semicolon >> ws));
+
+        static constexpr auto value = lexy::as_list<std::vector<std::string>>;
+    };
+
+    struct name_space {
+        static constexpr auto rule =
+            LEXY_LIT("namespace") + ws + dsl::capture(dsl::until(dsl::semicolon));
+
+        static constexpr auto value = lexy::as_string<std::string, lexy::utf8_encoding>;
+    };
+
+    static constexpr auto rule = dsl::partial_combination(
+        dsl::peek(LEXY_LIT("import")) >> (LEXY_MEM(imports) = dsl::p<import_list>)+ws,
+        dsl::peek(LEXY_LIT("namespace")) >>
+            (LEXY_MEM(name_space) = dsl::p<name_space>)+ws);
+
+    static constexpr auto value = lexy::as_aggregate<ast::metadata>;
+};
+
 struct element {
     static constexpr auto rule = (dsl::peek(LEXY_LIT("struct")) >> dsl::p<structure>) |
                                  (dsl::peek(LEXY_LIT("enum")) >> dsl::p<enumeration>) |
@@ -121,19 +153,24 @@ struct module {
         static constexpr auto value = lexy::as_list<std::vector<ast::element>>;
     };
 
-    static constexpr auto rule = dsl::p<module_elements> + dsl::eof;
+    static constexpr auto rule = (LEXY_MEM(meta) = dsl::p<metadata>)+(
+                                     LEXY_MEM(elements) = dsl::p<module_elements>)+ws +
+                                 dsl::eof;
 
-    static constexpr auto value = lexy::construct<ast::module>;
+    static constexpr auto value = lexy::as_aggregate<ast::module>;
 };
 } // namespace
 } // namespace lidl::grammar
 
 namespace lidl::frontend {
 std::optional<ast::module> parse_module(std::string_view input_text) {
-    lexy::string_input input(input_text.data(), input_text.size());
+    lexy::string_input<lexy::utf8_encoding> input(input_text.data(), input_text.size());
     auto result = lexy::parse<lidl::grammar::module>(input, lexy_ext::report_error);
     if (!result)
         return {};
+    if (result.value().meta && result.value().meta->name_space) {
+        result.value().meta->name_space->pop_back();
+    }
     return result.value();
 }
 } // namespace lidl::frontend

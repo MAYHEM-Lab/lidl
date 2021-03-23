@@ -41,7 +41,13 @@ struct loader : module_loader {
     }
 
     module_meta get_metadata() override {
-        return module_meta();
+        auto res = module_meta();
+        if (!m_ast_mod.meta) {
+            return res;
+        }
+        res.name = m_ast_mod.meta->name_space;
+        res.imports = m_ast_mod.meta->imports;
+        return res;
     }
 
 private:

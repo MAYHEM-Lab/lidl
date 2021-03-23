@@ -35,9 +35,15 @@ struct enumeration {
     std::optional<ast::name> extends;
 };
 
+struct metadata {
+    std::optional<std::string> name_space;
+    std::vector<std::string> imports;
+};
+
 using element = std::variant<structure, union_, enumeration>;
 
 struct module {
+    std::optional<metadata> meta;
     std::vector<element> elements;
 };
 } // namespace lidl::ast
