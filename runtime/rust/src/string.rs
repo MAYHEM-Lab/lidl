@@ -33,13 +33,15 @@ impl String {
     }
 
     pub fn new<'a>(mb: &'a mut MessageBuilder<'a>, str: &str) -> &'a String {
-        let buffer = mb.allocate(2 + str.bytes().len() as i32, 1);
+        let buffer = mb.allocate(2, 1);
+        let content = mb.allocate(str.bytes().len() as i32, 1);
 
         unsafe {
             let ptr = (&mut buffer[0] as *mut u8) as *mut i16;
             *ptr = str.as_bytes().len() as i16
         }
-        buffer[core::mem::size_of::<String>() ..].copy_from_slice(str.as_bytes());
+
+        content.copy_from_slice(str.as_bytes());
         String::from_buffer(buffer)
     }
 }
