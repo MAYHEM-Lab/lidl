@@ -202,7 +202,7 @@ recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& 
 
 std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
                                                         std::string_view name) {
-    return recursive_full_name_lookup(s, split(name, "."));
+    return recursive_full_name_lookup(s, split(name, "::"));
 }
 
 namespace {

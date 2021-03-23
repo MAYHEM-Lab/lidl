@@ -1,0 +1,14 @@
+namespace gfx;
+
+struct vec3f {
+    x: f32;
+    y: f32;
+    z: f32;
+}
+
+struct none_t {}
+
+union maybe_int {
+    val: i32;
+    none: none_t;
+}

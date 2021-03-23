@@ -1,11 +1,11 @@
 $lidlmeta:
   imports:
-    - ./vec3f
+    - ./vec3f.lidl
 
 imported:
   type: structure
   members:
-    v: gfx.vec3f
+    v: gfx::vec3f
 
 not_raw:
   type: structure
