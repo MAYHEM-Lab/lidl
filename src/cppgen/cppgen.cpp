@@ -82,10 +82,6 @@ struct cppgen {
 private:
     codegen::sections m_sections;
 
-    std::string_view name() {
-        return mod().module_name;
-    }
-
     const module& mod() {
         return *m_module;
     }

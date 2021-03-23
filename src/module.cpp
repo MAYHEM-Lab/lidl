@@ -18,7 +18,6 @@ module& module::add_child(std::string_view child_name, std::unique_ptr<module> c
     define(get_scope(), child_name, &mod);
     mod.parent      = this;
     mod.name_space  = child_name;
-    mod.module_name = child_name;
     return mod;
 }
 } // namespace lidl

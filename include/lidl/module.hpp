@@ -14,7 +14,6 @@
 namespace lidl {
 struct module : public base {
     using base::base;
-    std::string module_name;
     std::string name_space = "lidlmod";
 
     const module* parent = nullptr;
