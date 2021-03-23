@@ -79,7 +79,8 @@ void emitter::mark_module(const module& decl_mod) {
     if (&decl_mod != m_module) {
         for (auto& sym_handle : decl_mod.symbols().all_handles()) {
             auto sym = get_symbol(sym_handle);
-            if (dynamic_cast<const scope*>(sym) || sym == &forward_decl) {
+            if (dynamic_cast<const scope*>(sym) || dynamic_cast<const module*>(sym) ||
+                sym == &forward_decl) {
                 continue;
             }
 
