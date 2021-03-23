@@ -26,7 +26,7 @@ struct module : public base {
     std::vector<std::unique_ptr<enumeration>> enums;
 
     std::vector<std::unique_ptr<generic_structure>> generic_structs;
-    std::deque<generic_union> generic_unions;
+    std::vector<std::unique_ptr<generic_union>> generic_unions;
 
     std::vector<std::unique_ptr<service>> services;
     mutable std::deque<generic_instantiation> instantiations;

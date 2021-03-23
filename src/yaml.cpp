@@ -196,16 +196,18 @@ class yaml_loader : public module_loader {
         return genstr;
     }
 
-    generic_union read_generic_union(const YAML::Node& node, base& scop) {
+    std::unique_ptr<generic_union> read_generic_union(const YAML::Node& node,
+                                                      base& scop) {
         auto params = parse_parameters(node["parameters"]);
 
-        generic_union genstr{std::move(params), &scop, make_source_info(node)};
+        auto genstr = std::make_unique<generic_union>(
+            std::move(params), &scop, make_source_info(node));
 
-        for (auto& [name, param] : genstr.declaration) {
-            genstr.get_scope().declare(name);
+        for (auto& [name, param] : genstr->declaration) {
+            genstr->get_scope().declare(name);
         }
 
-        genstr.union_ = read_union(node, genstr);
+        genstr->union_ = read_union(node, *genstr);
         return genstr;
     }
 
@@ -338,7 +340,7 @@ public:
                 define(m_mod->symbols(), name, m_mod->generic_structs.back().get());
             } else if (type_str == "generic<union>") {
                 m_mod->generic_unions.emplace_back(read_generic_union(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->generic_unions.back());
+                define(m_mod->symbols(), name, m_mod->generic_unions.back().get());
             } else if (type_str == "service") {
                 m_mod->services.emplace_back(parse_service(val, *m_mod));
                 define(m_mod->symbols(), name, m_mod->services.back().get());
