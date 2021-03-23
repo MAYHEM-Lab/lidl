@@ -22,7 +22,7 @@ struct import_resolver {
     virtual ~import_resolver() = default;
 };
 
-class module;
+struct module;
 
 class module_loader {
 public:
