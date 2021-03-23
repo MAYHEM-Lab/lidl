@@ -10,8 +10,9 @@
 
 
 namespace lidl {
-std::unique_ptr<type> generic_structure::instantiate(const module& mod,
-                                         const generic_instantiation& ins) const {
+std::unique_ptr<type>
+generic_structure::instantiate(const module& mod,
+                               const generic_instantiation& ins) const {
     auto newstr = std::make_unique<structure>();
 
     auto& genstr = dynamic_cast<const generic_structure&>(ins.generic_type());
@@ -37,7 +38,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
         }
 
         auto generic_param_name = local_name(mem.type_.base);
-        auto it = actual.find(generic_param_name);
+        auto it                 = actual.find(generic_param_name);
 
         if (it == actual.end()) {
             throw std::runtime_error("shouldn't happen");
@@ -54,7 +55,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
 }
 
 std::unique_ptr<type> generic_union::instantiate(const module& mod,
-                                      const generic_instantiation& ins) const {
+                                                 const generic_instantiation& ins) const {
     auto newstr = std::make_unique<union_type>(const_cast<module*>(&mod));
 
     auto& genstr = dynamic_cast<const generic_union&>(ins.generic_type());
@@ -80,7 +81,7 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
         }
 
         auto generic_param_name = local_name(mem->type_.base);
-        auto it = actual.find(generic_param_name);
+        auto it                 = actual.find(generic_param_name);
 
         if (it == actual.end()) {
             std::cerr << fmt::format("Could not find name: {}\n", generic_param_name);
