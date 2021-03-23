@@ -63,7 +63,6 @@ struct union_type : public type, public extendable<union_type> {
 
     const enumeration& get_enum(const module& m) const;
 
-    union_type(const union_type&) = default;
     union_type(union_type&&)      = default;
     union_type& operator=(union_type&&) = default;
 

@@ -28,7 +28,7 @@ struct view_type : type {
         throw std::runtime_error("View type");
     }
 
-    name get_wire_type(const module& mod) const {
+    name get_wire_type(const module& mod) const override {
         return m_wire_type;
     }
 
