@@ -113,7 +113,6 @@ std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
 
 std::optional<symbol_handle> recursive_name_lookup(const scope& s,
                                                    std::string_view name) {
-    std::cerr << &s.object() << " - " << name << '\n';
     if (auto sym = s.name_lookup(name)) {
         return sym;
     }
