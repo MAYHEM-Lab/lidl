@@ -30,7 +30,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
         if (get_symbol(mem.type_.base) != &forward_decl) {
             // Generic parameters are forward declarations.
             // If a member does not have a forward declared type, we can safely skip it.
-            member new_mem;
+            member new_mem(newstr.get());
             new_mem.type_ = mem.type_;
             newstr->add_member(std::string(member_name), std::move(new_mem));
             continue;
@@ -45,7 +45,7 @@ std::unique_ptr<type> generic_structure::instantiate(const module& mod,
 
         name new_name;
 
-        member new_mem;
+        member new_mem(newstr.get());
         new_mem.type_ = it->second;
         newstr->add_member(std::string(member_name), std::move(new_mem));
     }
@@ -73,7 +73,7 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
         if (get_symbol(mem->type_.base) != &forward_decl) {
             // Generic parameters are forward declarations.
             // If a member does not have a forward declared type, we can safely skip it.
-            member new_mem;
+            member new_mem(newstr.get());
             new_mem.type_ = mem->type_;
             newstr->add_member(std::string(member_name), std::move(new_mem));
             continue;
@@ -91,7 +91,7 @@ std::unique_ptr<type> generic_union::instantiate(const module& mod,
             throw std::runtime_error("shouldn't happen");
         }
 
-        member new_mem;
+        member new_mem(newstr.get());
         new_mem.type_ = it->second;
         newstr->add_member(std::string(member_name), std::move(new_mem));
     }
