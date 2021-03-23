@@ -45,7 +45,7 @@ struct loader : module_loader {
         if (!m_ast_mod.meta) {
             return res;
         }
-        res.name = m_ast_mod.meta->name_space;
+        res.name    = m_ast_mod.meta->name_space;
         res.imports = m_ast_mod.meta->imports;
         return res;
     }
@@ -55,9 +55,7 @@ private:
     std::unique_ptr<member> parse(const ast::member& mem, base& s);
     std::unique_ptr<structure> parse(const ast::structure& str, base& s);
     std::unique_ptr<union_type> parse(const ast::union_& str, base& s);
-    std::unique_ptr<enumeration> parse(const ast::enumeration& str, base& s) {
-        return nullptr;
-    }
+    std::unique_ptr<enumeration> parse(const ast::enumeration& str, base& s);
 
     void add(std::string_view name, std::unique_ptr<structure>&& str) {
         m_mod->structs.emplace_back(std::move(str));
@@ -70,8 +68,8 @@ private:
     }
 
     void add(std::string_view name, std::unique_ptr<enumeration>&& str) {
-        //        m_mod->enums.emplace_back(std::move(str));
-        //        define(m_mod->symbols(), name, m_mod->structs.back().get());
+        m_mod->enums.emplace_back(std::move(str));
+        define(m_mod->symbols(), name, m_mod->enums.back().get());
     }
 
     void declare_pass();
@@ -146,6 +144,17 @@ std::unique_ptr<union_type> lidl::frontend::loader::parse(const ast::union_& str
     auto res = std::make_unique<union_type>(&s);
     for (auto& mem : str.members) {
         res->add_member(mem.name, *parse(mem, *res));
+    }
+    return res;
+}
+
+std::unique_ptr<enumeration> lidl::frontend::loader::parse(const ast::enumeration& enu,
+                                                           base& s) {
+    auto res = std::make_unique<enumeration>(&s);
+    res->underlying_type =
+        name{recursive_full_name_lookup(res->get_scope(), "i8").value()};
+    for (auto& [name, val] : enu.values) {
+        res->add_member(name);
     }
     return res;
 }
