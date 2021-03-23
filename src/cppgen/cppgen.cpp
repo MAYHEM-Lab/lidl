@@ -37,7 +37,7 @@ struct cppgen {
 
     void generate(std::ostream& str) {
         for (auto& e : m_module->enums) {
-            m_sections.merge_before(codegen::do_generate<enum_gen>(mod(), &e));
+            m_sections.merge_before(codegen::do_generate<enum_gen>(mod(), e.get()));
         }
 
         for (auto& ins : mod().instantiations) {

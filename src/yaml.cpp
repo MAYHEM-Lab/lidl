@@ -247,16 +247,17 @@ class yaml_loader : public module_loader {
         return serv;
     }
 
-    enumeration read_enum(const YAML::Node& node, base& scop) {
-        enumeration e(&scop, make_source_info(node));
+    std::unique_ptr<enumeration> read_enum(const YAML::Node& node, base& scop) {
+        auto e = std::make_unique<enumeration>(&scop, make_source_info(node));
 
         if (auto base_node = node["extends"]) {
-            e.set_base(read_type(base_node, e));
+            e->set_base(read_type(base_node, *e));
         }
 
-        e.underlying_type = name{recursive_full_name_lookup(e.get_scope(), "i8").value()};
+        e->underlying_type =
+            name{recursive_full_name_lookup(e->get_scope(), "i8").value()};
         for (auto&& member : node["members"]) {
-            e.add_member(member.as<std::string>(), make_source_info(member));
+            e->add_member(member.as<std::string>(), make_source_info(member));
         }
         return e;
     }
@@ -332,7 +333,7 @@ public:
                 define(m_mod->symbols(), name, m_mod->unions.back().get());
             } else if (type_str == "enumeration") {
                 m_mod->enums.emplace_back(read_enum(val, *m_mod));
-                define(m_mod->symbols(), name, &m_mod->enums.back());
+                define(m_mod->symbols(), name, m_mod->enums.back().get());
             } else if (type_str == "generic<structure>") {
                 m_mod->generic_structs.emplace_back(read_generic_structure(val, *m_mod));
                 define(m_mod->symbols(), name, m_mod->generic_structs.back().get());
