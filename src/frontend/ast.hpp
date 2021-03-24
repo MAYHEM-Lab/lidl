@@ -37,12 +37,28 @@ struct enumeration : node {
     std::optional<ast::name> extends;
 };
 
+struct service : node {
+    struct procedure : node {
+        struct parameter : node {
+            ast::name type;
+            std::string name;
+        };
+        std::string name;
+        std::vector<parameter> params;
+        ast::name return_type;
+    };
+
+    std::string name;
+    std::vector<procedure> procedures;
+    std::optional<ast::name> extends;
+};
+
 struct metadata {
     std::optional<std::string> name_space;
     std::vector<std::string> imports;
 };
 
-using element = std::variant<structure, union_, enumeration>;
+using element = std::variant<structure, union_, enumeration, service>;
 
 struct module {
     std::optional<metadata> meta;
