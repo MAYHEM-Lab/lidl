@@ -9,6 +9,7 @@
 #include "union_gen.hpp"
 
 #include <lidl/basic.hpp>
+#include <lidl/errors.hpp>
 #include <lidl/view_types.hpp>
 
 namespace lidl::cpp {
@@ -138,9 +139,7 @@ std::string remote_stub_generator::copy_proc_param(const procedure& proc,
             return fmt::format("lidl::create_string(mb, {})", param_name);
         }
 
-        throw std::runtime_error(fmt::format("Unknown view type {} at {}",
-                                             get_identifier(mod(), param.type),
-                                             lidl::to_string(*proc.src_info)));
+        throw unknown_type_error(get_identifier(mod(), param.type), proc.src_info);
     } else {
         return fmt::format("{}", param_name);
     }
