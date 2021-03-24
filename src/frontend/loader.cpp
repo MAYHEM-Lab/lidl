@@ -56,6 +56,9 @@ private:
     std::unique_ptr<structure> parse(const ast::structure& str, base& s);
     std::unique_ptr<union_type> parse(const ast::union_& str, base& s);
     std::unique_ptr<enumeration> parse(const ast::enumeration& str, base& s);
+    parameter parse(const ast::service::procedure::parameter& proc, base& s);
+    std::unique_ptr<procedure> parse(const ast::service::procedure& proc, base& s);
+    std::unique_ptr<service> parse(const ast::service& serv, base& s);
 
     void add(std::string_view name, std::unique_ptr<structure>&& str) {
         m_mod->structs.emplace_back(std::move(str));
@@ -70,6 +73,11 @@ private:
     void add(std::string_view name, std::unique_ptr<enumeration>&& str) {
         m_mod->enums.emplace_back(std::move(str));
         define(m_mod->symbols(), name, m_mod->enums.back().get());
+    }
+
+    void add(std::string_view name, std::unique_ptr<service>&& str) {
+        m_mod->services.emplace_back(std::move(str));
+        define(m_mod->symbols(), name, m_mod->services.back().get());
     }
 
     void declare_pass();
@@ -156,6 +164,43 @@ std::unique_ptr<enumeration> lidl::frontend::loader::parse(const ast::enumeratio
     for (auto& [name, val] : enu.values) {
         res->add_member(name);
     }
+    return res;
+}
+
+parameter lidl::frontend::loader::parse(const ast::service::procedure::parameter& proc,
+                                        base& s) {
+    parameter res(&s);
+
+    res.type = parse(proc.type, res);
+
+    return res;
+}
+
+std::unique_ptr<procedure>
+lidl::frontend::loader::parse(const ast::service::procedure& proc, base& s) {
+    auto res = std::make_unique<procedure>(&s);
+
+    res->add_return_type(parse(proc.return_type, *res));
+
+    for (auto& param : proc.params) {
+        res->add_parameter(param.name, parse(param, *res));
+    }
+
+    return res;
+}
+
+std::unique_ptr<service> lidl::frontend::loader::parse(const ast::service& serv,
+                                                       base& s) {
+    auto res = std::make_unique<service>(&s);
+
+    if (serv.extends) {
+        res->set_base(parse(*serv.extends, *res));
+    }
+
+    for (auto& proc : serv.procedures) {
+        res->add_procedure(proc.name, parse(proc, *res));
+    }
+
     return res;
 }
 } // namespace
