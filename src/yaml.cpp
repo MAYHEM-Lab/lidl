@@ -216,7 +216,7 @@ class yaml_loader : public module_loader {
 
         if (auto returns = node["returns"]; returns) {
             for (auto&& ret : returns) {
-                result->return_types.push_back(read_type(ret, *result));
+                result->add_return_type(read_type(ret, *result));
             }
         }
         if (auto params = node["parameters"]; params) {

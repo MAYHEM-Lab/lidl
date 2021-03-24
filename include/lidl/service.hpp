@@ -37,6 +37,10 @@ struct procedure : public base {
         define(get_scope(), parameters.back().first, &parameters.back().second);
     }
 
+    void add_return_type(name type) {
+        return_types.push_back(type);
+    }
+
     std::unique_ptr<structure> params_struct;
     std::unique_ptr<structure> results_struct;
     name params_struct_name;
