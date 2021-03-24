@@ -7,29 +7,31 @@
 #include <vector>
 
 namespace lidl::ast {
-struct name {
+struct node {};
+
+struct name : node {
     std::string base;
     std::optional<std::vector<std::variant<int64_t, name>>> args;
 };
 
-struct member {
+struct member : node {
     std::string name;
     ast::name type_name;
 };
 
-struct structure {
+struct structure : node {
     std::string name;
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
 
-struct union_ {
+struct union_ : node {
     std::string name;
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
 
-struct enumeration {
+struct enumeration : node {
     std::string name;
     std::vector<std::pair<std::string, std::optional<int64_t>>> values;
     std::optional<ast::name> extends;
