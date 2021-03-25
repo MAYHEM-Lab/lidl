@@ -8,31 +8,33 @@
 
 namespace lidl::ast {
 struct node {};
+using identifier = std::string;
+using qualified_identifier = std::string;
 
 struct name : node {
-    std::string base;
+    qualified_identifier base;
     std::optional<std::vector<std::variant<int64_t, name>>> args;
 };
 
 struct member : node {
-    std::string name;
+    identifier name;
     ast::name type_name;
 };
 
 struct structure : node {
-    std::string name;
+    identifier name;
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
 
 struct union_ : node {
-    std::string name;
+    identifier name;
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
 
 struct enumeration : node {
-    std::string name;
+    identifier name;
     std::vector<std::pair<std::string, std::optional<int64_t>>> values;
     std::optional<ast::name> extends;
 };
@@ -41,14 +43,14 @@ struct service : node {
     struct procedure : node {
         struct parameter : node {
             ast::name type;
-            std::string name;
+            identifier name;
         };
-        std::string name;
+        identifier name;
         std::vector<parameter> params;
         ast::name return_type;
     };
 
-    std::string name;
+    identifier name;
     std::vector<procedure> procedures;
     std::optional<ast::name> extends;
 };
