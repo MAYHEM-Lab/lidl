@@ -67,7 +67,7 @@ struct cppgen {
                 do_generate<zerocopy_stub_generator>(mod(), service.get()));
         }
 
-        codegen::emitter e(*mod().parent, mod(), m_sections);
+        codegen::emitter e(root_module(mod()), mod(), m_sections);
 
         str << "#pragma once\n\n#include <lidlrt/lidl.hpp>\n";
         if (!mod().services.empty()) {

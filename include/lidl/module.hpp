@@ -54,4 +54,12 @@ private:
 };
 
 std::unique_ptr<module> basic_module();
+
+inline const module& root_module(const module& mod) {
+    auto ptr = &mod;
+    while (ptr->parent) {
+        ptr = ptr->parent;
+    }
+    return *ptr;
+}
 } // namespace lidl
