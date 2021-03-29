@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <lidl/algorithm.hpp>
 #include <lidl/base.hpp>
 #include <lidl/scope.hpp>
 #include <stdexcept>
@@ -160,28 +161,6 @@ std::optional<symbol_handle> do_recursive_definition_lookup(const scope& s, symb
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name) {
     return do_recursive_definition_lookup(root_scope(s), name);
 }
-
-namespace {
-template<class OutIt>
-void split(std::string_view sv, std::string_view delim, OutIt it) {
-    while (true) {
-        if (sv.empty())
-            break;
-        auto i = sv.find(delim);
-        *it++  = sv.substr(0, i);
-        if (i == sv.npos) {
-            break;
-        }
-        sv = sv.substr(i + delim.size());
-    }
-}
-
-inline std::vector<std::string_view> split(std::string_view sv, std::string_view delim) {
-    std::vector<std::string_view> splitted;
-    split(sv, delim, std::back_inserter(splitted));
-    return splitted;
-}
-} // namespace
 
 std::optional<symbol_handle>
 recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& parts) {
