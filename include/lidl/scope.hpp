@@ -11,6 +11,8 @@
 #include <vector>
 
 namespace lidl {
+using qualified_name = std::vector<std::string_view>;
+
 using symbol = const base*;
 extern base forward_decl;
 class scope {
@@ -106,7 +108,7 @@ std::optional<symbol_handle> recursive_name_lookup(const scope& s, std::string_v
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name);
 
 std::optional<symbol_handle>
-recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& name);
+recursive_full_name_lookup(const scope& s, const qualified_name& name);
 
 std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
                                                         std::string_view name);
