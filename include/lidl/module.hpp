@@ -33,8 +33,10 @@ struct module : public base {
 
     const generic_instantiation& create_or_get_instantiation(const name& ins) const;
 
+    module& get_child(qualified_name child_name);
     module& get_child(std::string_view child_name);
 
+    module& add_child(qualified_name child_name, std::unique_ptr<module> child);
     module& add_child(std::string_view child_name, std::unique_ptr<module> child);
 
     mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
