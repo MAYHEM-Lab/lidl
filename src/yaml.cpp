@@ -26,7 +26,7 @@ public:
     }
 };
 
-class yaml_loader : public module_loader {
+class yaml_loader final : public module_loader {
     std::optional<source_info> make_source_info(const YAML::Node& node) {
         auto&& mark = node.Mark();
         if (mark.is_null()) {
