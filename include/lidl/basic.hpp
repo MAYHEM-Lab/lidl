@@ -81,4 +81,7 @@ struct procedure_params_info {
     std::string proc_name;
     const procedure* proc;
 };
+
+inline constexpr std::string_view scope_separator = "::";
+inline constexpr std::string_view hidden_magic = "#";
 } // namespace lidl

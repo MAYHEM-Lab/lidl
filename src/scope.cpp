@@ -101,7 +101,7 @@ std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
         assert(handle_res);
         auto handle = *handle_res;
         auto name   = (*it)->get_scope().nameof(handle);
-        if (name.empty() || name.starts_with("#")) {
+        if (name.empty() || name.starts_with(hidden_magic)) {
             continue;
         }
         names.push_back(name);
@@ -181,7 +181,7 @@ recursive_full_name_lookup(const scope& s, const std::vector<std::string_view>& 
 
 std::optional<symbol_handle> recursive_full_name_lookup(const scope& s,
                                                         std::string_view name) {
-    return recursive_full_name_lookup(s, split(name, "::"));
+    return recursive_full_name_lookup(s, split(name, scope_separator));
 }
 
 namespace {
