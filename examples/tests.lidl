@@ -1,7 +1,7 @@
 import "./vec3f.lidl";
 
 struct imported {
-    v: gfx.vec3f;
+    v: gfx::vec3f;
 }
 
 struct not_raw {
