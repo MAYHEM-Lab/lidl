@@ -38,7 +38,7 @@ private:
 class struct_body_gen {
 public:
     struct_body_gen(const module& mod,
-                    const symbol_handle& sym,
+                    const codegen::section_entity_t& sym,
                     std::string_view name,
                     std::string_view ctor_name,
                     const structure& str)
@@ -68,7 +68,7 @@ private:
     }
 
     const module* m_module;
-    symbol_handle m_symbol;
+    codegen::section_entity_t m_symbol;
     std::string_view m_name;
     std::string_view m_ctor_name;
     const structure* m_struct;

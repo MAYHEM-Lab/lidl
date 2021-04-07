@@ -9,9 +9,8 @@ public:
     virtual sections generate() = 0;
     virtual ~generator()        = default;
 
-    generator(symbol_handle sym, const module& mod, const Type& elem)
-        : m_symbol{sym}
-        , m_module{&mod}
+    generator(const module& mod, const Type& elem)
+        : m_module{&mod}
         , m_elem{&elem} {
     }
 
@@ -24,12 +23,11 @@ protected:
         return *m_elem;
     }
 
-    const symbol_handle& symbol() const {
-        return m_symbol;
+    const Type* symbol() const {
+        return m_elem;
     }
 
 private:
-    symbol_handle m_symbol;
     const module* m_module;
     const Type* m_elem;
 };

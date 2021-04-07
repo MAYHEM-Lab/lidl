@@ -15,9 +15,6 @@ public:
     // string for ptr<string>
     virtual std::string get_user_identifier(const module& mod, const name&) const = 0;
 
-    // How do we refer to this type name if we are in the same namespace?
-    virtual std::string get_local_identifier(const module& mod, const name&) const = 0;
-
     // How do we globally refer to this type name? Returns a fully qualified name.
     virtual std::string get_identifier(const module& mod, const name&) const = 0;
     virtual ~backend()                                                       = default;
@@ -36,7 +33,7 @@ auto do_generate(const module& mod, DefT* def, InstanceT& ins) {
     auto name     = local_name(sym);
     auto abs_name = current_backend()->get_identifier(mod, lidl::name{sym});
 
-    auto generator = GeneratorT(mod, sym, name, abs_name, ins);
+    auto generator = GeneratorT(mod, name, abs_name, ins);
     return generator.generate();
 }
 

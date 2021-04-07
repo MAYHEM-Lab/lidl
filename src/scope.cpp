@@ -88,14 +88,14 @@ std::string_view local_name(const symbol_handle& handle) {
     return handle.get_scope()->nameof(handle);
 }
 
-std::vector<std::string_view> absolute_name(const symbol_handle& sym) {
+qualified_name absolute_name(const symbol_handle& sym) {
     std::vector<const base*> path;
     path.push_back(&sym.get_scope()->object());
     while (path.back()->parent()) {
         path.push_back(path.back()->parent());
     }
 
-    std::vector<std::string_view> names;
+    qualified_name names;
     for (auto it = path.rbegin(); it + 1 != path.rend(); ++it) {
         auto handle_res = (*it)->get_scope().definition_lookup(*(it + 1));
         assert(handle_res);

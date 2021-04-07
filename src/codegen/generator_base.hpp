@@ -12,23 +12,21 @@ template<class Type>
 class generator_base : public codegen::generator<Type> {
 public:
     generator_base(const module& mod,
-                   symbol_handle sym,
                    std::string_view name,
                    std::string_view ctor_name,
                    std::string_view abs_name,
                    const Type& elem)
-        : codegen::generator<Type>(std::move(sym), mod, elem)
+        : codegen::generator<Type>(mod, elem)
         , m_name{name}
         , m_ctor_name(ctor_name)
         , m_abs_name(abs_name) {
     }
 
     generator_base(const module& mod,
-                   symbol_handle sym,
                    std::string_view name,
                    std::string_view abs_name,
                    const Type& elem)
-        : generator_base(mod, std::move(sym), name, name, abs_name, elem) {
+        : generator_base(mod, name, name, abs_name, elem) {
     }
 
 protected:
@@ -45,27 +43,7 @@ protected:
     }
 
     section_key_t def_key() {
-        if (this->symbol().is_valid()) {
-            return section_key_t{this->symbol(), section_type::definition};
-        } else {
-            return section_key_t{std::string(absolute_name()), section_type::definition};
-        }
-    }
-
-    section_key_t decl_key() {
-        if (this->symbol().is_valid()) {
-            return section_key_t{this->symbol(), section_type::declaration};
-        } else {
-            return section_key_t{std::string(absolute_name()), section_type::declaration};
-        }
-    }
-
-    section_key_t misc_key() {
-        if (this->symbol().is_valid()) {
-            return section_key_t{this->symbol(), section_type::misc};
-        } else {
-            return section_key_t{std::string(absolute_name()), section_type::misc};
-        }
+        return section_key_t{this->symbol(), section_type::definition};
     }
 
 private:

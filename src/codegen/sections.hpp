@@ -1,46 +1,61 @@
 #pragma once
 
-#include <variant>
-#include <string>
 #include <lidl/scope.hpp>
+#include <string>
+#include <variant>
 
 namespace lidl::codegen {
 enum class section_type
 {
     definition,
-    declaration,
-    misc
+
+    wire_types,
+    service_params_union,
+    service_return_union,
+    service_descriptor,
+    sync_server,
+    async_server,
+    stub,
+    async_stub,
+    zerocopy_stub,
+    async_zerocopy_stub,
+
+    generic_declaration,
+
+    lidl_traits,
+    std_traits,
+
+    eq_operator,
+    validator
 };
 
+using section_entity_t = const base*;
 struct section_key_t {
-    std::variant<std::monostate, std::string, symbol_handle> symbol;
-    section_type type;
-
     std::string to_string(const module& mod);
 
-    section_key_t()
-        : type{section_type::misc} {
-    }
-
-    section_key_t(std::string sym, section_type t = section_type::misc)
+    section_key_t(const base* sym, section_type t)
         : symbol{sym}
         , type{t} {
     }
 
-    section_key_t(const symbol_handle& sym, section_type t = section_type::misc)
-        : symbol{sym}
-        , type{t} {
+    section_key_t(symbol_handle handle, section_type t)
+            : symbol{get_symbol(handle)}
+            , type{t} {
     }
-
     friend bool operator==(const section_key_t& left, const section_key_t& right) {
         return left.type == right.type && left.symbol == right.symbol;
     }
+
+    section_type type;
+
+private:
+    section_entity_t symbol;
 };
 
 // Computes the list of section keys that are depended on by the given name.
 inline std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm) {
     std::vector<section_key_t> all;
-    all.emplace_back(nm.base, section_type::definition);
+    all.emplace_back(nm.base, nm.args.empty() ? section_type::definition : section_type::generic_declaration);
     for (auto& arg : nm.args) {
         if (auto n = std::get_if<name>(&arg.get_variant()); n) {
             auto sub = def_keys_from_name(mod, *n);
@@ -77,7 +92,8 @@ struct section {
 
 struct sections {
     sections() = default;
-    sections(std::vector<section> sects) : m_sections{std::move(sects)} {
+    sections(std::vector<section> sects)
+        : m_sections{std::move(sects)} {
     }
 
     void add(section sect) {
@@ -97,4 +113,4 @@ struct sections {
 private:
     std::vector<section> m_sections;
 };
-}
+} // namespace lidl::codegen

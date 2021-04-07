@@ -58,13 +58,7 @@ struct cppgen {
         }
 
         for (auto& service : mod().services) {
-            m_sections.merge_before(do_generate<service_generator>(mod(), service.get()));
-            m_sections.merge_before(
-                do_generate<async_service_generator>(mod(), service.get()));
-            m_sections.merge_before(
-                do_generate<remote_stub_generator>(mod(), service.get()));
-            m_sections.merge_before(
-                do_generate<zerocopy_stub_generator>(mod(), service.get()));
+            m_sections.merge_before(do_generate<better_service_generator>(mod(), service.get()));
         }
 
         codegen::emitter e(root_module(mod()), mod(), m_sections);
@@ -104,10 +98,7 @@ public:
                                     const lidl::name& name) const override {
         return cpp::get_user_identifier(mod, name);
     }
-    std::string get_local_identifier(const module& mod,
-                                     const lidl::name& name) const override {
-        return cpp::get_local_identifier(mod, name);
-    }
+
     std::string get_identifier(const module& mod, const lidl::name& name) const override {
         return cpp::get_identifier(mod, name);
     }

@@ -52,11 +52,9 @@ sections union_gen::generate() {
         members.push_back(raw_struct_gen::generate_field(
             "m_" + std::string(name), get_identifier(mod(), member->type_)));
     }
-    
-    auto enum_sym =
-        recursive_definition_lookup(mod().symbols(), &get().get_enum(mod())).value();
-    auto enum_name = local_name(enum_sym);
-    auto abs_name   = get_identifier(mod(), lidl::name{enum_sym});
+
+    auto enum_name = "alternatives";
+    auto abs_name   = fmt::format("{}::{}", absolute_name(), enum_name);
 
     std::vector<std::string> ctors;
     int member_index = 0;
@@ -137,7 +135,7 @@ template <class FunT>
         accessors.push_back(generate_getter(mem_name, *mem, false));
     }
 
-    enum_gen en(mod(), enum_sym, enum_name, abs_name, get().get_enum(mod()));
+    enum_gen en(mod(), enum_name, abs_name, get().get_enum(mod()));
     auto enum_res = en.generate();
     std::vector<section> defs;
     std::copy_if(std::make_move_iterator(enum_res.get_sections().begin()),
@@ -153,7 +151,7 @@ template <class FunT>
                  std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(misc),
                  [](const auto& sec) {
-                     return !sec.keys.empty() && sec.keys[0].type == section_type::misc;
+                     return !sec.keys.empty() && sec.keys[0].type != section_type::definition;
                  });
 
     auto bodies = std::accumulate(
@@ -187,7 +185,7 @@ template <class FunT>
     }
 
     section operator_eq;
-    operator_eq.keys.push_back(misc_key());
+    operator_eq.add_key({symbol(), section_type::eq_operator});
     operator_eq.add_dependency(def_key());
     operator_eq.name_space = mod().name_space;
     auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
@@ -278,7 +276,7 @@ sections union_gen::generate_traits() {
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
-    trait_sect.add_key(misc_key());
+    trait_sect.add_key({symbol(), section_type::lidl_traits});
     trait_sect.add_dependency(def_key());
 
     auto res = sections{{std::move(trait_sect)}};
@@ -297,9 +295,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.add_key({serv_handle, section_type::misc});
-        rpc_traits_sect.add_key({fmt::format("service_call_union<{}>", serv_full_name),
-                                 section_type::definition});
+        rpc_traits_sect.add_key({serv_handle, section_type::service_params_union});
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -317,9 +313,7 @@ sections union_gen::generate_traits() {
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
         rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.add_key({serv_handle, section_type::misc});
-        rpc_traits_sect.add_key({fmt::format("service_return_union<{}>", serv_full_name),
-                                 section_type::definition});
+        rpc_traits_sect.add_key({serv_handle, section_type::service_return_union});
         res.add(std::move(rpc_traits_sect));
     }
 

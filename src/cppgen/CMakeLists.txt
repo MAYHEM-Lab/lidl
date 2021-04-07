@@ -13,10 +13,10 @@ add_library(
   generic_gen.cpp
   generic_gen.hpp
   struct_bodygen.cpp
-  service_stub_gen.cpp
   service_stub_gen.hpp
   raw_union_gen.cpp
   raw_union_gen.hpp
+  service_gen.cpp
 )
 target_link_libraries(lidl_cppgen PUBLIC lidl_core lidl_codegen)
 

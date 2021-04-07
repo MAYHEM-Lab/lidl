@@ -25,7 +25,7 @@ sections struct_gen::do_generate() {
     s.name_space = mod().name_space;
 
     section operator_eq;
-    operator_eq.keys.push_back(misc_key());
+    operator_eq.add_key({symbol(), section_type::eq_operator});
     operator_eq.add_dependency(def_key());
     operator_eq.name_space = mod().name_space;
     auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
@@ -119,8 +119,9 @@ sections struct_gen::generate_traits() {
 
     if (get().params_info) {
         auto& info                      = *get().params_info;
-        constexpr auto rpc_trait_format = R"__(template <> struct rpc_param_traits<{}> {{
-            static constexpr auto params_for = &{}::{};
+        constexpr auto rpc_trait_format = R"__(template <> struct rpc_param_traits<{0}> {{
+            static constexpr auto params_for = &{1}::sync_server::{2};
+            static constexpr auto async_params_for = &{1}::async_server::{2};
         }};)__";
 
         auto serv_handle    = *recursive_definition_lookup(mod().symbols(), info.serv);
@@ -131,7 +132,8 @@ sections struct_gen::generate_traits() {
         rpc_traits_sect.definition = fmt::format(
             rpc_trait_format, absolute_name(), serv_full_name, info.proc_name);
         rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
+        rpc_traits_sect.add_dependency({serv_handle, section_type::sync_server});
+        rpc_traits_sect.add_dependency({serv_handle, section_type::async_server});
         res.add(std::move(rpc_traits_sect));
     }
 
@@ -139,7 +141,7 @@ sections struct_gen::generate_traits() {
         R"__([[nodiscard]] inline bool validate(const {}& val, tos::span<const uint8_t> buffer);)__";
 
     section validator_sect;
-    validator_sect.add_key(misc_key());
+    validator_sect.add_key({symbol(), section_type::validator});
     validator_sect.add_dependency(def_key());
     validator_sect.name_space = "lidl";
     validator_sect.definition = fmt::format(validate_format, absolute_name());

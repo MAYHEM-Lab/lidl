@@ -78,7 +78,7 @@ sections struct_body_gen::generate() {
         accessors.push_back(generate_getter(name, member, false));
     }
 
-    raw_struct_gen raw_gen(mod(), {}, "raw_t", "", str());
+    raw_struct_gen raw_gen(mod(), "raw_t", "raw_t", "", str());
     auto sects = raw_gen.generate();
 
     auto ctor = generate_constructor();
@@ -91,7 +91,7 @@ sections struct_body_gen::generate() {
             [[maybe_unused]] raw_t raw;)__";
 
     section def;
-    def.add_key({m_symbol, section_type::definition});
+    def.add_key({&str(), section_type::definition});
     def.definition = fmt::format(format,
                                  fmt::join(ctor, "\n"),
                                  fmt::join(accessors, "\n"),

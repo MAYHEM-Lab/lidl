@@ -33,7 +33,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
 
     run_passes_until_stable(tmpmod);
 
-    struct_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
+    struct_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
     auto res = gen.generate();
     mod().symbols().undefine("#");
 
@@ -51,7 +51,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     define(tmpmod.symbols(), local_full_name(), &un);
     run_passes_until_stable(tmpmod);
 
-    union_gen gen(tmpmod, symbol(), local_full_name(), name(), full_name(), un);
+    union_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
 
     auto res = gen.generate();
     mod().symbols().undefine("#");
@@ -83,9 +83,11 @@ std::string declare_template(const module& mod,
 sections generic_gen::do_generate() {
     sections common;
 
+    auto generic_decl_key = section_key_t{&get().generic_type(), section_type::generic_declaration};
+
     section decl;
     decl.name_space = mod().name_space;
-    decl.add_key(decl_key());
+    decl.add_key(generic_decl_key);
     decl.definition = declare_template(mod(), name(), get().generic_type());
     common.add(std::move(decl));
 
@@ -96,7 +98,7 @@ sections generic_gen::do_generate() {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
-                sec.add_dependency(decl_key());
+                sec.add_dependency(generic_decl_key);
             }
         }
         common.merge_before(res);
@@ -107,7 +109,7 @@ sections generic_gen::do_generate() {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
-                sec.add_dependency(decl_key());
+                sec.add_dependency(generic_decl_key);
             }
         }
         common.merge_before(res);

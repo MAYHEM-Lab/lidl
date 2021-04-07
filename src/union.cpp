@@ -57,7 +57,7 @@ int union_type::yaml2bin(const module& mod,
                          const YAML::Node& node,
                          ibinary_writer& writer) const {
     if (node.size() != 1) {
-        throw std::runtime_error("Union has not exactly 1 member!");
+        throw std::runtime_error("Union does not have exactly 1 member!");
     }
 
     auto active_member     = node.begin()->first.as<std::string>();
