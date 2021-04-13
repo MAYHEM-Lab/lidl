@@ -16,11 +16,11 @@ struct extendable {
     }
 
     const T* get_base() const {
-        assert(extends->args.empty());
-
         if (!extends) {
             return nullptr;
         }
+
+        assert(extends->args.empty());
 
         auto base_sym = get_symbol(extends->base);
         return dynamic_cast<const T*>(base_sym);
