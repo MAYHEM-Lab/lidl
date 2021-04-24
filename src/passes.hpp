@@ -11,9 +11,9 @@ bool service_pass(module& m);
 
 inline bool run_all_passes(module& m) {
     constexpr std::pair<std::string_view, pass> passes[] = {
-        {"Reference type pass", &reference_type_pass},
         {"Service procedure pass", &service_proc_pass},
         {"Service pass", &service_pass},
+        {"Reference type pass", &reference_type_pass},
     };
 
     bool changed = false;
