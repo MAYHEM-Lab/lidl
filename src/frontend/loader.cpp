@@ -53,12 +53,12 @@ struct loader : module_loader {
 private:
     name parse(const ast::name& nm, base& s);
     std::unique_ptr<member> parse(const ast::member& mem, base& s);
-    std::unique_ptr<structure> parse(const ast::structure& str, base& s);
-    std::unique_ptr<union_type> parse(const ast::union_& str, base& s);
-    std::unique_ptr<enumeration> parse(const ast::enumeration& str, base& s);
+    bool parse(const ast::structure& str, structure& res);
+    bool parse(const ast::union_& str, union_type& s);
+    bool parse(const ast::enumeration& str, enumeration& s);
     parameter parse(const ast::service::procedure::parameter& proc, base& s);
     std::unique_ptr<procedure> parse(const ast::service::procedure& proc, base& s);
-    std::unique_ptr<service> parse(const ast::service& serv, base& s);
+    bool parse(const ast::service& serv, service& s);
 
     void add(std::string_view name, std::unique_ptr<structure>&& str) {
         m_mod->structs.emplace_back(std::move(str));
@@ -80,6 +80,12 @@ private:
         define(m_mod->symbols(), name, m_mod->services.back().get());
     }
 
+    template<class T>
+    void add_default_top_level(std::string_view name) {
+        m_mod->symbols().declare(name);
+        add(name, std::make_unique<T>(&*m_mod));
+    }
+
     void declare_pass();
     void define_pass();
 
@@ -91,12 +97,37 @@ private:
     std::optional<std::string> m_origin;
 };
 
+template<class T>
+struct tmap;
+
+template<>
+struct tmap<ast::structure> {
+    using type = structure;
+};
+template<>
+struct tmap<ast::union_> {
+    using type = union_type;
+};
+template<>
+struct tmap<ast::enumeration> {
+    using type = enumeration;
+};
+template<>
+struct tmap<ast::service> {
+    using type = service;
+};
+
+template<class T>
+using tmap_t = typename tmap<T>::type;
+
 void lidl::frontend::loader::declare_pass() {
     for (const auto& e : m_ast_mod.elements) {
         std::visit(
             [this](auto& x) {
                 std::cerr << "Declare " << x.name << '\n';
-                m_mod->symbols().declare(x.name);
+                using lidl_type =
+                    tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                add_default_top_level<lidl_type>(x.name);
             },
             e);
     }
@@ -107,7 +138,12 @@ void lidl::frontend::loader::define_pass() {
         std::visit(
             [this](auto& x) {
                 std::cerr << "Define " << x.name << '\n';
-                add(x.name, parse(x, *m_mod));
+                auto sym =
+                    m_mod->symbols().lookup(m_mod->symbols().name_lookup(x.name).value());
+                using lidl_type =
+                    tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                auto elem = const_cast<lidl_type*>(dynamic_cast<const lidl_type*>(sym));
+                parse(x, *elem);
             },
             e);
     }
@@ -138,33 +174,26 @@ std::unique_ptr<member> lidl::frontend::loader::parse(const ast::member& mem, ba
     return res;
 }
 
-std::unique_ptr<structure> lidl::frontend::loader::parse(const ast::structure& str,
-                                                         base& s) {
-    auto res = std::make_unique<structure>(&s);
+bool lidl::frontend::loader::parse(const ast::structure& str, structure& res) {
     for (auto& mem : str.members) {
-        res->add_member(mem.name, *parse(mem, *res));
+        res.add_member(mem.name, *parse(mem, res));
     }
-    return res;
+    return true;
 }
 
-std::unique_ptr<union_type> lidl::frontend::loader::parse(const ast::union_& str,
-                                                          base& s) {
-    auto res = std::make_unique<union_type>(&s);
+bool lidl::frontend::loader::parse(const ast::union_& str, union_type& res) {
     for (auto& mem : str.members) {
-        res->add_member(mem.name, *parse(mem, *res));
+        res.add_member(mem.name, *parse(mem, res));
     }
-    return res;
+    return true;
 }
 
-std::unique_ptr<enumeration> lidl::frontend::loader::parse(const ast::enumeration& enu,
-                                                           base& s) {
-    auto res = std::make_unique<enumeration>(&s);
-    res->underlying_type =
-        name{recursive_full_name_lookup(res->get_scope(), "i8").value()};
+bool lidl::frontend::loader::parse(const ast::enumeration& enu, enumeration& res) {
+    res.underlying_type = name{recursive_full_name_lookup(res.get_scope(), "i8").value()};
     for (auto& [name, val] : enu.values) {
-        res->add_member(name);
+        res.add_member(name);
     }
-    return res;
+    return true;
 }
 
 parameter lidl::frontend::loader::parse(const ast::service::procedure::parameter& proc,
@@ -189,19 +218,16 @@ lidl::frontend::loader::parse(const ast::service::procedure& proc, base& s) {
     return res;
 }
 
-std::unique_ptr<service> lidl::frontend::loader::parse(const ast::service& serv,
-                                                       base& s) {
-    auto res = std::make_unique<service>(&s);
-
+bool lidl::frontend::loader::parse(const ast::service& serv, service& res) {
     if (serv.extends) {
-        res->set_base(parse(*serv.extends, *res));
+        res.set_base(parse(*serv.extends, res));
     }
 
     for (auto& proc : serv.procedures) {
-        res->add_procedure(proc.name, parse(proc, *res));
+        res.add_procedure(proc.name, parse(proc, res));
     }
 
-    return res;
+    return true;
 }
 } // namespace
 } // namespace lidl::frontend
