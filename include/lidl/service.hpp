@@ -54,7 +54,11 @@ struct property : member {
 struct service
     : public base
     , public extendable<service> {
-    using base::base;
+    service(base* parent = nullptr, std::optional<source_info> p_src_info = {})
+        : base(parent, std::move(p_src_info)) {
+        get_scope().declare("call_union");
+        get_scope().declare("return_union");
+    }
 
     void add_procedure(std::string name, std::unique_ptr<procedure> proc) {
         procedures.emplace_back(std::move(name), std::move(proc));
