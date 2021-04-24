@@ -36,6 +36,23 @@ struct cppgen {
     }
 
     void generate(std::ostream& str) {
+        for (auto& serv : m_module->services) {
+            {
+                auto call_union = &*serv->procedure_params_union;
+                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto union_name = local_name(sym);
+
+                rename(mod(), sym, fmt::format("wire_types::{}", union_name));
+            }
+            {
+                auto call_union = &*serv->procedure_results_union;
+                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto union_name = local_name(sym);
+
+                rename(mod(), sym, fmt::format("wire_types::{}", union_name));
+            }
+        }
+
         for (auto& e : m_module->enums) {
             m_sections.merge_before(codegen::do_generate<enum_gen>(mod(), e.get()));
         }

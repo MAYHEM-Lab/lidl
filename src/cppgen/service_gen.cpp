@@ -249,7 +249,6 @@ codegen::sections better_service_generator::generate_wire_types() {
         auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
         auto abs_name   = fmt::format("{}::wire_types::{}", absolute_name(), union_name);
         wire_type_names.emplace_back(union_name);
-        rename(mod(), sym, fmt::format("wire_types::{}", union_name));
 
         auto generator = union_gen(
             mod(), name, union_name, abs_name, *get().procedure_params_union);
@@ -266,7 +265,6 @@ codegen::sections better_service_generator::generate_wire_types() {
         auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
         auto abs_name   = fmt::format("{}::wire_types::{}", absolute_name(), union_name);
         wire_type_names.emplace_back(union_name);
-        rename(mod(), sym, fmt::format("wire_types::{}", union_name));
 
         auto generator = union_gen(
             mod(), name, union_name, abs_name, *get().procedure_results_union);
