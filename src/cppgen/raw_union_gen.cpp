@@ -174,40 +174,6 @@ sections raw_union_gen::generate_traits() {
 
     auto res = sections{{std::move(trait_sect)}};
 
-    if (auto serv = get().call_for) {
-        constexpr auto rpc_trait_format =
-            R"__(template <> struct service_call_union<{}> : {} {{
-        }};)__";
-
-        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), {serv_handle});
-
-        section rpc_traits_sect;
-        rpc_traits_sect.name_space = "lidl";
-        rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
-        rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        res.add(std::move(rpc_traits_sect));
-    }
-
-    if (auto serv = get().return_for) {
-        constexpr auto rpc_trait_format =
-            R"__(template <> struct service_return_union<{}> : {} {{
-        }};)__";
-
-        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), {serv_handle});
-
-        section rpc_traits_sect;
-        rpc_traits_sect.name_space = "lidl";
-        rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
-        rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        res.add(std::move(rpc_traits_sect));
-    }
-
     return res;
 }
 } // namespace lidl::cpp
