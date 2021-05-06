@@ -8,7 +8,7 @@
 namespace lidl {
 class base;
 struct type;
-struct generic;
+struct wire_type;
 struct enumeration;
 struct union_type;
 struct structure;
@@ -77,6 +77,17 @@ bool operator==(const name&, const name&);
 
 struct module;
 const type* get_type(const module& mod, const name&);
+
+template <class Type>
+const Type* get_type(const module& mod, const name& n) {
+    auto t = get_type(mod, n);
+    if (!t) {
+        return nullptr;
+    }
+    return dynamic_cast<const Type*>(t);
+}
+
+const wire_type* get_wire_type(const module& mod, const name& n);
 
 // Reference types in lidl cannot be used directly (for instance a string), and must
 // always go through a pointer. The reason being that they have unknown size.

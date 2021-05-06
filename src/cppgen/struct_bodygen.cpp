@@ -5,7 +5,7 @@ using codegen::sections;
 sections raw_struct_gen::generate() {
     std::vector<std::string> members;
     for (auto& [name, member] : get().all_members()) {
-        get_type(mod(), member.type_)->wire_layout(mod());
+        get_wire_type(mod(), member.type_)->wire_layout(mod());
         members.push_back(generate_field(name, get_identifier(mod(), member.type_)));
     }
 

@@ -13,19 +13,18 @@
 
 namespace lidl {
 pointer_type::pointer_type()
-    : generic(make_generic_declaration({{"T", "type"}})) {
+    : generic_wire_type(make_generic_declaration({{"T", "type"}})) {
 }
 
-raw_layout pointer_type::wire_layout(const module& mod,
-                                     const generic_instantiation&) const {
+raw_layout pointer_type::wire_layout(const module& mod, const name&) const {
     return raw_layout{2, 2};
 }
 
 YAML::Node pointer_type::bin2yaml(const module& mod,
-                                  const generic_instantiation& instantiation,
+                                  const name& instantiation,
                                   ibinary_reader& reader) const {
-    auto& arg = std::get<name>(instantiation.arguments()[0]);
-    if (auto pointee = get_type(mod, arg); pointee) {
+    auto& arg = std::get<name>(instantiation.args[0]);
+    if (auto pointee = get_wire_type(mod, arg); pointee) {
         auto off = reader.read_object<int16_t>();
         reader.seek(-off);
         return pointee->bin2yaml(mod, reader);
@@ -34,10 +33,10 @@ YAML::Node pointer_type::bin2yaml(const module& mod,
 }
 
 int pointer_type::yaml2bin(const module& mod,
-                           const generic_instantiation& instantiation,
+                           const name& instantiation,
                            const YAML::Node& node,
                            ibinary_writer& writer) const {
-    auto& arg = std::get<name>(instantiation.arguments()[0]);
+    auto& arg = std::get<name>(instantiation.args[0]);
     if (auto pointee = get_type(mod, arg); pointee) {
         auto pointee_pos = node.as<int>();
         writer.align(2);
@@ -50,7 +49,7 @@ int pointer_type::yaml2bin(const module& mod,
 }
 
 type_categories pointer_type::category(const module& mod,
-                                       const generic_instantiation& instantiation) const {
+                                       const name& instantiation) const {
     return type_categories::reference;
 }
 
@@ -62,7 +61,7 @@ std::unique_ptr<module> basic_module() {
         return define(basic_mod->symbols(), name, basic_mod->basic_types.back().get());
     };
 
-    auto add_generic = [&](std::string_view name, std::unique_ptr<generic> t) {
+    auto add_generic = [&](std::string_view name, std::unique_ptr<generic_type> t) {
         basic_mod->basic_generics.emplace_back(std::move(t));
         define(basic_mod->symbols(), name, basic_mod->basic_generics.back().get());
     };
@@ -84,7 +83,7 @@ std::unique_ptr<module> basic_module() {
 
     auto str = add_type("string", std::make_unique<string_type>());
 
-    add_type("string_view", std::make_unique<view_type>(name{str}));
+    add_type("string_view", std::make_unique<known_view_type>(name{str}));
     add_generic("span", std::make_unique<generic_span_type>());
 
     add_generic("ptr", std::make_unique<pointer_type>());
@@ -93,21 +92,29 @@ std::unique_ptr<module> basic_module() {
     return basic_mod;
 }
 
-const generic_instantiation& module::create_or_get_instantiation(const name& ins) const {
+const basic_generic_instantiation&
+module::create_or_get_instantiation(const name& ins) const {
     auto it = std::find_if(
         name_ins.begin(), name_ins.end(), [&](auto& p) { return p.first == ins; });
     if (it != name_ins.end()) {
         return *it->second;
     }
 
-    instantiations.emplace_back(ins);
-    name_ins.emplace_back(ins, &instantiations.back());
-    return instantiations.back();
+    std::unique_ptr<basic_generic_instantiation> instantiation;
+
+    if (dynamic_cast<const generic_wire_type*>(get_symbol(ins.base))) {
+        instantiation = std::make_unique<generic_wire_type_instantiation>(ins);
+    } else if (dynamic_cast<const generic_view_type*>(get_symbol(ins.base))) {
+        instantiation = std::make_unique<generic_view_type_instantiation>(ins);
+    }
+
+    instantiations.emplace_back(std::move(instantiation));
+    name_ins.emplace_back(ins, instantiations.back().get());
+    return *instantiations.back();
 }
 
-type_categories array_type::category(const module& mod,
-                                     const generic_instantiation& instantiation) const {
-    auto arg = std::get<name>(instantiation.arguments()[0]);
+type_categories array_type::category(const module& mod, const name& instantiation) const {
+    auto arg = std::get<name>(instantiation.args[0]);
     if (auto regular = get_type(mod, arg); regular) {
         return regular->category(mod);
     }
@@ -115,15 +122,16 @@ type_categories array_type::category(const module& mod,
 }
 
 int vector_type::yaml2bin(const module& mod,
-                          const generic_instantiation& instantiation,
+                          const name& instantiation,
                           const YAML::Node& node,
                           ibinary_writer& writer) const {
-    auto& arg    = std::get<name>(instantiation.arguments()[0]);
-    auto pointee = get_type(mod, arg);
+    auto& arg    = std::get<name>(instantiation.args[0]);
+    auto pointee = get_wire_type(mod, arg);
     Expects(pointee != nullptr);
 
     if (pointee->is_reference_type(mod)) {
-        auto actual_pointee = get_type(mod, std::get<name>(arg.args[0].get_variant()));
+        auto actual_pointee =
+            get_wire_type(mod, std::get<name>(arg.args[0].get_variant()));
 
         std::vector<int> positions;
         for (auto& elem : node) {
@@ -155,16 +163,15 @@ int vector_type::yaml2bin(const module& mod,
     }
 }
 
-raw_layout vector_type::wire_layout(const module& mod,
-                                    const generic_instantiation& ins) const {
+raw_layout vector_type::wire_layout(const module& mod, const name& ins) const {
     return {2, 2};
 }
 
 YAML::Node vector_type::bin2yaml(const module& mod,
-                                 const generic_instantiation& instantiation,
+                                 const name& instantiation,
                                  ibinary_reader& reader) const {
-    auto& arg = std::get<name>(instantiation.arguments()[0]);
-    if (auto pointee = get_type(mod, arg); pointee) {
+    auto& arg = std::get<name>(instantiation.args[0]);
+    if (auto pointee = get_wire_type(mod, arg); pointee) {
         auto size = reader.read_object<int16_t>();
         reader.seek(2);
 
@@ -187,7 +194,7 @@ YAML::Node vector_type::bin2yaml(const module& mod,
 }
 
 type_categories vector_type::category(const module& mod,
-                                      const generic_instantiation& instantiation) const {
+                                      const name& instantiation) const {
     return type_categories::reference;
 }
 

@@ -25,7 +25,7 @@ YAML::Node union_type::bin2yaml(const module& mod, ibinary_reader& reader) const
     reader.seek(enum_layout.size());
 
     auto& [name, member] = members[alternative];
-    auto member_type     = get_type(mod, member.type_);
+    auto member_type     = lidl::get_wire_type(mod, member.type_);
     reader.align(member_type->wire_layout(mod).alignment());
     node[name] = member_type->bin2yaml(mod, reader);
 
@@ -64,12 +64,12 @@ int union_type::yaml2bin(const module& mod,
     const auto& enumerator = get_enum(mod);
     auto enum_index        = enumerator.find_by_name(active_member);
     auto& [mem_name, mem]  = members[enum_index];
-    auto t                 = get_type(mod, mem.type_);
+    auto t                 = lidl::get_wire_type(mod, mem.type_);
 
     int pointee_pos = 0;
     if (t->is_reference_type(mod)) {
         auto pointee      = std::get<name>(mem.type_.args[0].get_variant());
-        auto pointee_type = get_type(mod, pointee);
+        auto pointee_type = lidl::get_wire_type(mod, pointee);
         writer.align(pointee_type->wire_layout(mod).alignment());
         pointee_pos = pointee_type->yaml2bin(mod, node.begin()->second, writer);
     }
@@ -97,7 +97,7 @@ compound_layout union_type::layout(const module& mod) const {
         if (get_type(mod, member.type_)->is_reference_type(mod)) {
             computer.add({2, 2});
         } else {
-            computer.add(get_type(mod, member.type_)->wire_layout(mod));
+            computer.add(lidl::get_wire_type(mod, member.type_)->wire_layout(mod));
         }
     }
 

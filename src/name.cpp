@@ -26,7 +26,11 @@ const type* get_type(const module& mod, const name& n) {
         return base_type;
     }
 
-    auto base_type = &dynamic_cast<const generic&>(*base);
+    auto base_type = dynamic_cast<const generic_type*>(base);
+    if (!base_type) {
+        return nullptr;
+    }
+
     if (base_type->declaration.arity() != n.args.size()) {
         throw std::runtime_error(
             fmt::format("mismatched number of args and params for generic: "
@@ -35,7 +39,7 @@ const type* get_type(const module& mod, const name& n) {
                         n.args.size()));
     }
 
-    return &mod.create_or_get_instantiation(n);
+    return dynamic_cast<const type*>(&mod.create_or_get_instantiation(n));
 }
 
 bool operator==(const name& left, const name& right) {

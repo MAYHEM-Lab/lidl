@@ -59,7 +59,7 @@ struct cppgen {
 
         for (auto& ins : mod().instantiations) {
             m_sections.merge_before(
-                do_generate<generic_gen>(mod(), &ins.generic_type(), ins));
+                do_generate<generic_gen>(mod(), ins->get_generic(), *ins));
         }
 
         for (auto& u : mod().unions) {

@@ -11,13 +11,14 @@
 #include <cassert>
 #include <deque>
 #include <lidl/basic.hpp>
-#include <lidl/member.hpp>
-#include <lidl/types.hpp>
 #include <lidl/enumeration.hpp>
+#include <lidl/member.hpp>
 
 namespace lidl {
-struct union_type : public type, public extendable<union_type> {
-    using type::type;
+struct union_type
+    : public wire_type
+    , public extendable<union_type> {
+    using wire_type::wire_type;
 
     void add_member(std::string name, member mem) {
         if (mem.parent() != this) {
@@ -63,7 +64,7 @@ struct union_type : public type, public extendable<union_type> {
 
     const enumeration& get_enum(const module& m) const;
 
-    union_type(union_type&&)      = default;
+    union_type(union_type&&) = default;
     union_type& operator=(union_type&&) = default;
 
     type_categories category(const module& mod) const override;

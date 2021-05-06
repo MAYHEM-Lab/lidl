@@ -140,7 +140,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("Pointer to int") {
-        generic_instantiation ptr_to_int(name{ptr_handle, {name{i32_handle}}});
+        basic_generic_instantiation ptr_to_int(name{ptr_handle, {name{i32_handle}}});
 
         int32_t i = 0xDEADBEEF;
         uint8_t buf[6];
@@ -157,7 +157,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("Pointer to strings") {
-        generic_instantiation ptr_to_str(name{ptr_handle, {name{str_handle}}});
+        basic_generic_instantiation ptr_to_str(name{ptr_handle, {name{str_handle}}});
 
         memory_writer writer(buff);
 
@@ -175,7 +175,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("vector of ints") {
-        generic_instantiation vec_of_int(name{vec_handle, {name{i32_handle}}});
+        basic_generic_instantiation vec_of_int(name{vec_handle, {name{i32_handle}}});
 
         memory_writer writer(buff);
 
@@ -193,7 +193,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("Pointer to vector of ints") {
-        generic_instantiation ptr_to_vec_of_int(
+        basic_generic_instantiation ptr_to_vec_of_int(
             name{ptr_handle, {name{vec_handle, {name{i32_handle}}}}});
 
         memory_writer writer(buff);
@@ -213,7 +213,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("enums") {
-        generic_instantiation vec_of_enums(name{vec_handle, {name{enum_handle}}});
+        basic_generic_instantiation vec_of_enums(name{vec_handle, {name{enum_handle}}});
 
         memory_writer writer(buff);
 

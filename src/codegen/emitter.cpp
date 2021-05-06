@@ -85,7 +85,7 @@ void emitter::mark_module(const module& decl_mod) {
             }
 
             auto key = section_key_t{sym,
-                                     dynamic_cast<const generic*>(sym)
+                                     dynamic_cast<const generic_type*>(sym)
                                          ? section_type::generic_declaration
                                          : section_type::definition};
             std::cerr << fmt::format("Marking {}\n", key.to_string(decl_mod));

@@ -23,7 +23,8 @@ compound_layout structure::layout(const module& mod) const {
         if (get_type(mod, member.type_)->is_reference_type(mod)) {
             computer.add_member(name, {2, 2});
         } else {
-            computer.add_member(name, get_type(mod, member.type_)->wire_layout(mod));
+            computer.add_member(name,
+                                get_type<wire_type>(mod, member.type_)->wire_layout(mod));
         }
     }
     return computer;
@@ -48,7 +49,7 @@ YAML::Node structure::bin2yaml(const module& mod, ibinary_reader& reader) const 
         auto member_begin_offset = l.offset_of(name).value();
         reader.seek(struct_begin + member_begin_offset, std::ios::beg);
 
-        node[name] = get_type(mod, member.type_)->bin2yaml(mod, reader);
+        node[name] = lidl::get_wire_type(mod, member.type_)->bin2yaml(mod, reader);
     }
 
     return node;
@@ -64,7 +65,8 @@ int structure::yaml2bin(const module& mod,
             // Continue, we'll place it inline
             continue;
         }
-        auto pointee = get_type(mod, std::get<name>(mem.type_.args[0].get_variant()));
+        auto pointee =
+            lidl::get_wire_type(mod, std::get<name>(mem.type_.args[0].get_variant()));
         references.emplace(mem_name, pointee->yaml2bin(mod, node[mem_name], writer));
     }
 
@@ -72,7 +74,7 @@ int structure::yaml2bin(const module& mod,
     auto struct_pos = writer.tell(); // Struct beginning
     auto l          = layout(mod);
     for (auto& [mem_name, mem] : members) {
-        auto t = get_type(mod, mem.type_);
+        auto t = lidl::get_wire_type(mod, mem.type_);
         if (t->is_reference_type(mod)) {
             const auto pos = references[mem_name];
             YAML::Node ptr_node(pos);

@@ -5,27 +5,23 @@
 #include <lidl/types.hpp>
 
 namespace lidl {
-struct span_type : view_type {
+struct span_type_instantiation : known_view_type {
 public:
-    span_type(const module& mod, const generic_instantiation& ins)
-        : view_type(name{recursive_name_lookup(mod.symbols(), "vector").value(),
-                         ins.get_name().args},
-                    nullptr)
-        , m_ins{ins} {
+    span_type_instantiation(const module& mod, const name& ins)
+        : known_view_type(
+              name{recursive_name_lookup(mod.symbols(), "vector").value(), ins.args},
+              nullptr) {
     }
-
-private:
-    generic_instantiation m_ins;
 };
 
-struct generic_span_type : generic {
+struct generic_span_type : instance_based_view_type {
     generic_span_type()
-        : generic(make_generic_declaration({{"T", "type"}})) {
+        : instance_based_view_type(make_generic_declaration({{"T", "type"}})) {
     }
 
-    std::unique_ptr<type> instantiate(const module& mod,
-                                      const generic_instantiation& ins) const override {
-        return std::make_unique<span_type>(mod, ins);
+    std::unique_ptr<view_type> instantiate(const module& mod,
+                                           const name& ins) const override {
+        return std::make_unique<span_type_instantiation>(mod, ins);
     }
 };
 } // namespace lidl

@@ -19,7 +19,7 @@ struct module : public cbase<base::categories::module> {
     const module* parent = nullptr;
 
     std::deque<std::unique_ptr<type>> basic_types;
-    std::deque<std::unique_ptr<generic>> basic_generics;
+    std::deque<std::unique_ptr<generic_type>> basic_generics;
 
     std::vector<std::unique_ptr<structure>> structs;
     std::vector<std::unique_ptr<union_type>> unions;
@@ -29,9 +29,9 @@ struct module : public cbase<base::categories::module> {
     std::vector<std::unique_ptr<generic_union>> generic_unions;
 
     std::vector<std::unique_ptr<service>> services;
-    mutable std::deque<generic_instantiation> instantiations;
+    mutable std::vector<std::unique_ptr<basic_generic_instantiation>> instantiations;
 
-    const generic_instantiation& create_or_get_instantiation(const name& ins) const;
+    const basic_generic_instantiation& create_or_get_instantiation(const name& ins) const;
 
     module& get_child(qualified_name child_name);
     module& get_child(std::string_view child_name);
@@ -40,7 +40,7 @@ struct module : public cbase<base::categories::module> {
     module& add_child(std::string_view child_name, std::unique_ptr<module> child);
 
     mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
-    mutable std::vector<std::pair<name, generic_instantiation*>> name_ins;
+    mutable std::vector<std::pair<name, basic_generic_instantiation*>> name_ins;
     module() = default;
 
     scope& symbols() {

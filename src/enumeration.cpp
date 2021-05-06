@@ -4,7 +4,7 @@ namespace lidl {
 
 YAML::Node enumeration::bin2yaml(const module& mod, ibinary_reader& reader) const {
     auto integral =
-        get_type(mod, underlying_type)->bin2yaml(mod, reader).as<uint64_t>();
+        lidl::get_wire_type(mod, underlying_type)->bin2yaml(mod, reader).as<uint64_t>();
 
     auto it = std::find_if(members.begin(), members.end(), [integral](auto& member) {
         return member.second.value == integral;
@@ -18,7 +18,7 @@ YAML::Node enumeration::bin2yaml(const module& mod, ibinary_reader& reader) cons
 }
 
 enum_member::enum_member(enumeration& en, int val, std::optional<source_info> src_info)
-        : cbase{&en, std::move(src_info)}
-        , value(val) {
+    : cbase{&en, std::move(src_info)}
+    , value(val) {
 }
 } // namespace lidl

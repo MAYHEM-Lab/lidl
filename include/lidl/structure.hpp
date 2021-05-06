@@ -7,8 +7,8 @@
 #include <lidl/types.hpp>
 
 namespace lidl {
-struct structure : public type {
-    using type::type;
+struct structure : public wire_type {
+    using wire_type::wire_type;
 
     const std::deque<std::pair<std::string, member>>& all_members() const {
         return members;

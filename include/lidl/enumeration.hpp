@@ -34,7 +34,7 @@ public:
     }
 
     [[nodiscard]] raw_layout wire_layout(const module& mod) const override {
-        return get_type(mod, underlying_type)->wire_layout(mod);
+        return get_type<wire_type>(mod, underlying_type)->wire_layout(mod);
     }
 
     [[nodiscard]] std::vector<std::pair<std::string_view, const enum_member*>>
@@ -80,7 +80,7 @@ public:
                  const YAML::Node& node,
                  ibinary_writer& writer) const override {
         auto val        = node.as<int64_t>();
-        auto underlying = get_type(mod, underlying_type);
+        auto underlying = get_type<wire_type>(mod, underlying_type);
         writer.align(underlying->wire_layout(mod).alignment());
         auto pos = writer.tell();
         underlying->yaml2bin(mod, node, writer);

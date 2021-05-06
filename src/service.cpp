@@ -23,7 +23,7 @@ std::unique_ptr<structure> procedure_params_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = param_t->get_wire_type(mod);
+            m.type_ = param_t->get_wire_type(mod).value();
             add_pointer_to_name_if_needed(mod, m.type_);
         } else {
             static auto string = dynamic_cast<const type*>(
@@ -63,7 +63,7 @@ std::unique_ptr<structure> procedure_results_struct(const module& mod,
              * type with it's wire type.
              * For instance, `string_view` in the procedure becomes `string` in the wire.
              */
-            m.type_ = param_t->get_wire_type(mod);
+            m.type_ = *param_t->get_wire_type(mod);
             add_pointer_to_name_if_needed(mod, m.type_);
         } else {
             m.type_ = param;

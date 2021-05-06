@@ -42,22 +42,30 @@ public:
         return category(mod) == type_categories::view;
     }
 
-    virtual name get_wire_type(const module& mod) const {
-        throw std::runtime_error("get_wire_type not implemented");
+    virtual std::optional<name> get_wire_type(const module& mod) const {
+        return {};
     }
 };
 
 struct view_type : type {
-    explicit view_type(name wire_type, base* parent, std::optional<source_info> loc = {})
-        : type(parent, loc)
-        , m_wire_type{std::move(wire_type)} {
+    explicit view_type(base* parent = nullptr, std::optional<source_info> loc = {})
+        : type(parent, loc) {
     }
 
     type_categories category(const module& mod) const final {
         return type_categories::view;
     }
+};
 
-    name get_wire_type(const module& mod) const override {
+struct known_view_type : view_type {
+    explicit known_view_type(name wire_type,
+                             base* parent                   = nullptr,
+                             std::optional<source_info> loc = {})
+        : view_type(parent, loc)
+        , m_wire_type{std::move(wire_type)} {
+    }
+
+    std::optional<name> get_wire_type(const module& mod) const override {
         return m_wire_type;
     }
 
@@ -70,7 +78,7 @@ struct wire_type : type {
     virtual raw_layout wire_layout(const module& mod) const                           = 0;
     virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const                 = 0;
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
-    name get_wire_type(const module& mod) const override;
+    std::optional<name> get_wire_type(const module& mod) const override;
 };
 
 struct value_type : wire_type {

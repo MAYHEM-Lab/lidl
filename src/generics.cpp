@@ -5,21 +5,20 @@
 #include <fmt/format.h>
 #include <lidl/generics.hpp>
 #include <lidl/module.hpp>
+#include <lidl/types.hpp>
 #include <map>
 #include <stdexcept>
 
-
 namespace lidl {
-std::unique_ptr<type>
-generic_structure::instantiate(const module& mod,
-                               const generic_instantiation& ins) const {
+std::unique_ptr<wire_type> generic_structure::instantiate(const module& mod,
+                                                          const name& ins) const {
     auto newstr = std::make_unique<structure>();
 
-    auto& genstr = dynamic_cast<const generic_structure&>(ins.generic_type());
+    auto& genstr = dynamic_cast<const generic_structure&>(*get_symbol(ins.base));
 
     std::unordered_map<std::string_view, name> actual;
     int index = 0;
-    for (auto& arg : ins.arguments()) {
+    for (auto& arg : ins.args) {
         if (auto n = std::get_if<name>(&arg)) {
             auto& paramname = (genstr.declaration.begin() + index)->first;
             actual.emplace(paramname, *n);
@@ -52,15 +51,15 @@ generic_structure::instantiate(const module& mod,
     return newstr;
 }
 
-std::unique_ptr<type> generic_union::instantiate(const module& mod,
-                                                 const generic_instantiation& ins) const {
-    auto newstr = std::make_unique<union_type>(const_cast<module*>(&mod));
+std::unique_ptr<wire_type> generic_union::instantiate(const module& mod,
+                                                      const name& ins) const {
+    auto newstr = std::make_unique<union_type>();
 
-    auto& genstr = dynamic_cast<const generic_union&>(ins.generic_type());
+    auto& genstr = dynamic_cast<const generic_union&>(*get_symbol(ins.base));
 
     std::unordered_map<std::string_view, name> actual;
     int index = 0;
-    for (auto& arg : ins.arguments()) {
+    for (auto& arg : ins.args) {
         if (auto n = std::get_if<name>(&arg)) {
             auto& paramname = (genstr.declaration.begin() + index)->first;
             actual.emplace(paramname, *n);
@@ -115,5 +114,24 @@ std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_vi
         return std::make_unique<value_parameter>();
     }
     return nullptr;
+}
+
+type_categories generic_wire_type_instantiation::category(const module& mod) const {
+    return this->get_generic()->category(mod, args);
+}
+
+raw_layout generic_wire_type_instantiation::wire_layout(const module& mod) const {
+    return this->get_generic()->wire_layout(mod, args);
+}
+
+YAML::Node generic_wire_type_instantiation::bin2yaml(const module& module,
+                                                     ibinary_reader& reader) const {
+    return this->get_generic()->bin2yaml(module, args, reader);
+}
+
+int generic_wire_type_instantiation::yaml2bin(const module& mod,
+                                              const YAML::Node& node,
+                                              ibinary_writer& writer) const {
+    return this->get_generic()->yaml2bin(mod, args, node, writer);
 }
 } // namespace lidl

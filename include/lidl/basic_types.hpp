@@ -2,24 +2,22 @@
 #include "generics.hpp"
 
 namespace lidl {
-struct array_type : generic {
+struct array_type : generic_wire_type {
     array_type()
-        : generic(make_generic_declaration({{"T", "type"}, {"Size", "i32"}})) {
+        : generic_wire_type(make_generic_declaration({{"T", "type"}, {"Size", "i32"}})) {
     }
 
-    type_categories category(const module& mod,
-                             const generic_instantiation& instantiation) const override;
+    type_categories category(const module& mod, const name& instantiation) const override;
 
-    virtual raw_layout
-    wire_layout(const module& mod,
-                const generic_instantiation& instantiation) const override {
+    virtual raw_layout wire_layout(const module& mod,
+                                   const name& instantiation) const override {
         if (category(mod, instantiation) == type_categories::reference) {
             return {2, 2};
         }
-        auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto regular = get_type(mod, arg); regular) {
+        auto& arg = std::get<name>(instantiation.args[0]);
+        if (auto regular = get_wire_type(mod, arg); regular) {
             auto layout = regular->wire_layout(mod);
-            auto len    = std::get<int64_t>(instantiation.arguments()[1]);
+            auto len    = std::get<int64_t>(instantiation.args[1]);
             return raw_layout(static_cast<int16_t>(layout.size() * len),
                               layout.alignment());
         }
@@ -27,7 +25,7 @@ struct array_type : generic {
     }
 
     YAML::Node bin2yaml(const module& mod,
-                        const generic_instantiation& instantiation,
+                        const name& instantiation,
                         ibinary_reader& span) const override {
         throw std::runtime_error("Not implemented!");
         //
@@ -52,18 +50,18 @@ struct array_type : generic {
     }
 
     int yaml2bin(const module& mod,
-                 const generic_instantiation& instantiation,
+                 const name& instantiation,
                  const YAML::Node& node,
                  ibinary_writer& writer) const override {
-        auto& len = std::get<int64_t>(instantiation.arguments()[1]);
+        auto& len = std::get<int64_t>(instantiation.args[1]);
         if (len != node.size()) {
             throw std::runtime_error("Array sizes do not match!");
         }
 
         writer.align(wire_layout(mod, instantiation).alignment());
         auto pos  = writer.tell();
-        auto& arg = std::get<name>(instantiation.arguments()[0]);
-        if (auto pointee = get_type(mod, arg); pointee) {
+        auto& arg = std::get<name>(instantiation.args[0]);
+        if (auto pointee = get_wire_type(mod, arg); pointee) {
             for (auto& elem : node) {
                 pointee->yaml2bin(mod, elem, writer);
             }
@@ -193,23 +191,21 @@ struct string_type : reference_type {
                  ibinary_writer& writer) const override;
 };
 
-struct vector_type : generic {
+struct vector_type : generic_wire_type {
     vector_type()
-        : generic(make_generic_declaration({{"T", "type"}})) {
+        : generic_wire_type(make_generic_declaration({{"T", "type"}})) {
     }
 
-    virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation& ins) const override;
+    virtual raw_layout wire_layout(const module& mod, const name& ins) const override;
 
-    type_categories category(const module& mod,
-                             const generic_instantiation& instantiation) const override;
+    type_categories category(const module& mod, const name& instantiation) const override;
 
     YAML::Node bin2yaml(const module& mod,
-                        const generic_instantiation& instantiation,
+                        const name& instantiation,
                         ibinary_reader& span) const override;
 
     int yaml2bin(const module& mod,
-                 const generic_instantiation& instantiation,
+                 const name& instantiation,
                  const YAML::Node& node,
                  ibinary_writer& writer) const override;
 };

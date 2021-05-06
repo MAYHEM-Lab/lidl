@@ -90,7 +90,7 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("vector of ints") {
-        generic_instantiation vec_of_int(name{vec_handle, {name{i32_handle}}});
+        basic_generic_instantiation vec_of_int(name{vec_handle, {name{i32_handle}}});
         memory_writer writer(buff);
 
         vec_of_int.yaml2bin(module, YAML::Node(std::vector<int64_t>{1, 2, 3}), writer);
@@ -101,7 +101,7 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("vector of pointers to strings") {
-        generic_instantiation vec_of_int(
+        basic_generic_instantiation vec_of_int(
             name{vec_handle, {name{ptr_handle, {{name{str_handle}}}}}});
         memory_writer writer(buff);
 
