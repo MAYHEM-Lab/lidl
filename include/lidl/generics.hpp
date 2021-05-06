@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lidl/generics.hpp"
 #include "structure.hpp"
 #include "types.hpp"
 
@@ -61,6 +62,50 @@ generic_parameters
 
 struct module;
 class generic_instantiation;
+
+template<class Of>
+struct basic_generic_instantiation;
+
+template<class Of, base::categories Category>
+struct basic_generic : public cbase<Category> {
+    explicit basic_generic(generic_parameters decl,
+                           base* parent                       = nullptr,
+                           std::optional<source_info> src_loc = {})
+        : cbase<Category>(parent, std::move(src_loc))
+        , declaration(std::move(decl)) {
+    }
+
+
+    using instantiation_type = basic_generic_instantiation<Of>;
+
+    virtual std::unique_ptr<Of>
+    instantiate(const module& mod, const instantiation_type& ins) const = 0;
+
+    generic_parameters declaration;
+};
+
+struct generic_wire_type : basic_generic<wire_type, base::categories::generic_type> {
+
+    virtual raw_layout wire_layout(const module& mod,
+                                   const instantiation_type& instantiation) const {
+        return instantiate(mod, instantiation)->wire_layout(mod);
+    }
+
+    virtual YAML::Node bin2yaml(const module& mod,
+                                const instantiation_type& instantiation,
+                                ibinary_reader& span) const {
+
+        return instantiate(mod, instantiation)->bin2yaml(mod, span);
+    }
+
+    virtual int yaml2bin(const module& mod,
+                         const instantiation_type& instantiation,
+                         const YAML::Node& node,
+                         ibinary_writer& writer) const {
+        return instantiate(mod, instantiation)->yaml2bin(mod, node, writer);
+    }
+};
+
 struct generic : public base {
     explicit generic(generic_parameters decl,
                      base* parent                       = nullptr,
@@ -74,25 +119,6 @@ struct generic : public base {
     virtual type_categories category(const module& mod,
                                      const generic_instantiation& instantiation) const {
         return instantiate(mod, instantiation)->category(mod);
-    }
-
-    virtual raw_layout wire_layout(const module& mod,
-                                   const generic_instantiation& instantiation) const {
-        return instantiate(mod, instantiation)->wire_layout(mod);
-    }
-
-    virtual YAML::Node bin2yaml(const module& mod,
-                                const generic_instantiation& instantiation,
-                                ibinary_reader& span) const {
-
-        return instantiate(mod, instantiation)->bin2yaml(mod, span);
-    }
-
-    virtual int yaml2bin(const module& mod,
-                         const generic_instantiation& instantiation,
-                         const YAML::Node& node,
-                         ibinary_writer& writer) const {
-        return instantiate(mod, instantiation)->yaml2bin(mod, node, writer);
     }
 
     virtual name get_wire_type(const module& mod,
@@ -114,9 +140,7 @@ struct generic_structure : generic {
     explicit generic_structure(generic_parameters decl,
                                base* parent                       = nullptr,
                                std::optional<source_info> src_loc = {})
-        : generic(std::move(decl),
-                  parent,
-                  std::move(src_loc)) {
+        : generic(std::move(decl), parent, std::move(src_loc)) {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
@@ -129,9 +153,7 @@ struct generic_union : generic {
     explicit generic_union(generic_parameters decl,
                            base* parent                       = nullptr,
                            std::optional<source_info> src_loc = {})
-        : generic(std::move(decl),
-                  parent,
-                  std::move(src_loc))
+        : generic(std::move(decl), parent, std::move(src_loc))
         , union_{nullptr} {
     }
 

@@ -1,4 +1,4 @@
-add_library(lidl_rt INTERFACE include/lidlrt/service_ptr.hpp)
+add_library(lidl_rt INTERFACE)
 target_include_directories(lidl_rt INTERFACE include)
 target_compile_features(lidl_rt INTERFACE cxx_std_17)
 
