@@ -16,6 +16,7 @@ public:
         procedure,
         generic_type,
         member,
+        queue,
         other,
     };
 

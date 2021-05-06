@@ -49,6 +49,7 @@ add_library(
   src/inheritance.cpp
   src/base.cpp
   include/lidl/algorithm.hpp
+  include/lidl/queue.hpp
 )
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)
