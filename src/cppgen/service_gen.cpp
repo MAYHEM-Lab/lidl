@@ -100,7 +100,7 @@ std::vector<section_key_t> generate_procedure(const module& mod,
 codegen::sections
 generate_service_descriptor(const module& mod, std::string_view, const service& service) {
     auto serv_handle    = *recursive_definition_lookup(mod.symbols(), &service);
-    auto serv_full_name = get_identifier(mod, {serv_handle});
+    auto serv_full_name = get_identifier(mod, lidl::name{serv_handle});
 
     std::ostringstream str;
     section sect;
@@ -330,9 +330,6 @@ codegen::sections better_service_generator::generate_sync_server() {
 
     str << "};";
 
-    auto serv_handle    = *recursive_definition_lookup(mod().symbols(), &get());
-    auto serv_full_name = get_identifier(mod(), {serv_handle});
-
     def_sec.add_dependency(def_key());
     def_sec.add_key({symbol(), section_type::sync_server});
     def_sec.definition = str.str();
@@ -371,9 +368,6 @@ codegen::sections better_service_generator::generate_async_server() {
     str << fmt::format("virtual ~async_server() = default;\n", name());
 
     str << "};";
-
-    auto serv_handle    = *recursive_definition_lookup(mod().symbols(), &get());
-    auto serv_full_name = get_identifier(mod(), {serv_handle});
 
     def_sec.add_dependency(def_key());
     def_sec.add_key({symbol(), section_type::async_server});

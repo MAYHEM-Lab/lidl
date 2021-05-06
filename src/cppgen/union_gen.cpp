@@ -287,7 +287,7 @@ sections union_gen::generate_traits() {
         }};)__";
 
         auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), {serv_handle});
+        auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";
@@ -305,7 +305,7 @@ sections union_gen::generate_traits() {
         }};)__";
 
         auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), {serv_handle});
+        auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";

@@ -16,7 +16,7 @@ sections struct_gen::do_generate() {
             {1}
         }};)__";
 
-    auto body = struct_body_gen(mod(), symbol(), name(), ctor_name(), get()).generate();
+    auto body = struct_body_gen(mod(), ctor_name(), get()).generate();
 
     section s;
     s.keys.push_back(def_key());
@@ -125,7 +125,7 @@ sections struct_gen::generate_traits() {
         }};)__";
 
         auto serv_handle    = *recursive_definition_lookup(mod().symbols(), info.serv);
-        auto serv_full_name = get_identifier(mod(), {serv_handle});
+        auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
         rpc_traits_sect.name_space = "lidl";

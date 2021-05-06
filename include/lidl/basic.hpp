@@ -45,12 +45,34 @@ private:
 
 struct generic_argument;
 
+struct name;
+struct module;
+// Reference types in lidl cannot be used directly (for instance a string), and must
+// always go through a pointer. The reason being that they have unknown size.
+// However, users aren't expected to use ptr<>s in their schemas.
+// This function takes a name, and converts the given to T to a ptr<T> if needed.
+// Returns true if the name was converted to a pointer.
+bool add_pointer_to_name_if_needed(const module& mod, name& n);
+
 /**
  * A name object refers to a concrete type in a lidl module.
  *
  * If the type is a generic instantiation, the name stores the arguments.
  */
 struct name {
+    name() = default;
+    explicit name(symbol_handle base)
+        : base(base) {
+    }
+    name(symbol_handle base, std::vector<generic_argument> args)
+        : base(base)
+        , args(std::move(args)) {
+    }
+
+    void finalize(const module& mod) {
+        add_pointer_to_name_if_needed(mod, *this);
+    }
+
     symbol_handle base;
     std::vector<generic_argument> args;
 };
@@ -75,10 +97,9 @@ struct generic_argument : std::variant<name, int64_t> {
 bool operator==(const symbol_handle& left, const symbol_handle& right);
 bool operator==(const name&, const name&);
 
-struct module;
 const type* get_type(const module& mod, const name&);
 
-template <class Type>
+template<class Type>
 const Type* get_type(const module& mod, const name& n) {
     auto t = get_type(mod, n);
     if (!t) {
@@ -88,13 +109,6 @@ const Type* get_type(const module& mod, const name& n) {
 }
 
 const wire_type* get_wire_type(const module& mod, const name& n);
-
-// Reference types in lidl cannot be used directly (for instance a string), and must
-// always go through a pointer. The reason being that they have unknown size.
-// However, users aren't expected to use ptr<>s in their schemas.
-// This function takes a name, and converts the given to T to a ptr<T> if needed.
-// Returns true if the name was converted to a pointer.
-bool add_pointer_to_name_if_needed(const module& mod, name& n);
 
 struct procedure_params_info {
     const service* serv;

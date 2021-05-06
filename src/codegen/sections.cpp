@@ -1,13 +1,14 @@
 #include "sections.hpp"
+
 #include "codegen.hpp"
 
 namespace lidl::codegen {
 std::string section_key_t::to_string(const module& mod) {
     std::string sym;
-    auto sh      = recursive_definition_lookup(mod.symbols(), symbol);
+    auto sh = recursive_definition_lookup(mod.symbols(), symbol);
 
     if (sh) {
-        sym = current_backend()->get_identifier(mod, {*sh});
+        sym = current_backend()->get_identifier(mod, name{*sh});
 
         try {
             auto t = get_type(mod, name{*sh});
@@ -76,4 +77,4 @@ std::string section_key_t::to_string(const module& mod) {
 
     return fmt::format("{} for {}", typestr, sym);
 }
-}
+} // namespace lidl::codegen

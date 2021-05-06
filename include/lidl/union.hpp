@@ -79,10 +79,18 @@ struct union_type
 
     compound_layout layout(const module& mod) const;
 
+    void finalize(const module& mod) {
+        for (auto& mem : members) {
+            mem.second.finalize(mod);
+        }
+        get_enum(mod);
+        m_enumeration->finalize(mod);
+    }
+
 private:
     std::deque<std::pair<std::string, member>> members;
 
-    mutable std::unique_ptr<const enumeration> m_enumeration;
+    mutable std::unique_ptr<enumeration> m_enumeration;
 };
 
 std::unique_ptr<enumeration> enum_for_union(const module& m, const union_type& u);

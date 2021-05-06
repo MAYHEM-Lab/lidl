@@ -78,47 +78,36 @@ std::unique_ptr<structure> procedure_results_struct(const module& mod,
 }
 } // namespace
 structure& procedure::params_struct(const module& mod) const {
-    if (structs_dirty) {
-        m_params_struct  = procedure_params_struct(mod, get_service(), m_name, *this);
-        m_results_struct = procedure_results_struct(mod, get_service(), m_name, *this);
-
-        auto handle     = define(get_service().get_scope(),
-                             fmt::format("{}_params", m_name),
-                             m_params_struct.get());
-        auto res_handle = define(get_service().get_scope(),
-                                 fmt::format("{}_results", m_name),
-                                 m_results_struct.get());
-
-        params_struct_name = name{handle};
-        add_pointer_to_name_if_needed(mod, params_struct_name);
-        results_struct_name = name{res_handle};
-        add_pointer_to_name_if_needed(mod, results_struct_name);
-
-        structs_dirty = false;
-    }
+    generate_structs_if_dirty(mod);
     return *m_params_struct;
 }
 
 structure& procedure::results_struct(const module& mod) const {
-    if (structs_dirty) {
-        m_params_struct  = procedure_params_struct(mod, get_service(), m_name, *this);
-        m_results_struct = procedure_results_struct(mod, get_service(), m_name, *this);
+    generate_structs_if_dirty(mod);
+    return *m_results_struct;
+}
 
-        auto handle     = define(get_service().get_scope(),
+void procedure::generate_structs_if_dirty(const module& mod) const {
+    if (!structs_dirty) {
+        return;
+    }
+
+    m_params_struct  = procedure_params_struct(mod, get_service(), m_name, *this);
+    m_results_struct = procedure_results_struct(mod, get_service(), m_name, *this);
+
+    auto handle     = define(get_service().get_scope(),
                              fmt::format("{}_params", m_name),
                              m_params_struct.get());
-        auto res_handle = define(get_service().get_scope(),
-                                 fmt::format("{}_results", m_name),
-                                 m_results_struct.get());
+    auto res_handle = define(get_service().get_scope(),
+                             fmt::format("{}_results", m_name),
+                             m_results_struct.get());
 
-        params_struct_name = name{handle};
-        add_pointer_to_name_if_needed(mod, params_struct_name);
-        results_struct_name = name{res_handle};
-        add_pointer_to_name_if_needed(mod, results_struct_name);
+    params_struct_name = name{handle};
+    add_pointer_to_name_if_needed(mod, params_struct_name);
+    results_struct_name = name{res_handle};
+    add_pointer_to_name_if_needed(mod, results_struct_name);
 
-        structs_dirty = false;
-    }
-    return *m_results_struct;
+    structs_dirty = false;
 }
 
 service& procedure::get_service() const {

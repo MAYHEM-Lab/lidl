@@ -39,6 +39,8 @@ struct module : public cbase<base::categories::module> {
     module& add_child(qualified_name child_name, std::unique_ptr<module> child);
     module& add_child(std::string_view child_name, std::unique_ptr<module> child);
 
+    void finalize();
+
     mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
     mutable std::vector<std::pair<name, basic_generic_instantiation*>> name_ins;
     module() = default;

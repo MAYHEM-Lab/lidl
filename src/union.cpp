@@ -121,7 +121,7 @@ std::unique_ptr<enumeration> enum_for_union(const module& m, const union_type& u
         auto& base_enum = base->get_enum(m);
         auto enum_sym =
             recursive_definition_lookup(base->get_scope(), &base_enum).value();
-        e->set_base({enum_sym});
+        e->set_base(name{enum_sym});
     }
 
     //    static_cast<base*>(&e)->get_scope()->set_parent(u.get_scope()->shared_from_this());

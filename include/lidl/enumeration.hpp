@@ -87,6 +87,9 @@ public:
         return pos;
     }
 
+    void finalize(const module& mod) {
+        underlying_type.finalize(mod);
+    }
 private:
 };
 } // namespace lidl

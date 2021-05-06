@@ -27,6 +27,12 @@ struct structure : public wire_type {
         define(get_scope(), members.back().first, &members.back().second);
     }
 
+    void finalize(const module& mod) {
+        for (auto& mem : members) {
+            mem.second.finalize(mod);
+        }
+    }
+
     /**
      * If this member has a value, this structure is generated to transport the parameters
      * for that procedure.

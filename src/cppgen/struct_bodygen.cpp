@@ -3,6 +3,7 @@
 namespace lidl::cpp {
 using codegen::sections;
 sections raw_struct_gen::generate() {
+    std::cerr << fmt::format("Generating raw struct {}\n", absolute_name());
     std::vector<std::string> members;
     for (auto& [name, member] : get().all_members()) {
         get_wire_type(mod(), member.type_)->wire_layout(mod());
@@ -72,6 +73,7 @@ std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
 }
 
 sections struct_body_gen::generate() {
+    std::cerr << fmt::format("Generating struct body for {}\n", m_ctor_name);
     std::vector<std::string> accessors;
     for (auto& [name, member] : str().all_members()) {
         accessors.push_back(generate_getter(name, member, true));
@@ -125,6 +127,8 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
 std::string struct_body_gen::generate_getter(std::string_view member_name,
                                              const member& mem,
                                              bool is_const) {
+    std::cerr << fmt::format("Generating getter for {}::{}\n", m_ctor_name, member_name);
+
     auto member_type = get_type(mod(), mem.type_);
     if (!member_type->is_reference_type(mod())) {
         auto type_name              = get_identifier(mod(), mem.type_);

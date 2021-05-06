@@ -25,6 +25,11 @@ struct parameter : public cbase<base::categories::other> {
     using cbase::cbase;
     lidl::name type;
     param_flags flags = param_flags::in;
+
+
+    void finalize(const module& mod) {
+        type.finalize(mod);
+    }
 };
 
 struct procedure : public cbase<base::categories::procedure> {
@@ -48,6 +53,20 @@ struct procedure : public cbase<base::categories::procedure> {
         return_types.push_back(type);
     }
 
+    void finalize(const module& mod) {
+        generate_structs_if_dirty(mod);
+        for (auto& ret : return_types) {
+            ret.finalize(mod);
+        }
+        for (auto& param : parameters) {
+            param.second.finalize(mod);
+        }
+        m_params_struct->finalize(mod);
+        m_results_struct->finalize(mod);
+        params_struct_name.finalize(mod);
+        results_struct_name.finalize(mod);
+    }
+
     service& get_service() const;
 
     structure& params_struct(const module& mod) const;
@@ -57,6 +76,8 @@ struct procedure : public cbase<base::categories::procedure> {
     std::string m_name;
 
 private:
+    void generate_structs_if_dirty(const module& mod) const;
+
     mutable bool structs_dirty = true;
 
     mutable std::unique_ptr<structure> m_params_struct;
@@ -130,6 +151,15 @@ struct service
         for (auto& [name, proc] : procedures) {
             fn(*this, name, proc);
         }
+    }
+
+    void finalize(const module& mod) {
+        generate_unions_if_dirty(mod);
+        for (auto& proc : procedures) {
+            proc.second->finalize(mod);
+        }
+        m_procedure_params_union->finalize(mod);
+        m_procedure_params_union->finalize(mod);
     }
 
 private:

@@ -163,8 +163,6 @@ name lidl::frontend::loader::parse(const ast::name& nm, base& s) {
         }
     }
 
-    add_pointer_to_name_if_needed(*m_mod, res);
-
     return res;
 }
 

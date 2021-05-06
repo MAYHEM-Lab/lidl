@@ -15,6 +15,10 @@ struct member : public cbase<base::categories::member> {
         , type_{std::move(type)} {
     }
 
+    void finalize(const module& mod) {
+        type_.finalize(mod);
+    }
+
     name type_;
     bool nullable = false;
 

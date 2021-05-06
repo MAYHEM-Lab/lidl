@@ -10,7 +10,7 @@ namespace lidl {
 namespace {
 name pointerify(const symbol_handle& ptr_sym, const name& n) {
     assert(ptr_sym != n.base);
-    return name{.base = ptr_sym, .args = {n}};
+    return name{ptr_sym, {n}};
 }
 } // namespace
 
