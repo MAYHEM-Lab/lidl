@@ -1,0 +1,10 @@
+namespace lidl_example;
+
+service i2c {
+    receive(addr: u8, data: span<u8>) -> i32;
+}
+
+struct x {
+    a: i2c::call_union;
+    v: vector<string>;
+}
