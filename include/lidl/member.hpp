@@ -6,12 +6,12 @@
 #include <lidl/base.hpp>
 
 namespace lidl {
-struct member : public base {
-    using base::base;
+struct member : public cbase<base::categories::member> {
+    using cbase::cbase;
     explicit member(name type,
                     base* parent                        = nullptr,
                     std::optional<source_info> src_info = {})
-        : base(parent, std::move(src_info))
+        : cbase(parent, std::move(src_info))
         , type_{std::move(type)} {
     }
 

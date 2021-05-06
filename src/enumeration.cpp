@@ -18,7 +18,7 @@ YAML::Node enumeration::bin2yaml(const module& mod, ibinary_reader& reader) cons
 }
 
 enum_member::enum_member(enumeration& en, int val, std::optional<source_info> src_info)
-        : base{&en, std::move(src_info)}
+        : cbase{&en, std::move(src_info)}
         , value(val) {
 }
 } // namespace lidl

@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 namespace lidl {
-struct enum_member : public base {
+struct enum_member : public cbase<base::categories::other> {
     enum_member(enumeration& en, int val, std::optional<source_info> src_info = {});
     int value;
 };

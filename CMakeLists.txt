@@ -42,7 +42,6 @@ add_library(
   include/lidl/view_types.hpp
   src/types.cpp
   include/lidl/source_info.hpp
-  src/passes.hpp
   include/lidl/base.hpp
   include/lidl/loader.hpp
   src/loader.cpp

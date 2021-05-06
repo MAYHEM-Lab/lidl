@@ -1,5 +1,3 @@
-#include "passes.hpp"
-
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -119,11 +117,5 @@ void load_context::perform_load(module_loader& loader, std::string_view work_dir
 
     auto& mod = loader.get_module();
     loader.load();
-
-    try {
-        run_passes_until_stable(mod);
-    } catch (std::exception& err) {
-        std::cerr << "A pass failed: " << err.what() << '\n';
-    }
 }
 } // namespace lidl

@@ -8,16 +8,29 @@
 namespace lidl {
 class base {
 public:
-    explicit base(base* parent = nullptr, std::optional<source_info> p_src_info = {});
+    enum class categories
+    {
+        module,
+        type,
+        service,
+        procedure,
+        generic_type,
+        member,
+        other,
+    };
+
+    explicit base(categories category,
+                  base* parent                          = nullptr,
+                  std::optional<source_info> p_src_info = {});
     base(const base&);
-    base(base&&) = default;
+    base(base&&)  = default;
     base& operator=(base&&) = default;
 
     std::optional<source_info> src_info;
 
     virtual ~base() = default;
 
-    const base* parent() const {
+    base* parent() const {
         return m_parent_elem;
     }
 
@@ -25,7 +38,7 @@ public:
         return *m_scope;
     }
 
-    const scope& get_scope() const {
+    scope& get_scope() const {
         return *m_scope;
     }
 
@@ -34,8 +47,21 @@ public:
         m_scope->set_object(*this);
     }
 
+    categories category() const {
+        return m_category;
+    }
+
 private:
+    categories m_category;
     std::unique_ptr<scope> m_scope;
     mutable base* m_parent_elem = nullptr;
+};
+
+template<base::categories Category>
+class cbase : public base {
+public:
+    explicit cbase(base* parent = nullptr, std::optional<source_info> p_src_info = {})
+        : base(Category, parent, std::move(p_src_info)) {
+    }
 };
 } // namespace lidl

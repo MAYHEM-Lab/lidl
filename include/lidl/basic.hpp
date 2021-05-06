@@ -1,9 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <variant>
 #include <vector>
-#include <string>
 
 namespace lidl {
 class base;
@@ -55,6 +55,9 @@ struct name {
     std::vector<generic_argument> args;
 };
 
+bool is_type(const name&);
+bool is_service(const name&);
+
 struct generic_argument : std::variant<name, int64_t> {
     using variant::variant;
     std::variant<name, int64_t>& get_variant() {
@@ -75,6 +78,12 @@ bool operator==(const name&, const name&);
 struct module;
 const type* get_type(const module& mod, const name&);
 
+// Reference types in lidl cannot be used directly (for instance a string), and must
+// always go through a pointer. The reason being that they have unknown size.
+// However, users aren't expected to use ptr<>s in their schemas.
+// This function takes a name, and converts the given to T to a ptr<T> if needed.
+// Returns true if the name was converted to a pointer.
+bool add_pointer_to_name_if_needed(const module& mod, name& n);
 
 struct procedure_params_info {
     const service* serv;
@@ -83,5 +92,5 @@ struct procedure_params_info {
 };
 
 inline constexpr std::string_view scope_separator = "::";
-inline constexpr std::string_view hidden_magic = "#";
+inline constexpr std::string_view hidden_magic    = "#";
 } // namespace lidl

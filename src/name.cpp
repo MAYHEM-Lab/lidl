@@ -7,7 +7,18 @@
 
 
 namespace lidl {
+bool is_type(const name& n) {
+    return get_symbol(n.base)->category() == base::categories::type ||
+           get_symbol(n.base)->category() == base::categories::generic_type;
+}
+
+bool is_service(const name& n) {
+    return get_symbol(n.base)->category() == base::categories::service;
+}
+
 const type* get_type(const module& mod, const name& n) {
+    assert(is_type(n));
+
     auto base = get_symbol(n.base);
 
     if (auto base_type = dynamic_cast<const type*>(base); base_type) {

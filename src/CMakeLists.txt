@@ -43,10 +43,6 @@ if(BUILD_TESTS)
   target_link_libraries(scope_test PUBLIC lidl_core test_main)
   add_test(scope_test scope_test)
 
-  add_executable(reference_type_pass_test reference_type_pass_test.cpp)
-  target_link_libraries(reference_type_pass_test PUBLIC lidl_core test_main)
-  add_test(reference_type_pass_test reference_type_pass_test)
-
   add_executable(bin2yaml_test bin2yaml_test.cpp)
   target_link_libraries(bin2yaml_test PUBLIC lidl_core test_main)
   add_test(bin2yaml_test bin2yaml_test)

@@ -4,7 +4,6 @@
 
 #include "generic_gen.hpp"
 
-#include "../passes.hpp"
 #include "cppgen.hpp"
 #include "struct_gen.hpp"
 #include "union_gen.hpp"
@@ -31,8 +30,6 @@ sections generic_gen::do_generate(const generic_structure& str) {
     auto& un = *tmpmod.structs.back();
     define(tmpmod.symbols(), local_full_name(), &un);
 
-    run_passes_until_stable(tmpmod);
-
     struct_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
     auto res = gen.generate();
     mod().symbols().undefine("#");
@@ -49,7 +46,6 @@ sections generic_gen::do_generate(const generic_union& u) {
         std::unique_ptr<union_type>(static_cast<union_type*>(instantiated.release())));
     auto& un = *tmpmod.unions.back();
     define(tmpmod.symbols(), local_full_name(), &un);
-    run_passes_until_stable(tmpmod);
 
     union_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
 

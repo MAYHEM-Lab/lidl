@@ -21,30 +21,46 @@ enum class param_flags
     in_out = 3
 };
 
-struct parameter : public base {
-    using base::base;
+struct parameter : public cbase<base::categories::other> {
+    using cbase::cbase;
     lidl::name type;
     param_flags flags = param_flags::in;
 };
 
-struct procedure : public base {
-    using base::base;
+struct procedure : public cbase<base::categories::procedure> {
+    using cbase::cbase;
     std::deque<name> return_types;
     std::deque<std::pair<std::string, parameter>> parameters;
 
     void add_parameter(std::string name, parameter proc) {
+        if (!structs_dirty) {
+            throw std::runtime_error("Procedure cannot be modified anymore!");
+        }
         parameters.emplace_back(std::move(name), std::move(proc));
         define(get_scope(), parameters.back().first, &parameters.back().second);
     }
 
     void add_return_type(name type) {
+        if (!structs_dirty) {
+            throw std::runtime_error("Procedure cannot be modified anymore!");
+        }
+
         return_types.push_back(type);
     }
 
-    std::unique_ptr<structure> params_struct;
-    std::unique_ptr<structure> results_struct;
-    name params_struct_name;
-    name results_struct_name;
+    service& get_service() const;
+
+    structure& params_struct(const module& mod) const;
+    structure& results_struct(const module& mod) const;
+    mutable name params_struct_name;
+    mutable name results_struct_name;
+    std::string m_name;
+
+private:
+    mutable bool structs_dirty = true;
+
+    mutable std::unique_ptr<structure> m_params_struct;
+    mutable std::unique_ptr<structure> m_results_struct;
 };
 
 struct property : member {
@@ -52,22 +68,27 @@ struct property : member {
 };
 
 struct service
-    : public base
+    : public cbase<base::categories::service>
     , public extendable<service> {
     service(base* parent = nullptr, std::optional<source_info> p_src_info = {})
-        : base(parent, std::move(p_src_info)) {
+        : cbase(parent, std::move(p_src_info)) {
         get_scope().declare("call_union");
         get_scope().declare("return_union");
     }
 
     void add_procedure(std::string name, std::unique_ptr<procedure> proc) {
-        procedures.emplace_back(std::move(name), std::move(proc));
+        if (!unions_dirty) {
+            throw std::runtime_error("Service cannot be modified anymore!");
+        }
+        procedures.emplace_back(name, std::move(proc));
+        procedures.back().second->m_name = std::move(name);
         define(get_scope(), procedures.back().first, procedures.back().second.get());
     }
 
     std::deque<std::pair<std::string, property>> properties;
-    std::optional<union_type> procedure_params_union;
-    std::optional<union_type> procedure_results_union;
+
+    union_type& procedure_params_union(const module& mod) const;
+    union_type& procedure_results_union(const module& mod) const;
 
     auto& own_procedures() {
         return procedures;
@@ -112,6 +133,13 @@ struct service
     }
 
 private:
+    void generate_unions_if_dirty(const module& mod) const;
+
+    mutable std::optional<union_type> m_procedure_params_union;
+    mutable std::optional<union_type> m_procedure_results_union;
+
+    mutable bool unions_dirty = true;
+
     std::deque<std::pair<std::string, std::unique_ptr<procedure>>> procedures;
 };
 

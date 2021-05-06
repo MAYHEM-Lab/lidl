@@ -1,5 +1,3 @@
-#include "passes.hpp"
-
 #include <doctest.h>
 #include <gsl/span>
 #include <lidl/module.hpp>
@@ -52,8 +50,6 @@ TEST_CASE("yaml2bin") {
     module.unions.emplace_back();
     auto& un = module.unions.back();
     un.members.emplace_back("foo", member{name{ptr_handle, {name{str_handle}}}});
-
-    union_enum_pass(module);
 
     uint8_t buff[64];
 

@@ -9,7 +9,7 @@
 
 
 namespace lidl {
-base forward_decl{};
+base forward_decl{base::categories::other};
 
 symbol_handle::symbol_handle(scope& s, int id)
     : m_id(id)

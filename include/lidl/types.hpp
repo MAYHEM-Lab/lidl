@@ -24,9 +24,9 @@ enum class type_categories
 };
 
 struct module;
-struct type : public base {
+struct type : public cbase<base::categories::type> {
 public:
-    using base::base;
+    using cbase::cbase;
 
     virtual raw_layout wire_layout(const module& mod) const = 0;
 

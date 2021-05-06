@@ -86,7 +86,10 @@ class yaml_loader final : public module_loader {
             if (!lookup) {
                 throw unknown_type_error(type_name, make_source_info(type_node));
             }
-            return name{*lookup};
+            
+            auto res = name{*lookup};
+            add_pointer_to_name_if_needed(*m_mod, res);
+            return res;
         } else {
             auto name_node = type_node["name"];
             if (!name_node) {
@@ -102,7 +105,9 @@ class yaml_loader final : public module_loader {
 
             auto args = parse_generic_args(type_node["parameters"], s);
 
-            return name{*lookup, args};
+            auto res = name{*lookup, args};
+            add_pointer_to_name_if_needed(*m_mod, res);
+            return res;
         }
         throw std::runtime_error("shouldn't reach here");
     }

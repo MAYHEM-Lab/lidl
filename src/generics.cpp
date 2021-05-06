@@ -44,8 +44,6 @@ generic_structure::instantiate(const module& mod,
             throw std::runtime_error("shouldn't happen");
         }
 
-        name new_name;
-
         member new_mem(newstr.get());
         new_mem.type_ = it->second;
         newstr->add_member(std::string(member_name), std::move(new_mem));

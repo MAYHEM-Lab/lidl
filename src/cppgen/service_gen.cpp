@@ -109,11 +109,11 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     sect.add_dependency({serv_handle, section_type::definition});
 
     auto params_union =
-        recursive_definition_lookup(service.get_scope(), &*service.procedure_params_union)
+        recursive_definition_lookup(service.get_scope(), &service.procedure_params_union(mod))
             .value();
 
     auto results_union = recursive_definition_lookup(service.get_scope(),
-                                                     &*service.procedure_results_union)
+                                                     &service.procedure_results_union(mod))
                              .value();
 
     sect.add_dependency({params_union, section_type::definition});
@@ -123,25 +123,25 @@ generate_service_descriptor(const module& mod, std::string_view, const service& 
     std::vector<std::string> tuple_types(all_procs.size());
     std::transform(
         all_procs.begin(), all_procs.end(), tuple_types.begin(), [&](auto& proc_pair) {
-            auto& [proc_name, proc_ptr] = proc_pair;
-            auto param_name =
-                get_identifier(mod,
-                               name{recursive_definition_lookup(
-                                        mod.get_scope(), proc_ptr->params_struct.get())
-                                        .value()});
+        auto& [proc_name, proc_ptr] = proc_pair;
+        auto param_name =
+            get_identifier(mod,
+                           name{recursive_definition_lookup(mod.get_scope(),
+                                                            &proc_ptr->params_struct(mod))
+                                    .value()});
 
-            auto res_name =
-                get_identifier(mod,
-                               name{recursive_definition_lookup(
-                                        mod.get_scope(), proc_ptr->results_struct.get())
-                                        .value()});
-            return fmt::format(
-                "::lidl::procedure_descriptor<&service_type::sync_server::{1}, "
-                "&service_type::async_server::{1}, {2}, {3}>{{\"{1}\"}}",
-                serv_full_name,
-                proc_name,
-                param_name,
-                res_name);
+        auto res_name =
+            get_identifier(mod,
+                           name{recursive_definition_lookup(
+                                    mod.get_scope(), &proc_ptr->results_struct(mod))
+                                    .value()});
+        return fmt::format(
+            "::lidl::procedure_descriptor<&service_type::sync_server::{1}, "
+            "&service_type::async_server::{1}, {2}, {3}>{{\"{1}\"}}",
+            serv_full_name,
+            proc_name,
+            param_name,
+            res_name);
         });
     str << fmt::format("template <> class service_descriptor<{}> {{\npublic:\n",
                        serv_full_name);
@@ -205,7 +205,7 @@ codegen::sections better_service_generator::generate_wire_types() {
     std::vector<std::string> wire_type_names;
     for (auto& [name, proc] : get().own_procedures()) {
         {
-            auto sym = *get().get_scope().definition_lookup(proc->params_struct.get());
+            auto sym = *get().get_scope().definition_lookup(&proc->params_struct(mod()));
             auto union_name = local_name(sym);
             auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
             auto abs_name =
@@ -215,7 +215,7 @@ codegen::sections better_service_generator::generate_wire_types() {
             wire_type_names.emplace_back(union_name);
 
             auto generator =
-                struct_gen(mod(), name, union_name, abs_name, *proc->params_struct);
+                struct_gen(mod(), name, union_name, abs_name, proc->params_struct(mod()));
             auto subres = generator.generate();
             for (auto& x : subres.get_sections()) {
                 x.add_dependency(wire_types_key);
@@ -224,7 +224,7 @@ codegen::sections better_service_generator::generate_wire_types() {
         }
 
         {
-            auto sym = *get().get_scope().definition_lookup(proc->results_struct.get());
+            auto sym = *get().get_scope().definition_lookup(&proc->results_struct(mod()));
             auto union_name = local_name(sym);
             auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
             auto abs_name =
@@ -234,7 +234,7 @@ codegen::sections better_service_generator::generate_wire_types() {
             wire_type_names.emplace_back(union_name);
 
             auto generator =
-                struct_gen(mod(), name, union_name, abs_name, *proc->results_struct);
+                struct_gen(mod(), name, union_name, abs_name, proc->results_struct(mod()));
             auto subres = generator.generate();
             for (auto& x : subres.get_sections()) {
                 x.add_dependency(wire_types_key);
@@ -244,14 +244,14 @@ codegen::sections better_service_generator::generate_wire_types() {
     }
 
     {
-        auto sym = *get().get_scope().definition_lookup(&*get().procedure_params_union);
+        auto sym = *get().get_scope().definition_lookup(&get().procedure_params_union(mod()));
         auto union_name = local_name(sym);
         auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
         auto abs_name   = fmt::format("{}::wire_types::{}", absolute_name(), union_name);
         wire_type_names.emplace_back(union_name);
 
-        auto generator = union_gen(
-            mod(), name, union_name, abs_name, *get().procedure_params_union);
+        auto generator =
+            union_gen(mod(), name, union_name, abs_name, get().procedure_params_union(mod()));
         auto subres = generator.generate();
         for (auto& x : subres.get_sections()) {
             x.add_dependency(wire_types_key);
@@ -260,14 +260,14 @@ codegen::sections better_service_generator::generate_wire_types() {
     }
 
     {
-        auto sym = *get().get_scope().definition_lookup(&*get().procedure_results_union);
+        auto sym = *get().get_scope().definition_lookup(&get().procedure_results_union(mod()));
         auto union_name = local_name(sym);
         auto name       = fmt::format("{}::wire_types::{}", this->name(), union_name);
         auto abs_name   = fmt::format("{}::wire_types::{}", absolute_name(), union_name);
         wire_type_names.emplace_back(union_name);
 
-        auto generator = union_gen(
-            mod(), name, union_name, abs_name, *get().procedure_results_union);
+        auto generator =
+            union_gen(mod(), name, union_name, abs_name, get().procedure_results_union(mod()));
         auto subres = generator.generate();
         for (auto& x : subres.get_sections()) {
             x.add_dependency(wire_types_key);
@@ -462,7 +462,7 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
         proc.parameters.end(),
         param_names.begin(),
         [this, &proc](auto& param) { return fmt::format("&{}", param.first); });
-    if (proc.results_struct->is_reference_type(mod())) {
+    if (proc.results_struct(mod()).is_reference_type(mod())) {
         param_names.emplace_back("&response_builder");
     }
 
@@ -603,16 +603,16 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
                    [this, &proc](auto& param) {
                        return copy_proc_param(proc, param.first, param.second);
                    });
-    if (proc.params_struct->is_reference_type(mod())) {
+    if (proc.params_struct(mod()).is_reference_type(mod())) {
         param_names.emplace(param_names.begin(), "mb");
     }
 
     auto params_struct_identifier = get_identifier(
         mod(),
-        lidl::name{recursive_definition_lookup(mod().symbols(), proc.params_struct.get())
+        lidl::name{recursive_definition_lookup(mod().symbols(), &proc.params_struct(mod()))
                        .value()});
 
-    if (proc.params_struct->is_reference_type(mod())) {
+    if (proc.params_struct(mod()).is_reference_type(mod())) {
         params_struct_identifier =
             fmt::format("lidl::create<{}>", params_struct_identifier);
     }
@@ -716,7 +716,8 @@ co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + 
         return fmt::format(
             R"__(auto& copied = lidl::create_string(response_builder, res.ret0().string_view());
     {} static_cast<{}>(copied);)__",
-            async ? "co_return" : "return", ident);
+            async ? "co_return" : "return",
+            ident);
 
     } else {
         // Must be a regular type, just return

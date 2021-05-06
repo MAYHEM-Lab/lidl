@@ -1,5 +1,3 @@
-#include "passes.hpp"
-
 #include <doctest.h>
 #include <lidl/module.hpp>
 #include <lidl/types.hpp>
@@ -83,8 +81,6 @@ TEST_CASE("bin2yaml") {
     module.unions.emplace_back();
     auto& un = module.unions.back();
     un.add_member("foo", member{name{ptr_handle, {name{str_handle}}}});
-
-    union_enum_pass(module);
 
     uint8_t buff[64];
 

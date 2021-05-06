@@ -12,8 +12,8 @@
 #include <vector>
 
 namespace lidl {
-struct module : public base {
-    using base::base;
+struct module : public cbase<base::categories::module> {
+    using cbase::cbase;
     std::string name_space = "lidlmod";
 
     const module* parent = nullptr;

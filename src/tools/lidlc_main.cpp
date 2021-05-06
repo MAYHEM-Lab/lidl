@@ -1,5 +1,4 @@
 #include "lidl/union.hpp"
-#include "passes.hpp"
 
 #include <codegen.hpp>
 #include <filesystem>

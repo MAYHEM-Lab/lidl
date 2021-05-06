@@ -65,7 +65,7 @@ struct generic : public base {
     explicit generic(generic_parameters decl,
                      base* parent                       = nullptr,
                      std::optional<source_info> src_loc = {})
-        : base(parent, std::move(src_loc))
+        : base(categories::generic_type, parent, std::move(src_loc))
         , declaration(std::move(decl)) {
     }
 
@@ -114,7 +114,9 @@ struct generic_structure : generic {
     explicit generic_structure(generic_parameters decl,
                                base* parent                       = nullptr,
                                std::optional<source_info> src_loc = {})
-        : generic(std::move(decl), parent, std::move(src_loc)) {
+        : generic(std::move(decl),
+                  parent,
+                  std::move(src_loc)) {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
@@ -127,7 +129,10 @@ struct generic_union : generic {
     explicit generic_union(generic_parameters decl,
                            base* parent                       = nullptr,
                            std::optional<source_info> src_loc = {})
-        : generic(std::move(decl), parent, std::move(src_loc)), union_{nullptr}  {
+        : generic(std::move(decl),
+                  parent,
+                  std::move(src_loc))
+        , union_{nullptr} {
     }
 
     std::unique_ptr<type> instantiate(const module& mod,
