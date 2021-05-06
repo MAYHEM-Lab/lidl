@@ -92,27 +92,6 @@ std::unique_ptr<module> basic_module() {
     return basic_mod;
 }
 
-const basic_generic_instantiation&
-module::create_or_get_instantiation(const name& ins) const {
-    auto it = std::find_if(
-        name_ins.begin(), name_ins.end(), [&](auto& p) { return p.first == ins; });
-    if (it != name_ins.end()) {
-        return *it->second;
-    }
-
-    std::unique_ptr<basic_generic_instantiation> instantiation;
-
-    if (dynamic_cast<const generic_wire_type*>(get_symbol(ins.base))) {
-        instantiation = std::make_unique<generic_wire_type_instantiation>(ins);
-    } else if (dynamic_cast<const generic_view_type*>(get_symbol(ins.base))) {
-        instantiation = std::make_unique<generic_view_type_instantiation>(ins);
-    }
-
-    instantiations.emplace_back(std::move(instantiation));
-    name_ins.emplace_back(ins, instantiations.back().get());
-    return *instantiations.back();
-}
-
 type_categories array_type::category(const module& mod, const name& instantiation) const {
     auto arg = std::get<name>(instantiation.args[0]);
     if (auto regular = get_type(mod, arg); regular) {

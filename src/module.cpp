@@ -45,4 +45,27 @@ module& module::add_child(qualified_name child_name, std::unique_ptr<module> chi
 module& module::add_child(std::string_view child_name, std::unique_ptr<module> child) {
     return add_child(split(child_name, scope_separator), std::move(child));
 }
+
+const basic_generic_instantiation&
+module::create_or_get_instantiation(const name& ins) const {
+    auto it = std::find_if(
+        name_ins.begin(), name_ins.end(), [&](auto& p) { return p.first == ins; });
+    if (it != name_ins.end()) {
+        return *it->second;
+    }
+
+    std::unique_ptr<basic_generic_instantiation> instantiation;
+
+    if (dynamic_cast<const generic_wire_type*>(get_symbol(ins.base))) {
+        instantiation = std::make_unique<generic_wire_type_instantiation>(ins);
+    } else if (dynamic_cast<const generic_view_type*>(get_symbol(ins.base))) {
+        instantiation = std::make_unique<generic_view_type_instantiation>(ins);
+    }
+
+    assert(instantiation);
+
+    instantiations.emplace_back(std::move(instantiation));
+    name_ins.emplace_back(ins, instantiations.back().get());
+    return *instantiations.back();
+}
 } // namespace lidl
