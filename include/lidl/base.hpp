@@ -52,6 +52,10 @@ public:
         return m_category;
     }
 
+    bool is_generic() const{
+        return category() == categories::generic_type;
+    }
+
 private:
     categories m_category;
     std::unique_ptr<scope> m_scope;

@@ -42,9 +42,7 @@ public:
         return category(mod) == type_categories::view;
     }
 
-    virtual std::optional<name> get_wire_type(const module& mod) const {
-        return {};
-    }
+    virtual name get_wire_type_name(const module& mod, const name& your_name) const;
 };
 
 struct view_type : type {
@@ -65,7 +63,7 @@ struct known_view_type : view_type {
         , m_wire_type{std::move(wire_type)} {
     }
 
-    std::optional<name> get_wire_type(const module& mod) const override {
+    name get_wire_type_name(const module& mod, const name& your_name) const override {
         return m_wire_type;
     }
 
@@ -73,12 +71,17 @@ private:
     name m_wire_type;
 };
 
-struct wire_type : type {
+struct serializeable_type : type {
     using type::type;
-    virtual raw_layout wire_layout(const module& mod) const                           = 0;
+
     virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const                 = 0;
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
-    std::optional<name> get_wire_type(const module& mod) const override;
+};
+
+struct wire_type : serializeable_type {
+    using serializeable_type::serializeable_type;
+
+    virtual raw_layout wire_layout(const module& mod) const = 0;
 };
 
 struct value_type : wire_type {
@@ -89,16 +92,11 @@ struct value_type : wire_type {
     }
 };
 
-struct reference_type : wire_type {
-    using wire_type::wire_type;
+struct reference_type : serializeable_type {
+    using serializeable_type::serializeable_type;
 
     type_categories category(const module& mod) const override {
         return type_categories::reference;
-    }
-
-    raw_layout wire_layout(const module&) const override {
-        return raw_layout{/*.size=*/2,
-                          /*.alignment=*/2};
     }
 };
 } // namespace lidl

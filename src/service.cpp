@@ -15,30 +15,19 @@ std::unique_ptr<structure> procedure_params_struct(const module& mod,
     for (auto& [name, param] : proc.parameters) {
         member m(s.get(), param.src_info);
         auto param_t = get_type(mod, param.type);
-        if (param_t->is_view(mod)) {
-            /**
-             * While procedures may have view types in their parameters, view types do not
-             * have representations on the wire. The struct we are generating is only used
-             * when a request needs to be serialized. Therefore, we replace the view
-             * type with it's wire type.
-             * For instance, `string_view` in the procedure becomes `string` in the wire.
-             */
-            m.type_ = param_t->get_wire_type(mod).value();
-            add_pointer_to_name_if_needed(mod, m.type_);
-        } else {
-            static auto string = dynamic_cast<const type*>(
-                get_symbol(*lidl::recursive_name_lookup(mod.symbols(), "string")));
 
-            if (param_t->is_reference_type(mod) &&
-                get_type(mod, param.type.args[0].as_name()) == string) {
-                std::cerr << fmt::format("Warning at {}: Prefer using string_view rather "
-                                         "than string in procedure parameters.\n",
-                                         to_string(*proc.src_info));
-            }
+        static auto string = dynamic_cast<const type*>(
+            get_symbol(*lidl::recursive_name_lookup(mod.symbols(), "string")));
 
-            m.type_ = param.type;
-            add_pointer_to_name_if_needed(mod, m.type_);
+        if (param_t->is_reference_type(mod) &&
+            get_type(mod, param.type) == string) {
+            std::cerr << fmt::format("Warning at {}: Prefer using string_view rather "
+                                     "than string in procedure parameters.\n",
+                                     to_string(*proc.src_info));
         }
+
+        m.type_ = param_t->get_wire_type_name(mod, param.type);
+
         s->add_member(name, std::move(m));
     }
 
@@ -55,20 +44,9 @@ std::unique_ptr<structure> procedure_results_struct(const module& mod,
     for (auto& param : proc.return_types) {
         member m(s.get(), proc.src_info);
         auto param_t = get_type(mod, param);
-        if (param_t->is_view(mod)) {
-            /**
-             * While procedures may have view types in their return values, view types do
-             * not have representations on the wire. The struct we are generating is only
-             * used when a request needs to be serialized. Therefore, we replace the view
-             * type with it's wire type.
-             * For instance, `string_view` in the procedure becomes `string` in the wire.
-             */
-            m.type_ = *param_t->get_wire_type(mod);
-            add_pointer_to_name_if_needed(mod, m.type_);
-        } else {
-            m.type_ = param;
-            add_pointer_to_name_if_needed(mod, m.type_);
-        }
+
+        m.type_ = param_t->get_wire_type_name(mod, param);
+
         s->add_member(fmt::format("ret{}", s->all_members().size()), std::move(m));
 
         s->return_info = procedure_params_info{&servic, std::string(name), &proc};
@@ -96,16 +74,14 @@ void procedure::generate_structs_if_dirty(const module& mod) const {
     m_results_struct = procedure_results_struct(mod, get_service(), m_name, *this);
 
     auto handle     = define(get_service().get_scope(),
-                             fmt::format("{}_params", m_name),
-                             m_params_struct.get());
+                         fmt::format("{}_params", m_name),
+                         m_params_struct.get());
     auto res_handle = define(get_service().get_scope(),
                              fmt::format("{}_results", m_name),
                              m_results_struct.get());
 
-    params_struct_name = name{handle};
-    add_pointer_to_name_if_needed(mod, params_struct_name);
+    params_struct_name  = name{handle};
     results_struct_name = name{res_handle};
-    add_pointer_to_name_if_needed(mod, results_struct_name);
 
     structs_dirty = false;
 }

@@ -50,7 +50,7 @@ int pointer_type::yaml2bin(const module& mod,
 
 type_categories pointer_type::category(const module& mod,
                                        const name& instantiation) const {
-    return type_categories::reference;
+    return type_categories::value;
 }
 
 std::unique_ptr<module> basic_module() {
@@ -142,10 +142,6 @@ int vector_type::yaml2bin(const module& mod,
     }
 }
 
-raw_layout vector_type::wire_layout(const module& mod, const name& ins) const {
-    return {2, 2};
-}
-
 YAML::Node vector_type::bin2yaml(const module& mod,
                                  const name& instantiation,
                                  ibinary_reader& reader) const {
@@ -172,9 +168,18 @@ YAML::Node vector_type::bin2yaml(const module& mod,
     throw std::runtime_error("pointee must be a regular type");
 }
 
-type_categories vector_type::category(const module& mod,
-                                      const name& instantiation) const {
-    return type_categories::reference;
+name array_type::get_wire_type_name(const module& mod, const name& your_name) const {
+    auto wire_name_of_arg =
+        get_type(mod, your_name.args.front().as_name())
+            ->get_wire_type_name(mod, your_name.args.front().as_name());
+    return name{your_name.base, {wire_name_of_arg}};
+}
+
+name vector_type::get_wire_type_name(const module& mod, const name& your_name) const {
+    auto wire_name_of_arg =
+        get_type(mod, your_name.args.front().as_name())
+            ->get_wire_type_name(mod, your_name.args.front().as_name());
+    return name{your_name.base, {wire_name_of_arg}};
 }
 
 int string_type::yaml2bin(const module& module,

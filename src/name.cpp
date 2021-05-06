@@ -16,30 +16,50 @@ bool is_service(const name& n) {
     return get_symbol(n.base)->category() == base::categories::service;
 }
 
-const type* get_type(const module& mod, const name& n) {
-    assert(is_type(n));
-
+const base* resolve(const module& mod, const name& n) {
     auto base = get_symbol(n.base);
 
-    if (auto base_type = dynamic_cast<const type*>(base); base_type) {
+    if (!base->is_generic()) {
         assert(n.args.empty());
-        return base_type;
+        return base;
     }
 
-    auto base_type = dynamic_cast<const generic_type*>(base);
-    if (!base_type) {
+    auto* generic_base = dynamic_cast<const basic_generic*>(base);
+
+    if (n.args.empty()) {
+        // We're just resolving the generic itself, not an instance.
+        return generic_base;
+    }
+
+    if (generic_base->declaration.arity() != n.args.size()) {
+        std::cerr << fmt::format("mismatched number of args and params for generic: "
+                                 "expected {}, got {}\n",
+                                 generic_base->declaration.arity(),
+                                 n.args.size());
+        assert(false);
+    }
+
+    return dynamic_cast<const lidl::base*>(&mod.create_or_get_instantiation(n));
+}
+
+const wire_type* get_wire_type(const module& mod, const name& n) {
+    auto t = get_type(mod, n);
+    if (!t) {
         return nullptr;
     }
 
-    if (base_type->declaration.arity() != n.args.size()) {
-        throw std::runtime_error(
-            fmt::format("mismatched number of args and params for generic: "
-                        "expected {}, got {}",
-                        base_type->declaration.arity(),
-                        n.args.size()));
+    if (auto wt = dynamic_cast<const wire_type*>(t)) {
+        return wt;
     }
 
-    return dynamic_cast<const type*>(&mod.create_or_get_instantiation(n));
+    auto wire_name = t->get_wire_type_name(mod, n);
+    assert(wire_name != n);
+    return get_wire_type(mod, wire_name);
+}
+
+const type* get_type(const module& mod, const name& n) {
+    assert(is_type(n));
+    return dynamic_cast<const type*>(resolve(mod, n));
 }
 
 bool operator==(const name& left, const name& right) {

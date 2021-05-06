@@ -24,7 +24,6 @@ add_library(
   include/lidl/service.hpp
   src/service.cpp
   include/lidl/errors.hpp
-  src/reference_type_pass.cpp
   src/scope.cpp
   src/name.cpp
   src/structure.cpp

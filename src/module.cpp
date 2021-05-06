@@ -60,6 +60,8 @@ module::create_or_get_instantiation(const name& ins) const {
         instantiation = std::make_unique<generic_wire_type_instantiation>(ins);
     } else if (dynamic_cast<const generic_view_type*>(get_symbol(ins.base))) {
         instantiation = std::make_unique<generic_view_type_instantiation>(ins);
+    }else if (dynamic_cast<const generic_reference_type*>(get_symbol(ins.base))) {
+        instantiation = std::make_unique<generic_reference_type_instantiation>(ins);
     }
 
     assert(instantiation);

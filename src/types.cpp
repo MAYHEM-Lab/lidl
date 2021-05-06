@@ -1,23 +1,17 @@
+#include <lidl/module.hpp>
 #include <lidl/types.hpp>
 
 namespace lidl {
-std::optional<name> wire_type::get_wire_type(const module& mod) const {
-    return type::get_wire_type(mod);
-}
-
-const wire_type* get_wire_type(const module& mod, const name& n) {
-    auto wire_t = get_type<wire_type>(mod, n);
-    if (!wire_t) {
-        auto t = get_type(mod, n);
-        if (!t) {
-            return nullptr;
-        }
-        auto wire_name = t->get_wire_type(mod);
-        if (!wire_name) {
-            return nullptr;
-        }
-        return get_type<wire_type>(mod, *wire_name);
+name type::get_wire_type_name(const module& mod, const name& your_name) const {
+    if (is_value(mod)) {
+        return your_name;
     }
-    return wire_t;
+
+    if (is_reference_type(mod)) {
+        auto ptr_sym = recursive_name_lookup(mod.symbols(), "ptr").value();
+        return name{ptr_sym, {your_name}};
+    }
+
+    assert(false && "Must override get_wire_type_name");
 }
 } // namespace lidl

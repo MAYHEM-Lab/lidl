@@ -68,6 +68,8 @@ struct array_type : generic_wire_type {
         }
         return pos;
     }
+
+    name get_wire_type_name(const module& mod, const name& your_name) const override;
 };
 
 struct basic_type : value_type {
@@ -191,14 +193,10 @@ struct string_type : reference_type {
                  ibinary_writer& writer) const override;
 };
 
-struct vector_type : generic_wire_type {
+struct vector_type : generic_reference_type {
     vector_type()
-        : generic_wire_type(make_generic_declaration({{"T", "type"}})) {
+        : generic_reference_type(make_generic_declaration({{"T", "type"}})) {
     }
-
-    virtual raw_layout wire_layout(const module& mod, const name& ins) const override;
-
-    type_categories category(const module& mod, const name& instantiation) const override;
 
     YAML::Node bin2yaml(const module& mod,
                         const name& instantiation,
@@ -208,5 +206,7 @@ struct vector_type : generic_wire_type {
                  const name& instantiation,
                  const YAML::Node& node,
                  ibinary_writer& writer) const override;
+
+    name get_wire_type_name(const module& mod, const name& your_name) const override;
 };
 } // namespace lidl

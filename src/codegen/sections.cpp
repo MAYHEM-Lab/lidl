@@ -11,7 +11,7 @@ std::string section_key_t::to_string(const module& mod) {
         sym = current_backend()->get_identifier(mod, name{*sh});
 
         try {
-            auto t = get_type(mod, name{*sh});
+            auto t = resolve(mod, name{*sh});
             if (t->src_info) {
                 auto loc = lidl::to_string(*t->src_info);
                 sym      = fmt::format("{} (defined at {})", sym, loc);

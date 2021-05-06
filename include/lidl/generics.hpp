@@ -86,24 +86,36 @@ struct generic_type : basic_generic {
                         std::move(src_loc)) {
     }
 
+    virtual name get_wire_type_name(const module& mod, const name& your_name) const = 0;
+
     virtual type_categories category(const module& mod,
                                      const name& instantiation) const = 0;
 };
 
-struct generic_wire_type : generic_type {
+struct generic_serializeable_type : generic_type {
     using generic_type::generic_type;
-
-    virtual raw_layout wire_layout(const module& mod,
-                                   const name& instantiation) const = 0;
 
     virtual YAML::Node bin2yaml(const module& mod,
                                 const name& instantiation,
-                                ibinary_reader& span) const = 0;
+                                ibinary_reader& reader) const = 0;
 
     virtual int yaml2bin(const module& mod,
                          const name& instantiation,
                          const YAML::Node& node,
                          ibinary_writer& writer) const = 0;
+};
+
+struct generic_reference_type : generic_serializeable_type {
+    using generic_serializeable_type::generic_serializeable_type;
+
+    type_categories category(const module& mod, const name& instantiation) const override;
+};
+
+struct generic_wire_type : generic_serializeable_type {
+    using generic_serializeable_type::generic_serializeable_type;
+
+    virtual raw_layout wire_layout(const module& mod,
+                                   const name& instantiation) const = 0;
 };
 
 struct instance_based_wire_type : generic_wire_type {
@@ -131,6 +143,10 @@ struct instance_based_wire_type : generic_wire_type {
         return instantiate(mod, instantiation)->category(mod);
     }
 
+    name get_wire_type_name(const module& mod, const name& instantiation) const override {
+        return instantiate(mod, instantiation)->get_wire_type_name(mod, instantiation);
+    }
+
     virtual std::unique_ptr<wire_type> instantiate(const module& mod,
                                                    const name& instantiation) const = 0;
 };
@@ -142,17 +158,13 @@ struct generic_view_type : generic_type {
                              const name& instantiation) const override {
         return type_categories::view;
     }
-
-    virtual std::optional<name> get_wire_type(const module& mod,
-                                              const name& instantiation) const = 0;
 };
 
 struct instance_based_view_type : generic_view_type {
     using generic_view_type::generic_view_type;
 
-    std::optional<name> get_wire_type(const module& mod,
-                                      const name& instantiation) const override {
-        return instantiate(mod, instantiation)->get_wire_type(mod);
+    name get_wire_type_name(const module& mod, const name& instantiation) const override {
+        return instantiate(mod, instantiation)->get_wire_type_name(mod, instantiation);
     }
 
     virtual std::unique_ptr<view_type> instantiate(const module& mod,
@@ -182,7 +194,7 @@ struct pointer_type : generic_wire_type {
 
     type_categories category(const module& mod, const name& instantiation) const override;
 
-    virtual raw_layout wire_layout(const module& mod, const name&) const override;
+    raw_layout wire_layout(const module& mod, const name&) const override;
 
     int yaml2bin(const module& mod,
                  const name& instantiation,
@@ -192,7 +204,14 @@ struct pointer_type : generic_wire_type {
     YAML::Node bin2yaml(const module& mod,
                         const name& instantiation,
                         ibinary_reader& span) const override;
+
+    name get_wire_type_name(const module& mod, const name& instantiation) const override {
+        return instantiation;
+    }
 };
+
+const name& deref_ptr(const module& mod, const name& nm);
+
 struct basic_generic_instantiation {
     explicit basic_generic_instantiation(name use)
         : args(std::move(use)) {
@@ -220,10 +239,37 @@ struct generic_view_type_instantiation
         return static_cast<const generic_view_type*>(this->generic);
     }
 
-    std::optional<name> get_wire_type(const module& mod) const override {
-        return get_generic()->get_wire_type(mod, args);
+    name get_wire_type_name(const module& mod, const name& n) const override {
+        assert(n == args);
+        return get_generic()->get_wire_type_name(mod, args);
     }
 };
+
+struct generic_reference_type_instantiation
+    : reference_type
+    , basic_generic_instantiation {
+    using basic_generic_instantiation::basic_generic_instantiation;
+
+    const generic_reference_type* get_generic() const {
+        return static_cast<const generic_reference_type*>(this->generic);
+    }
+
+    name get_wire_type_name(const module& mod, const name& n) const override {
+        assert(n == args);
+        return get_generic()->get_wire_type_name(mod, args);
+    }
+
+    YAML::Node bin2yaml(const module& module, ibinary_reader& reader) const override {
+        return this->get_generic()->bin2yaml(module, args, reader);
+    }
+
+    int yaml2bin(const module& mod,
+                 const YAML::Node& node,
+                 ibinary_writer& writer) const override {
+        return this->get_generic()->yaml2bin(mod, args, node, writer);
+    }
+};
+
 struct generic_wire_type_instantiation
     : wire_type
     , basic_generic_instantiation {

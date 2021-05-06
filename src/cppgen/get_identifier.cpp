@@ -120,13 +120,8 @@ std::string get_local_identifier(const module& mod, const name& n) {
 }
 
 std::string get_user_identifier(const module& mod, const name& n) {
-    auto& ntype = *get_type(mod, n);
-    if (ntype.is_reference_type(mod)) {
-        // must be a pointer instantiation
-        auto& base = std::get<name>(n.args.at(0));
-        return get_identifier(mod, base);
-    }
-
-    return get_identifier(mod, n);
+    auto& nn = deref_ptr(mod, n);
+    auto& ntype = *get_type(mod, nn);
+    return get_identifier(mod, nn);
 }
 } // namespace lidl::cpp

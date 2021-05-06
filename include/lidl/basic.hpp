@@ -47,13 +47,6 @@ struct generic_argument;
 
 struct name;
 struct module;
-// Reference types in lidl cannot be used directly (for instance a string), and must
-// always go through a pointer. The reason being that they have unknown size.
-// However, users aren't expected to use ptr<>s in their schemas.
-// This function takes a name, and converts the given to T to a ptr<T> if needed.
-// Returns true if the name was converted to a pointer.
-bool add_pointer_to_name_if_needed(const module& mod, name& n);
-
 /**
  * A name object refers to a concrete type in a lidl module.
  *
@@ -70,7 +63,6 @@ struct name {
     }
 
     void finalize(const module& mod) {
-        add_pointer_to_name_if_needed(mod, *this);
     }
 
     symbol_handle base;
@@ -96,7 +88,7 @@ struct generic_argument : std::variant<name, int64_t> {
 
 bool operator==(const symbol_handle& left, const symbol_handle& right);
 bool operator==(const name&, const name&);
-
+const base* resolve(const module& mod, const name&);
 const type* get_type(const module& mod, const name&);
 
 template<class Type>

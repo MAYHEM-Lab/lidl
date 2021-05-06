@@ -116,6 +116,14 @@ std::unique_ptr<generic_parameter> get_generic_parameter_for_type(std::string_vi
     return nullptr;
 }
 
+const name& deref_ptr(const module& mod, const name& nm) {
+    auto ptr_sym = recursive_name_lookup(mod.symbols(), "ptr").value();
+    if (nm.base == ptr_sym) {
+        return nm.args[0].as_name();
+    }
+    return nm;
+}
+
 type_categories generic_wire_type_instantiation::category(const module& mod) const {
     return this->get_generic()->category(mod, args);
 }
@@ -133,5 +141,10 @@ int generic_wire_type_instantiation::yaml2bin(const module& mod,
                                               const YAML::Node& node,
                                               ibinary_writer& writer) const {
     return this->get_generic()->yaml2bin(mod, args, node, writer);
+}
+
+type_categories generic_reference_type::category(const module& mod,
+                                                 const name& instantiation) const {
+    return type_categories::reference;
 }
 } // namespace lidl

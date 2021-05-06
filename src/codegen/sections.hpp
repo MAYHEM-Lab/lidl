@@ -42,6 +42,7 @@ struct section_key_t {
             : symbol{get_symbol(handle)}
             , type{t} {
     }
+
     friend bool operator==(const section_key_t& left, const section_key_t& right) {
         return left.type == right.type && left.symbol == right.symbol;
     }

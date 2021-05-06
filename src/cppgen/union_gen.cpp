@@ -14,36 +14,24 @@ using codegen::sections;
 std::string union_gen::generate_getter(std::string_view member_name,
                                        const member& mem,
                                        bool is_const) {
-    auto member_type = get_type(mod(), mem.type_);
-    if (!member_type->is_reference_type(mod())) {
-        auto type_name              = get_identifier(mod(), mem.type_);
-        constexpr auto format       = R"__({0}& {1}() {{
-                LIDL_UNION_ASSERT(alternative() == alternatives::{1});
-                return m_{1};
-            }})__";
-        constexpr auto const_format = R"__(const {0}& {1}() const {{
-                LIDL_UNION_ASSERT(alternative() == alternatives::{1});
-                return m_{1};
-            }})__";
-        return fmt::format(is_const ? const_format : format, type_name, member_name);
-    } else {
-        // need to dereference before return
-        auto& base      = std::get<lidl::name>(mem.type_.args[0]);
-        auto identifier = get_identifier(mod(), base);
-        if (!mem.is_nullable()) {
-            constexpr auto format = R"__({0}& {1}() {{
-                LIDL_UNION_ASSERT(alternative() == alternatives::{1});
-                return m_{1}.unsafe().get();
-            }})__";
-            constexpr auto const_format =
-                R"__(const {0}& {1}() const {{
-                LIDL_UNION_ASSERT(alternative() == alternatives::{1});
-                return m_{1}.unsafe().get();
-            }})__";
-            return fmt::format(is_const ? const_format : format, identifier, member_name);
-        }
-    }
-    return "";
+    assert(!mem.is_nullable());
+
+    auto member_type_name =
+        get_type(mod(), mem.type_)->get_wire_type_name(mod(), mem.type_);
+
+    constexpr auto format =
+        R"__({0}& {1}() {{
+            LIDL_UNION_ASSERT(alternative() == alternatives::{1});
+            return m_{1};
+        }})__";
+    constexpr auto const_format =
+        R"__(const {0}& {1}() const {{
+            LIDL_UNION_ASSERT(alternative() == alternatives::{1});
+            return m_{1};
+        }})__";
+
+    auto type_name = get_identifier(mod(), deref_ptr(mod(), member_type_name));
+    return fmt::format(is_const ? const_format : format, type_name, member_name);
 }
 
 sections union_gen::generate() {
@@ -54,7 +42,7 @@ sections union_gen::generate() {
     }
 
     auto enum_name = "alternatives";
-    auto abs_name   = fmt::format("{}::{}", absolute_name(), enum_name);
+    auto abs_name  = fmt::format("{}::{}", absolute_name(), enum_name);
 
     std::vector<std::string> ctors;
     int member_index = 0;
@@ -151,7 +139,8 @@ template <class FunT>
                  std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(misc),
                  [](const auto& sec) {
-                     return !sec.keys.empty() && sec.keys[0].type != section_type::definition;
+                     return !sec.keys.empty() &&
+                            sec.keys[0].type != section_type::definition;
                  });
 
     auto bodies = std::accumulate(

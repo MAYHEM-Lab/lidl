@@ -64,6 +64,13 @@ public:
         return *this;
     }
 
+    operator T&() {
+        return unsafe().get();
+    }
+
+    operator T&() const {
+        return unsafe().get();
+    }
 private:
     struct unsafe_ {
         // Stores the offset in number of bytes, not Ts!

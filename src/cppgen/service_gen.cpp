@@ -666,8 +666,8 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
     if (param_type->is_reference_type(mod())) {
         throw std::runtime_error("Reference types are not supported in stubs yet!");
     } else if (param_type->is_view(mod())) {
-        auto wire_type_name = param_type->get_wire_type(mod());
-        if (wire_type_name->base ==
+        auto wire_type_name = param_type->get_wire_type_name(mod(), param.type);
+        if (wire_type_name.base ==
             recursive_full_name_lookup(mod().symbols(), "string").value()) {
 
             return fmt::format("lidl::create_string(mb, {})", param_name);
@@ -702,8 +702,8 @@ co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + 
         // Would just memcpy'ing the extent of the result work?
         throw std::runtime_error("Reference types are not supported by stubgen yet!");
     } else if (ret_type->is_view(mod())) {
-        auto wire_type_name = ret_type->get_wire_type(mod());
-        if (wire_type_name->base !=
+        auto wire_type_name = ret_type->get_wire_type_name(mod(), proc.return_types[0]);
+        if (wire_type_name.base !=
             recursive_full_name_lookup(mod().symbols(), "string").value()) {
             throw std::runtime_error("Stubgen only supports string_views");
         }
