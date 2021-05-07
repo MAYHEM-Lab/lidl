@@ -38,7 +38,10 @@ sections union_gen::generate() {
     std::vector<std::string> members;
     for (auto& [name, member] : get().all_members()) {
         members.push_back(raw_struct_gen::generate_field(
-            "m_" + std::string(name), get_identifier(mod(), member->type_)));
+            "m_" + std::string(name),
+            get_identifier(mod(),
+                           get_type(mod(), member->type_)
+                               ->get_wire_type_name(mod(), member->type_))));
     }
 
     auto enum_name = "alternatives";
@@ -51,7 +54,7 @@ sections union_gen::generate() {
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto identifier  = get_user_identifier(mod(), member->type_);
+        auto identifier = get_user_identifier(mod(), member->type_);
         if (!member->is_nullable()) {
             arg_names        = fmt::format("const {}& p_{}", identifier, member_name);
             initializer_list = fmt::format("m_{0}(p_{0})", member_name);

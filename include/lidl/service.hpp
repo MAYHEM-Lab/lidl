@@ -87,8 +87,6 @@ struct service
         define(get_scope(), procedures.back().first, procedures.back().second.get());
     }
 
-    std::deque<std::pair<std::string, property>> properties;
-
     union_type& procedure_params_union(const module& mod) const;
     union_type& procedure_results_union(const module& mod) const;
 

@@ -83,6 +83,7 @@ void run(const lidlc_args& args) {
 
     auto backend = backend_maker->second();
     backend->generate(*mod, *args.output_stream);
+    args.output_stream->flush();
 }
 } // namespace lidl
 
