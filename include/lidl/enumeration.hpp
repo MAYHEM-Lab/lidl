@@ -86,10 +86,6 @@ public:
         underlying->yaml2bin(mod, node, writer);
         return pos;
     }
-
-    void finalize(const module& mod) {
-        underlying_type.finalize(mod);
-    }
 private:
 };
 } // namespace lidl

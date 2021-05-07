@@ -70,19 +70,4 @@ module::create_or_get_instantiation(const name& ins) const {
     name_ins.emplace_back(ins, instantiations.back().get());
     return *instantiations.back();
 }
-
-void module::finalize() {
-    for (auto& elem : services) {
-        elem->finalize(*this);
-    }
-    for (auto& elem : structs) {
-        elem->finalize(*this);
-    }
-    for (auto& elem : unions) {
-        elem->finalize(*this);
-    }
-    for (auto& elem : enums) {
-        elem->finalize(*this);
-    }
-}
 } // namespace lidl

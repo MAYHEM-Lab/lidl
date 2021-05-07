@@ -62,9 +62,6 @@ struct name {
         , args(std::move(args)) {
     }
 
-    void finalize(const module& mod) {
-    }
-
     symbol_handle base;
     std::vector<generic_argument> args;
 };

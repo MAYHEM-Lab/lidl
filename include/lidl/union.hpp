@@ -79,14 +79,6 @@ struct union_type
 
     compound_layout layout(const module& mod) const;
 
-    void finalize(const module& mod) {
-        for (auto& mem : members) {
-            mem.second.finalize(mod);
-        }
-        get_enum(mod);
-        m_enumeration->finalize(mod);
-    }
-
 private:
     std::deque<std::pair<std::string, member>> members;
 
