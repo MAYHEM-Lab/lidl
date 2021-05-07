@@ -666,10 +666,8 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
     if (param_type->is_reference_type(mod())) {
         throw std::runtime_error("Reference types are not supported in stubs yet!");
     } else if (param_type->is_view(mod())) {
-        auto wire_type_name = param_type->get_wire_type_name(mod(), param.type);
-        if (wire_type_name.base ==
-            recursive_full_name_lookup(mod().symbols(), "string").value()) {
-
+        if (param.type.base ==
+            recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
             return fmt::format("lidl::create_string(mb, {})", param_name);
         }
 
@@ -679,13 +677,13 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
     }
 }
 std::string better_service_generator::copy_and_return(const procedure& proc, bool async) {
-
     if (proc.return_types.empty()) {
         return async ? "co_return;" : "return;";
     }
 
     auto ret_type = get_type(mod(), proc.return_types[0]);
     auto ident    = get_user_identifier(mod(), proc.return_types[0]);
+
     if (ret_type->is_reference_type(mod())) {
         constexpr auto format =
             R"__(auto [__extent, __pos] = lidl::meta::detail::find_extent_and_position(res.ret0());
@@ -699,12 +697,9 @@ memcpy(__res_ptr, __extent.data(), __extent.size());
 co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
 
         return fmt::format(async ? async_format : format, ident);
-        // Would just memcpy'ing the extent of the result work?
-        throw std::runtime_error("Reference types are not supported by stubgen yet!");
     } else if (ret_type->is_view(mod())) {
-        auto wire_type_name = ret_type->get_wire_type_name(mod(), proc.return_types[0]);
-        if (wire_type_name.base !=
-            recursive_full_name_lookup(mod().symbols(), "string").value()) {
+        if (proc.return_types[0].base !=
+            recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
             throw std::runtime_error("Stubgen only supports string_views");
         }
 
@@ -715,7 +710,6 @@ co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + 
     {} static_cast<{}>(copied);)__",
             async ? "co_return" : "return",
             ident);
-
     } else {
         // Must be a regular type, just return
         return fmt::format("{} res.ret0();", async ? "co_return" : "return");

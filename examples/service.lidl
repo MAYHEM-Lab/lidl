@@ -4,6 +4,10 @@ service i2c {
     receive(addr: u8, data: span<u8>) -> i32;
 }
 
+service echo {
+    echo(str: string_view) -> string_view;
+}
+
 struct x {
     a: i2c::call_union;
     v: vector<string>;

@@ -63,11 +63,14 @@ sections struct_gen::generate_traits() {
     std::vector<std::string> ctor_types{""};
     std::vector<std::string> ctor_args{""};
     for (auto& [member_name, member] : get().all_members()) {
-        auto member_type = get_type(mod(), member.type_);
-        auto identifier  = get_user_identifier(mod(), member.type_);
+        auto member_type_name =
+            get_type(mod(), member.type_)->get_wire_type_name(mod(), member.type_);
+
+        auto identifier = get_user_identifier(mod(), member_type_name);
+
         ctor_args.push_back(fmt::format("p_{}", member_name));
 
-        if (!member_type->is_reference_type(mod()) || !member.is_nullable()) {
+        if (!member.is_nullable()) {
             ctor_types.push_back(fmt::format("const {}& p_{}", identifier, member_name));
             continue;
         }

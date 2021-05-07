@@ -51,9 +51,8 @@ sections union_gen::generate() {
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto member_type = get_type(mod(), member->type_);
         auto identifier  = get_user_identifier(mod(), member->type_);
-        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
+        if (!member->is_nullable()) {
             arg_names        = fmt::format("const {}& p_{}", identifier, member_name);
             initializer_list = fmt::format("m_{0}(p_{0})", member_name);
         } else {
