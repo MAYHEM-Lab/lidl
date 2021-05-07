@@ -6,7 +6,7 @@
 #include <string>
 
 namespace lidl::js {
-inline std::string generate_layout_getter(const module& mod, const type& t) {
+inline std::string generate_layout_getter(const module& mod, const wire_type& t) {
     auto layout = t.wire_layout(mod);
 
     static constexpr auto format = R"__(

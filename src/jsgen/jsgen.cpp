@@ -24,40 +24,29 @@ public:
     void generate(std::ostream& str) {
         std::vector<std::string> exports;
 
-        for (auto& s : mod().structs) {
-            //            if (is_anonymous(*m_module, &s)) {
-            //                continue;
-            //            }
-            auto sym       = *mod().symbols().definition_lookup(&s);
-            auto name      = local_name(sym);
-            auto generator = struct_gen(
-                mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
-            m_sections.merge_before(generator.generate());
-            exports.emplace_back(name);
-        }
-
-        for (auto& s : mod().unions) {
-            //            if (is_anonymous(*m_module, &s)) {
-            //                continue;
-            //            }
-            auto sym       = *mod().symbols().definition_lookup(&s);
-            auto name      = local_name(sym);
-            auto generator = union_gen(
-                mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
-            m_sections.merge_before(generator.generate());
-            exports.emplace_back(name);
-        }
-
-        for (auto& s : mod().enums) {
-            if (is_anonymous(mod(), &s)) {
-                continue;
+        for (auto& serv : mod().services) {
+            {
+                auto call_union = &serv->procedure_params_union(mod());
+                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto union_name = local_name(sym);
             }
-            auto sym  = *mod().symbols().definition_lookup(&s);
-            auto name = local_name(sym);
-            auto generator =
-                enum_gen(mod(), sym, name, get_local_obj_name(mod(), lidl::name{sym}), s);
-            m_sections.merge_before(generator.generate());
-            exports.emplace_back(name);
+            {
+                auto call_union = &serv->procedure_results_union(mod());
+                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto union_name = local_name(sym);
+            }
+        }
+
+        for (auto& s : mod().structs) {
+            m_sections.merge_before(codegen::do_generate<struct_gen>(mod(), s.get()));
+        }
+
+        for (auto& e : mod().enums) {
+            m_sections.merge_before(codegen::do_generate<enum_gen>(mod(), e.get()));
+        }
+
+        for (auto& u : mod().unions) {
+            m_sections.merge_before(codegen::do_generate<union_gen>(mod(), u.get()));
         }
 
         codegen::emitter e(*mod().parent, mod(), m_sections);
@@ -91,10 +80,7 @@ public:
                                     const lidl::name& name) const override {
         return js::get_local_user_obj_name(mod, name);
     }
-    std::string get_local_identifier(const module& mod,
-                                     const lidl::name& name) const override {
-        return js::get_local_obj_name(mod, name);
-    }
+
     std::string get_identifier(const module& mod, const lidl::name& name) const override {
         return js::get_local_obj_name(mod, name);
     }

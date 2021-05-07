@@ -121,7 +121,6 @@ std::string get_local_identifier(const module& mod, const name& n) {
 
 std::string get_user_identifier(const module& mod, const name& n) {
     auto& nn = deref_ptr(mod, n);
-    auto& ntype = *get_type(mod, nn);
     return get_identifier(mod, nn);
 }
 } // namespace lidl::cpp

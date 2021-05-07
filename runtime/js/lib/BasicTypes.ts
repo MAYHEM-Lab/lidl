@@ -1,5 +1,4 @@
 import {Layout, Type, LidlObject, TypedType} from "./Object";
-
 export {Layout, Type, LidlObject, TypedType} from "./Object"
 
 export class BoolClass implements TypedType<Bool> {

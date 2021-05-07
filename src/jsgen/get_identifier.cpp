@@ -186,13 +186,7 @@ std::string get_local_obj_name(const module& mod, const name& n) {
 }
 
 std::string get_local_user_obj_name(const module& mod, const name& n) {
-    auto& ntype = *get_type(mod, n);
-    if (ntype.is_reference_type(mod)) {
-        // must be a pointer instantiation
-        auto& base = std::get<name>(n.args[0]);
-        return get_obj_identifier(mod, base);
-    }
-
+    auto& nn = deref_ptr(mod, n);
     return get_obj_identifier(mod, n);
 }
 } // namespace lidl::js

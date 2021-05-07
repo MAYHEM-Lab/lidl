@@ -9,7 +9,7 @@ option(BUILD_TOOLS "Enable the build of accompanying tools. Disable to only get 
 option(DISABLE_FRONTEND "Disable the lidl frontend" OFF)
 option(DISABLE_YAML "Disable the yaml frontend" OFF)
 
-set(ENABLE_BACKENDS "cpp")
+set(ENABLE_BACKENDS "cpp;js")
 
 set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined")
 
