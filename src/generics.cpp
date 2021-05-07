@@ -12,7 +12,7 @@
 namespace lidl {
 std::unique_ptr<wire_type> generic_structure::instantiate(const module& mod,
                                                           const name& ins) const {
-    auto newstr = std::make_unique<structure>();
+    auto newstr = std::make_unique<structure>(const_cast<module*>(&mod));
 
     auto& genstr = dynamic_cast<const generic_structure&>(*get_symbol(ins.base));
 
@@ -53,7 +53,7 @@ std::unique_ptr<wire_type> generic_structure::instantiate(const module& mod,
 
 std::unique_ptr<wire_type> generic_union::instantiate(const module& mod,
                                                       const name& ins) const {
-    auto newstr = std::make_unique<union_type>(nullptr);
+    auto newstr = std::make_unique<union_type>(const_cast<module*>(&mod));
 
     auto& genstr = dynamic_cast<const generic_union&>(*get_symbol(ins.base));
 

@@ -57,11 +57,6 @@ struct cppgen {
             m_sections.merge_before(codegen::do_generate<enum_gen>(mod(), e.get()));
         }
 
-        for (auto& ins : mod().instantiations) {
-            m_sections.merge_before(
-                do_generate<generic_gen>(mod(), ins->get_generic(), *ins));
-        }
-
         for (auto& u : mod().unions) {
             if (u->raw) {
                 m_sections.merge_before(do_generate<raw_union_gen>(mod(), u.get()));
@@ -76,6 +71,11 @@ struct cppgen {
 
         for (auto& service : mod().services) {
             m_sections.merge_before(do_generate<better_service_generator>(mod(), service.get()));
+        }
+
+        for (auto& ins : mod().instantiations) {
+            m_sections.merge_before(
+                do_generate<generic_gen>(mod(), ins->get_generic(), *ins));
         }
 
         codegen::emitter e(root_module(mod()), mod(), m_sections);
