@@ -3,14 +3,14 @@
 
 namespace lidl {
 type_categories structure::category(const module& mod) const {
-    return std::any_of(members.begin(),
+    return std::all_of(members.begin(),
                        members.end(),
                        [&](auto& mem) {
                            auto& [name, member] = mem;
-                           return get_type(mod, member.type_)->is_reference_type(mod);
+                           return get_type(mod, member.type_)->is_value(mod);
                        })
-               ? type_categories::reference
-               : type_categories::value;
+               ? type_categories::value
+               : type_categories::reference;
 }
 
 raw_layout structure::wire_layout(const module& mod) const {
@@ -20,12 +20,9 @@ raw_layout structure::wire_layout(const module& mod) const {
 compound_layout structure::layout(const module& mod) const {
     compound_layout computer;
     for (auto& [name, member] : members) {
-        if (get_type(mod, member.type_)->is_reference_type(mod)) {
-            computer.add_member(name, {2, 2});
-        } else {
-            computer.add_member(name,
-                                get_type<wire_type>(mod, member.type_)->wire_layout(mod));
-        }
+        auto wire_type = get_wire_type(mod, member.type_);
+        computer.add_member(name,
+                            wire_type->wire_layout(mod));
     }
     return computer;
 }
@@ -61,7 +58,7 @@ int structure::yaml2bin(const module& mod,
     std::unordered_map<std::string, int> references;
     for (auto& [mem_name, mem] : members) {
         auto t = get_type(mod, mem.type_);
-        if (!t->is_reference_type(mod)) {
+        if (t->is_value(mod)) {
             // Continue, we'll place it inline
             continue;
         }

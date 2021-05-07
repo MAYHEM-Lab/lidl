@@ -176,10 +176,13 @@ name array_type::get_wire_type_name(const module& mod, const name& your_name) co
 }
 
 name vector_type::get_wire_type_name(const module& mod, const name& your_name) const {
+    auto ptr_sym = recursive_name_lookup(mod.symbols(), "ptr").value();
+
     auto wire_name_of_arg =
         get_type(mod, your_name.args.front().as_name())
             ->get_wire_type_name(mod, your_name.args.front().as_name());
-    return name{your_name.base, {wire_name_of_arg}};
+
+    return name{ptr_sym, {name{your_name.base, {wire_name_of_arg}}}};
 }
 
 int string_type::yaml2bin(const module& module,

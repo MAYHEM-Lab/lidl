@@ -53,7 +53,7 @@ std::unique_ptr<wire_type> generic_structure::instantiate(const module& mod,
 
 std::unique_ptr<wire_type> generic_union::instantiate(const module& mod,
                                                       const name& ins) const {
-    auto newstr = std::make_unique<union_type>();
+    auto newstr = std::make_unique<union_type>(nullptr);
 
     auto& genstr = dynamic_cast<const generic_union&>(*get_symbol(ins.base));
 
