@@ -21,10 +21,24 @@ struct member : node {
     ast::name type_name;
 };
 
-struct structure : node {
-    identifier name;
+struct structure_body : node {
     std::vector<member> members;
     std::optional<ast::name> extends;
+};
+
+struct structure : node {
+    identifier name;
+    structure_body body;
+};
+
+struct generic_parameter : node {
+    identifier name;
+};
+
+struct generic_structure : node {
+    std::vector<generic_parameter> params;
+    identifier name;
+    structure_body body;
 };
 
 struct union_ : node {
@@ -60,7 +74,7 @@ struct metadata {
     std::vector<std::string> imports;
 };
 
-using element = std::variant<structure, union_, enumeration, service>;
+using element = std::variant<structure, union_, enumeration, service, generic_structure>;
 
 struct module {
     std::optional<metadata> meta;

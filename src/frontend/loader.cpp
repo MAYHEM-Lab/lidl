@@ -21,7 +21,7 @@ auto make_overload(Ts&&... ts) {
 }
 
 
-struct loader : module_loader {
+struct loader final : module_loader {
     loader(load_context& ctx, ast::module&& mod, std::optional<std::string> origin = {})
         : m_ast_mod(std::move(mod))
         , m_context{&ctx}
@@ -54,8 +54,10 @@ private:
     name parse(const ast::name& nm, base& s);
     std::unique_ptr<member> parse(const ast::member& mem, base& s);
     bool parse(const ast::structure& str, structure& res);
+    bool parse(const ast::generic_structure& str, generic_structure& res);
     bool parse(const ast::union_& str, union_type& s);
     bool parse(const ast::enumeration& str, enumeration& s);
+    generic_parameters parse(const std::vector<ast::generic_parameter>& params);
     parameter parse(const ast::service::procedure::parameter& proc, base& s);
     std::unique_ptr<procedure> parse(const ast::service::procedure& proc, base& s);
     bool parse(const ast::service& serv, service& s);
@@ -63,6 +65,11 @@ private:
     void add(std::string_view name, std::unique_ptr<structure>&& str) {
         m_mod->structs.emplace_back(std::move(str));
         define(m_mod->symbols(), name, m_mod->structs.back().get());
+    }
+
+    void add(std::string_view name, std::unique_ptr<generic_structure>&& str) {
+        m_mod->generic_structs.emplace_back(std::move(str));
+        define(m_mod->symbols(), name, m_mod->generic_structs.back().get());
     }
 
     void add(std::string_view name, std::unique_ptr<union_type>&& str) {
@@ -104,6 +111,12 @@ template<>
 struct tmap<ast::structure> {
     using type = structure;
 };
+
+template<>
+struct tmap<ast::generic_structure> {
+    using type = generic_structure;
+};
+
 template<>
 struct tmap<ast::union_> {
     using type = union_type;
@@ -175,7 +188,7 @@ std::unique_ptr<member> lidl::frontend::loader::parse(const ast::member& mem, ba
 }
 
 bool lidl::frontend::loader::parse(const ast::structure& str, structure& res) {
-    for (auto& mem : str.members) {
+    for (auto& mem : str.body.members) {
         res.add_member(mem.name, *parse(mem, res));
     }
     return true;
@@ -228,6 +241,30 @@ bool lidl::frontend::loader::parse(const ast::service& serv, service& res) {
     }
 
     return true;
+}
+
+bool lidl::frontend::loader::parse(const ast::generic_structure& str,
+                                   generic_structure& res) {
+    res.struct_     = std::make_unique<structure>(&res);
+    res.declaration = parse(str.params);
+
+    for (auto& mem : str.body.members) {
+        res.struct_->add_member(mem.name, *parse(mem, *res.struct_));
+    }
+
+    return true;
+}
+
+generic_parameters
+lidl::frontend::loader::parse(const std::vector<ast::generic_parameter>& params) {
+    std::vector<std::pair<std::string, std::string>> pairs;
+
+    pairs.reserve(params.size());
+    for (auto& p : params) {
+        pairs.emplace_back(p.name, "type");
+    }
+
+    return make_generic_declaration(pairs);
 }
 } // namespace
 } // namespace lidl::frontend

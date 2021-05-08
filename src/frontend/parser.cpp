@@ -55,6 +55,17 @@ struct name {
     static constexpr auto value = lexy::as_aggregate<ast::name>;
 };
 
+struct generic_parameters {
+    struct parameter {
+        static constexpr auto rule  = (LEXY_MEM(name) = dsl::p<identifier>);
+        static constexpr auto value = lexy::as_aggregate<ast::generic_parameter>;
+    };
+
+    static constexpr auto rule = dsl::angle_bracketed.opt_list(
+        dsl::p<parameter>, dsl::trailing_sep(dsl::comma >> ws));
+    static constexpr auto value = lexy::as_list<std::vector<ast::generic_parameter>>;
+};
+
 struct member_list {
     struct member {
         static constexpr auto rule = (LEXY_MEM(name) = dsl::p<identifier>)+ws +
@@ -68,14 +79,30 @@ struct member_list {
     static constexpr auto value = lexy::as_list<std::vector<ast::member>>;
 };
 
-struct structure {
+struct structure_body {
     static constexpr auto rule =
-        LEXY_LIT("struct") + dsl::ascii::blank +
-        (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
         dsl::if_(dsl::colon >> (LEXY_MEM(extends) = dsl::p<name>)) + ws +
         (LEXY_MEM(members) = dsl::p<member_list>);
 
+    static constexpr auto value = lexy::as_aggregate<ast::structure_body>;
+};
+
+struct structure {
+    static constexpr auto rule = LEXY_LIT("struct") + dsl::ascii::blank +
+                                 (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
+                                 (LEXY_MEM(body) = dsl::p<structure_body>);
+
     static constexpr auto value = lexy::as_aggregate<ast::structure>;
+};
+
+struct generic_structure {
+    static constexpr auto rule =
+        LEXY_LIT("struct") +
+        (LEXY_MEM(params) = dsl::p<generic_parameters>)+dsl::ascii::blank +
+        (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
+        (LEXY_MEM(body) = dsl::p<structure_body>);
+
+    static constexpr auto value = lexy::as_aggregate<ast::generic_structure>;
 };
 
 struct union_ {
@@ -185,10 +212,12 @@ struct metadata {
 };
 
 struct element {
-    static constexpr auto rule = (dsl::peek(LEXY_LIT("struct")) >> dsl::p<structure>) |
-                                 (dsl::peek(LEXY_LIT("enum")) >> dsl::p<enumeration>) |
-                                 (dsl::peek(LEXY_LIT("union")) >> dsl::p<union_>) |
-                                 (dsl::peek(LEXY_LIT("service")) >> dsl::p<service>);
+    static constexpr auto rule =
+        (dsl::peek(LEXY_LIT("struct<")) >> dsl::p<generic_structure>) |
+        (dsl::peek(LEXY_LIT("struct")) >> dsl::p<structure>) |
+        (dsl::peek(LEXY_LIT("enum")) >> dsl::p<enumeration>) |
+        (dsl::peek(LEXY_LIT("union")) >> dsl::p<union_>) |
+        (dsl::peek(LEXY_LIT("service")) >> dsl::p<service>);
 
     static constexpr auto value = lexy::construct<ast::element>;
 };
