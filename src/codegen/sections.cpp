@@ -3,9 +3,24 @@
 #include "codegen.hpp"
 
 namespace lidl::codegen {
-std::string section_key_t::to_string(const module& mod) {
+std::string compute_namespace_for_section(const section_key_t& key) {
+    switch (key.type) {
+    case section_type::lidl_traits:
+    case section_type::service_params_union:
+    case section_type::service_return_union:
+    case section_type::service_descriptor:
+    case section_type::validator:
+        return "lidl";
+    case section_type::std_traits:
+        return "std";
+    default:
+        return find_parent_module(key.symbol())->name_space;
+    }
+}
+
+std::string section_key_t::to_string(const module& mod) const {
     std::string sym;
-    auto sh = recursive_definition_lookup(mod.symbols(), symbol);
+    auto sh = recursive_definition_lookup(mod.symbols(), symbol());
 
     if (sh) {
         sym = current_backend()->get_identifier(mod, name{*sh});

@@ -22,7 +22,7 @@ std::string generic_gen::full_name() {
 
 sections generic_gen::do_generate(const generic_structure& str) {
     lidl::module tmpmod(const_cast<module*>(&mod()), str.src_info);
-    tmpmod.name_space = mod().name_space;
+    tmpmod.name_space = find_parent_module(&str)->name_space;
     define(mod().symbols(), "#", &tmpmod);
     auto instantiated = str.instantiate(tmpmod, get().args);
     tmpmod.structs.emplace_back(
@@ -39,7 +39,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
 
 sections generic_gen::do_generate(const generic_union& u) {
     lidl::module tmpmod(const_cast<module*>(&mod()), u.src_info);
-    tmpmod.name_space = mod().name_space;
+    tmpmod.name_space = find_parent_module(&u)->name_space;
     define(mod().symbols(), "#", &tmpmod);
     auto instantiated = u.instantiate(tmpmod, get().args);
     tmpmod.unions.emplace_back(
@@ -76,13 +76,13 @@ std::string declare_template(const module& mod,
 
 } // namespace
 
-sections generic_gen::do_generate() {
+sections generic_gen::generate() {
     sections common;
 
-    auto generic_decl_key = section_key_t{get().get_generic(), section_type::generic_declaration};
+    auto generic_decl_key =
+        section_key_t{get().get_generic(), section_type::generic_declaration};
 
     section decl;
-    decl.name_space = mod().name_space;
     decl.add_key(generic_decl_key);
     decl.definition = declare_template(mod(), name(), *get().get_generic());
     common.add(std::move(decl));
@@ -90,7 +90,7 @@ sections generic_gen::do_generate() {
     if (auto genstr = dynamic_cast<const generic_structure*>(get().get_generic())) {
         auto res = do_generate(*genstr);
         for (auto& sec : res.get_sections()) {
-            if (std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+            if (std::any_of(sec.keys().begin(), sec.keys().end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
@@ -101,7 +101,7 @@ sections generic_gen::do_generate() {
     } else if (auto genun = dynamic_cast<const generic_union*>(get().get_generic())) {
         auto res = do_generate(*genun);
         for (auto& sec : res.get_sections()) {
-            if (std::any_of(sec.keys.begin(), sec.keys.end(), [](auto& key) {
+            if (std::any_of(sec.keys().begin(), sec.keys().end(), [](auto& key) {
                     return key.type == section_type::definition;
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
@@ -113,6 +113,7 @@ sections generic_gen::do_generate() {
         // This is not a user defined generic, so no point in emitting it.
         return {};
     }
+
     return common;
 }
 } // namespace lidl::cpp

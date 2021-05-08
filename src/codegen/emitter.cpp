@@ -19,7 +19,7 @@ bool emitter::pass() {
         auto& sect = m_not_generated[i];
         if (is_satisfied(sect)) {
             changed = true;
-            m_this_pass[sect.name_space].push_back(std::move(sect));
+            m_this_pass[sect.name_space()].push_back(std::move(sect));
             m_not_generated.erase(m_not_generated.begin() + i);
         } else {
             ++i;
@@ -36,7 +36,7 @@ bool emitter::pass() {
         for (auto& sect : sects) {
             m_stream << sect.definition << '\n';
 
-            for (auto& key : sect.keys) {
+            for (auto& key : sect.keys()) {
                 m_satisfied.emplace_back(key);
             }
             m_generated.emplace_back(std::move(sect));
@@ -56,9 +56,9 @@ std::string emitter::emit() {
     if (!m_not_generated.empty()) {
         std::cerr << "The following dependencies could not be resolved:\n";
         for (auto& sect : m_not_generated) {
-            std::vector<std::string> key_names(sect.keys.size());
-            std::transform(sect.keys.begin(),
-                           sect.keys.end(),
+            std::vector<std::string> key_names(sect.keys().size());
+            std::transform(sect.keys().begin(),
+                           sect.keys().end(),
                            key_names.begin(),
                            [&](auto& key) { return key.to_string(*m_module); });
             std::cerr << fmt::format("{}:\n", fmt::join(key_names, "\n"));
@@ -100,7 +100,6 @@ void emitter::mark_module(const module& decl_mod) {
 emitter::emitter(const module& root_mod, const module& mod, sections all)
     : m_module{&mod}
     , m_not_generated(std::move(all.get_sections())) {
-
     mark_module(root_mod);
 }
 } // namespace lidl::codegen

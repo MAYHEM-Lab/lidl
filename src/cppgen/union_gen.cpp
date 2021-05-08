@@ -132,8 +132,8 @@ template <class FunT>
                  std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(defs),
                  [](const auto& sec) {
-                     return !sec.keys.empty() &&
-                            sec.keys[0].type == section_type::definition;
+                     return !sec.keys().empty() &&
+                            sec.keys().front().type == section_type::definition;
                  });
 
     std::vector<section> misc;
@@ -141,8 +141,8 @@ template <class FunT>
                  std::make_move_iterator(enum_res.get_sections().end()),
                  std::back_inserter(misc),
                  [](const auto& sec) {
-                     return !sec.keys.empty() &&
-                            sec.keys[0].type != section_type::definition;
+                     return !sec.keys().empty() &&
+                            sec.keys().front().type != section_type::definition;
                  });
 
     auto bodies = std::accumulate(
@@ -153,10 +153,11 @@ template <class FunT>
     section s;
     s.add_key(def_key());
     for (auto& sec : defs) {
-        s.keys.insert(s.keys.begin(), sec.keys.begin(), sec.keys.end());
+        for (auto& key : sec.keys()) {
+            s.add_key(key);
+        }
     }
 
-    s.name_space = mod().name_space;
     s.definition = fmt::format(format,
                                name(),
                                enum_name,
@@ -178,7 +179,6 @@ template <class FunT>
     section operator_eq;
     operator_eq.add_key({symbol(), section_type::eq_operator});
     operator_eq.add_dependency(def_key());
-    operator_eq.name_space = mod().name_space;
     auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
         if (left.alternative() != right.alternative()) {{ return false; }}
         switch (left.alternative()) {{
@@ -260,7 +260,6 @@ sections union_gen::generate_traits() {
             }};)__";
 
     section trait_sect;
-    trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
                                         absolute_name(),
                                         fmt::join(names, ", "),
@@ -281,7 +280,6 @@ sections union_gen::generate_traits() {
         auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
-        rpc_traits_sect.name_space = "lidl";
         rpc_traits_sect.definition =
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());
@@ -299,7 +297,6 @@ sections union_gen::generate_traits() {
         auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
-        rpc_traits_sect.name_space = "lidl";
         rpc_traits_sect.definition =
             fmt::format(rpc_trait_format, serv_full_name, absolute_name());
         rpc_traits_sect.add_dependency(def_key());

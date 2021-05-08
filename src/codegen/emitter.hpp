@@ -24,7 +24,7 @@ private:
     bool pass();
 
     bool is_defined(const section& sect) {
-        return std::all_of(sect.keys.begin(), sect.keys.end(), [&](auto& n) {
+        return std::all_of(sect.keys().begin(), sect.keys().end(), [&](auto& n) {
             return std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
                    m_satisfied.end();
         });

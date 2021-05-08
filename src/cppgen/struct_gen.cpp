@@ -19,15 +19,13 @@ sections struct_gen::do_generate() {
     auto body = struct_body_gen(mod(), ctor_name(), get()).generate();
 
     section s;
-    s.keys.push_back(def_key());
+    s.add_key(def_key());
     s.definition = fmt::format(format, name(), body.get_sections().at(0).definition);
     s.depends_on = body.get_sections().at(0).depends_on;
-    s.name_space = mod().name_space;
 
     section operator_eq;
     operator_eq.add_key({symbol(), section_type::eq_operator});
     operator_eq.add_dependency(def_key());
-    operator_eq.name_space = mod().name_space;
     auto eq_format = R"__(inline bool operator==(const {0}& left, const {0}& right) {{
         return {1};
     }})__";
@@ -89,7 +87,6 @@ sections struct_gen::generate_traits() {
             }};)__";
 
     section trait_sect;
-    trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
                                         absolute_name(),
                                         fmt::join(members, ", "),
@@ -97,6 +94,7 @@ sections struct_gen::generate_traits() {
                                         fmt::join(ctor_args, ", "),
                                         fmt::join(member_types, ", "));
     trait_sect.add_dependency(def_key());
+    trait_sect.add_key({symbol(), section_type::lidl_traits});
 
     constexpr auto std_format = R"__(template <>
             struct tuple_size<{}> : std::integral_constant<std::size_t, {}> {{
@@ -113,10 +111,10 @@ sections struct_gen::generate_traits() {
     }
 
     section std_trait_sect;
-    std_trait_sect.name_space = "std";
     std_trait_sect.definition = fmt::format(std_format, absolute_name(), members.size()) +
                                 fmt::format("{}", fmt::join(tuple_elements, "\n"));
     std_trait_sect.add_dependency(def_key());
+    std_trait_sect.add_key({symbol(), section_type::std_traits});
 
     auto res = sections{{std::move(trait_sect), std::move(std_trait_sect)}};
 
@@ -131,7 +129,7 @@ sections struct_gen::generate_traits() {
         auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
 
         section rpc_traits_sect;
-        rpc_traits_sect.name_space = "lidl";
+        rpc_traits_sect.add_key({symbol(), section_type::lidl_traits});
         rpc_traits_sect.definition = fmt::format(
             rpc_trait_format, absolute_name(), serv_full_name, info.proc_name);
         rpc_traits_sect.add_dependency(def_key());
@@ -146,7 +144,6 @@ sections struct_gen::generate_traits() {
     section validator_sect;
     validator_sect.add_key({symbol(), section_type::validator});
     validator_sect.add_dependency(def_key());
-    validator_sect.name_space = "lidl";
     validator_sect.definition = fmt::format(validate_format, absolute_name());
     res.add(std::move(validator_sect));
 

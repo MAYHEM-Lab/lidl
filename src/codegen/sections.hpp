@@ -31,32 +31,38 @@ enum class section_type
 
 using section_entity_t = const base*;
 struct section_key_t {
-    std::string to_string(const module& mod);
+    std::string to_string(const module& mod) const;
 
     section_key_t(const base* sym, section_type t)
-        : symbol{sym}
+        : m_symbol{sym}
         , type{t} {
     }
 
     section_key_t(symbol_handle handle, section_type t)
-            : symbol{get_symbol(handle)}
-            , type{t} {
+        : m_symbol{get_symbol(handle)}
+        , type{t} {
     }
 
     friend bool operator==(const section_key_t& left, const section_key_t& right) {
-        return left.type == right.type && left.symbol == right.symbol;
+        return left.type == right.type && left.symbol() == right.symbol();
     }
 
     section_type type;
 
+    section_entity_t symbol() const {
+        return m_symbol;
+    }
+
 private:
-    section_entity_t symbol;
+    section_entity_t m_symbol;
 };
 
 // Computes the list of section keys that are depended on by the given name.
 inline std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm) {
     std::vector<section_key_t> all;
-    all.emplace_back(nm.base, nm.args.empty() ? section_type::definition : section_type::generic_declaration);
+    all.emplace_back(nm.base,
+                     nm.args.empty() ? section_type::definition
+                                     : section_type::generic_declaration);
     for (auto& arg : nm.args) {
         if (auto n = std::get_if<name>(&arg.get_variant()); n) {
             auto sub = def_keys_from_name(mod, *n);
@@ -66,20 +72,19 @@ inline std::vector<section_key_t> def_keys_from_name(const module& mod, const na
     return all;
 }
 
-struct section {
-    /**
-     * If this member is not empty, it specifies the namespace in which the definition
-     * will be emitted in.
-     */
-    std::string name_space;
 
+std::string compute_namespace_for_section(const section_key_t& key);
+struct section {
     /**
      * This member is used as the key for the definition in dependency resolution.
      */
-    std::vector<section_key_t> keys;
 
     void add_key(section_key_t key) {
-        keys.push_back(std::move(key));
+//        assert(m_keys.empty());
+        if (m_keys.empty()) {
+            m_name_space = compute_namespace_for_section(key);
+        }
+        m_keys.push_back(std::move(key));
     }
 
     std::string definition;
@@ -89,6 +94,23 @@ struct section {
     void add_dependency(section_key_t key) {
         depends_on.push_back(std::move(key));
     }
+
+    const std::string& name_space() {
+        return m_name_space;
+    }
+
+    const auto& keys() const {
+        return m_keys;
+    }
+
+private:
+    std::vector<section_key_t> m_keys;
+
+    /**
+     * If this member is not empty, it specifies the namespace in which the definition
+     * will be emitted in.
+     */
+    std::string m_name_space;
 };
 
 struct sections {

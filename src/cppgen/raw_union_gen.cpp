@@ -91,8 +91,7 @@ sections raw_union_gen::do_generate() {
     }
 
     section s;
-    s.keys.push_back(def_key());
-    s.name_space = mod().name_space;
+    s.add_key(def_key());
     s.definition = fmt::format(format,
                                name(),
                                fmt::join(ctors, "\n"),
@@ -162,14 +161,13 @@ sections raw_union_gen::generate_traits() {
             }};)__";
 
     section trait_sect;
-    trait_sect.name_space = "lidl";
     trait_sect.definition = fmt::format(format,
                                         absolute_name(),
                                         fmt::join(names, ", "),
                                         fmt::join(ctors, "\n"),
                                         fmt::join(ctor_names, ", "),
                                         fmt::join(members, ", "));
-    trait_sect.add_key({this->symbol(), section_type::lidl_traits});
+    trait_sect.add_key({symbol(), section_type::lidl_traits});
     trait_sect.add_dependency(def_key());
 
     auto res = sections{{std::move(trait_sect)}};
