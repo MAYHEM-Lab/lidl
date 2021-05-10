@@ -20,6 +20,7 @@ public:
         generic_view,
         queue,
         other,
+        enum_member,
     };
 
     explicit base(categories category,

@@ -7,7 +7,7 @@
 #include <stdexcept>
 
 namespace lidl {
-struct enum_member : public cbase<base::categories::other> {
+struct enum_member : public cbase<base::categories::enum_member> {
     enum_member(enumeration& en, int val, std::optional<source_info> src_info = {});
     int value;
 };
@@ -86,6 +86,7 @@ public:
         underlying->yaml2bin(mod, node, writer);
         return pos;
     }
+
 private:
 };
 } // namespace lidl
