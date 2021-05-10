@@ -31,7 +31,11 @@ std::string decide_param_type_decoration(const module& mod, const parameter& par
             // l-value ref.
             return "{}& {}";
         }
+    } else if (is_service(param.type)) {
+        return "lidl::service_ptr<{}>";
     }
+
+    assert(false);
 }
 
 std::pair<std::string, std::vector<section_key_t>>
