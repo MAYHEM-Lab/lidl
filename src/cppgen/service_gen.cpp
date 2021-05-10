@@ -10,6 +10,39 @@
 namespace lidl::cpp {
 using codegen::section_key_t;
 namespace {
+bool return_of_name_requires_message_builder(const module& mod, const name& nm) {
+    return is_view(nm) || (is_type(nm) && get_wire_type(mod, nm)->is_reference_type(mod));
+}
+
+bool procedure_needs_message_builder(const module& mod, const procedure& proc) {
+    if (std::any_of(
+            proc.return_types.begin(),
+            proc.return_types.end(),
+            std::bind_front(return_of_name_requires_message_builder, std::ref(mod)))) {
+        return true;
+    }
+
+    return false;
+}
+
+std::string compute_return_type_name(const module& mod, const procedure& proc) {
+    if (proc.return_types.empty()) {
+        return "void";
+    }
+
+    std::string ret_type_name;
+    ret_type_name = get_user_identifier(mod, proc.return_types.front());
+
+    if (is_type(proc.return_types.front())) {
+        auto ret_type = get_wire_type(mod, proc.return_types.front());
+        if (ret_type->is_reference_type(mod)) {
+            ret_type_name = fmt::format("const {}&", ret_type_name);
+        }
+    }
+
+    return ret_type_name;
+}
+
 std::string decide_param_type_decoration(const module& mod, const parameter& param) {
     if (is_view(param.type)) {
         return "{} {}";
@@ -68,22 +101,10 @@ make_proc_signature(const module& mod,
         dependencies.push_back(key);
     }
 
-    std::string ret_type_name;
-    if (proc.return_types.empty()) {
-        ret_type_name = "void";
-    } else {
-        ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
+    auto ret_type_name = compute_return_type_name(mod, proc);
 
-        if (is_type(proc.return_types.front())) {
-            auto ret_type = get_wire_type(mod, proc.return_types.at(0));
-            if (ret_type->is_reference_type(mod)) {
-                ret_type_name = fmt::format("const {}&", ret_type_name);
-                params.emplace_back(
-                    fmt::format("::lidl::message_builder& response_builder"));
-            }
-        } else if (is_view(proc.return_types.front())) {
-            params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
-        }
+    if (procedure_needs_message_builder(mod, proc)) {
+        params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
     }
 
     if (async) {
@@ -415,7 +436,6 @@ codegen::sections better_service_generator::generate_zerocopy_stub() {
 }
 
 codegen::sections better_service_generator::generate_async_zerocopy_stub() {
-
     section sect;
 
     // We depend on the definition for the service.
@@ -444,28 +464,29 @@ codegen::sections better_service_generator::generate_async_zerocopy_stub() {
 
 std::string better_service_generator::make_zerocopy_procedure_stub(
     std::string_view proc_name, const procedure& proc, bool async) {
-    std::string ret_type_name;
+    std::string tmp_ret_type_name;
     if (proc.return_types.empty()) {
-        ret_type_name = "void";
+        tmp_ret_type_name = "void";
     } else {
-        ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
+        tmp_ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
         if (is_type(proc.return_types.front())) {
             auto ret_type = get_wire_type(mod(), proc.return_types.at(0));
             if (ret_type->is_reference_type(mod())) {
                 // Notice the return type is a pointer here!
-                ret_type_name = fmt::format("{}*", ret_type_name);
+                // This is not for the actual return object, but rather for the temporary
+                // location that will hold the vale we'll return.
+                tmp_ret_type_name = fmt::format("{}*", tmp_ret_type_name);
             }
-        } else if (is_view(proc.return_types.front())) {
         }
     }
 
     std::vector<std::string> param_names(proc.parameters.size());
-    std::transform(
-        proc.parameters.begin(),
-        proc.parameters.end(),
-        param_names.begin(),
-        [this, &proc](auto& param) { return fmt::format("&{}", param.first); });
-    if (proc.results_struct(mod()).is_reference_type(mod())) {
+    std::transform(proc.parameters.begin(),
+                   proc.parameters.end(),
+                   param_names.begin(),
+                   [](auto& param) { return fmt::format("&{}", param.first); });
+
+    if (procedure_needs_message_builder(mod(), proc)) {
         param_names.emplace_back("&response_builder");
     }
 
@@ -518,7 +539,7 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
         sig,
         tuple_make,
         get().proc_index(proc).value(),
-        ret_type_name,
+        tmp_ret_type_name,
         is_type(proc.return_types.front()) &&
                 get_wire_type(mod(), proc.return_types.front())->is_reference_type(mod())
             ? "*"
@@ -589,18 +610,7 @@ codegen::sections better_service_generator::generate_async_stub() {
 std::string better_service_generator::make_procedure_stub(std::string_view proc_name,
                                                           const procedure& proc,
                                                           bool async) try {
-    std::string ret_type_name;
-    if (proc.return_types.empty()) {
-        ret_type_name = "void";
-    } else {
-        ret_type_name = get_user_identifier(mod(), proc.return_types.front());
-        if (is_type(proc.return_types.front())) {
-            auto ret_type = get_wire_type(mod(), proc.return_types.front());
-            if (ret_type->is_reference_type(mod())) {
-                ret_type_name = fmt::format("const {}&", ret_type_name);
-            }
-        }
-    }
+    auto ret_type_name = compute_return_type_name(mod(), proc);
 
     std::vector<std::string> param_names(proc.parameters.size());
     std::transform(proc.parameters.begin(),
@@ -609,7 +619,8 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
                    [this, &proc](auto& param) {
                        return copy_proc_param(proc, param.first, param.second);
                    });
-    if (proc.params_struct(mod()).is_reference_type(mod())) {
+
+    if (procedure_needs_message_builder(mod(), proc)) {
         param_names.emplace(param_names.begin(), "mb");
     }
 
@@ -704,14 +715,9 @@ std::string better_service_generator::copy_and_return(const procedure& proc, boo
                 R"__(auto [__extent, __pos] = lidl::meta::detail::find_extent_and_position(res.ret0());
 auto __res_ptr = response_builder.allocate(__extent.size(), 1);
 memcpy(__res_ptr, __extent.data(), __extent.size());
-return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
-            constexpr auto async_format =
-                R"__(auto [__extent, __pos] = lidl::meta::detail::find_extent_and_position(res.ret0());
-auto __res_ptr = response_builder.allocate(__extent.size(), 1);
-memcpy(__res_ptr, __extent.data(), __extent.size());
-co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
+{1} *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
 
-            return fmt::format(async ? async_format : format, ident);
+            return fmt::format(format, ident, async ? "co_return" : "return");
         }
 
         // Must be a value type, just return
