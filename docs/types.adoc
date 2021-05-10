@@ -1,0 +1,64 @@
+= Types
+
+A *wire type* is a type that we can place in a struct or union.
+
+A *value type* is a type that we can place in structs completely inline.
+For instance, `u32`, `f64`, `u8` are value types. A value type's wire type is itself.
+
+Compounds of value types are also value types. For instance, a struct full of value types is also a value type. Arrays of value types are also value types.
+
+[code]
+----
+struct vec3f {
+    x: f32;
+    y: f32;
+    z: f32;
+}
+
+static_assert(is_value_type<f32>());
+static_assert(is_value_type<vec3f>());
+----
+
+A *reference type* is a type that we cannot place inline, and has some out of line,
+possibly variable sized data. A `string` is a reference type. Since its size is not known, the contents of the string must be allocated first. Reference types are placed in compound types as pointers to their pre allocated selves.
+
+A compound containing a reference type is also a reference type. For instance a struct containing a string is also a reference type. Ditto for arrays.
+
+The wire type of a reference is the base type wrapped in a pointer. For instance,
+`wire_type(string) = ptr<string>`. Pointer is a special type, and while it itself is a reference type, `wire_type(ptr<T>) = ptr<T>` instead of `ptr<ptr<T>>`.
+
+Structs and unions may only contain wire types. Non-wire types may appear
+in service parameter and return types.
+
+A *view* is a non-wire type that allows a procedure to take or return a view of an existing object. While lidl knows about view types, they are language dependent, and do not have to be lidl specific. An example of a view type is `string_view`, and in {cpp}, is mapped to a `std::string_view`. A `string_view` may be a view over a `std::string` as well as a `lidl::string`. Every view type has a wire type that is used in case the parameter or the return value needs to be serialized. For instance, regardless of where a `std::string_view` is returned, it will be converted to a `lidl::string` before being sent over the wire.
+
+Wire type computation will recurse until stable. For instance, the wire type of a `string_view` is a `string`, which is not really a wire type. Lidl will then get the wire type of `string`, which is `ptr<string>`. Since the wire type of `ptr<string>` is also `ptr<string>`, we have reached stability and recursion will end.
+
+A service is also a non-wire type. A procedure may take/return a service. If a service needs to be serialized, the transport will be asked to create a `lidl::wire_service<T>` from the actual service returned by a procedure.
+
+While anything going into the wire must be a wire type, the type the user sees may be different. For instance, top level pointers are always removed from user visible types. For instance, the getter of a string member of a struct will return a `string&` in {cpp} instead of a `ptr<string>&`. However, this can only apply to top level pointers. For instance, an array of strings cannot hide the internal pointer, and will return `array<ptr<string>, 4>&` instead of `array<string, 4>&`.
+
+User supplied generics have slightly different rules. The type name itself will not contain the pointers, but the internal members will. For instance, consider this definition and use:
+
+[code]
+----
+struct<T> wrapper {
+    t: T;
+}
+
+struct use_it {
+    x: wrapper<u64>;
+    y: wrapper<string>;
+    z: wrapper<vector<string>>;
+}
+----
+
+Here, the user will see `wrapper<lidl::string>` in {cpp} for `use_it::y`, but the generated type will actually have `ptr<lidl::string>` inside. This is most visible in `use_it::z`. While the type is still called `wrapper<lidl::vector<lidl::string>>` in {cpp}, the accessor will return `lidl::vector<ptr<lidl::string>>&`. So the pointer details may not be visible in the user visible type names, but they will be visible in wire and user visible accessor types.
+
+This of course concerns target languages with specializeable generics support. On languages without such support, the user visible type of `use_it::y` will be `wrapper_string`, which demonstrates how it works in {cpp} as well, it's just a name rather than being directly related to the internal types.
+
+== Summary
+
+. Generics will convert their parameters to wire types when needed.
+. Lidl attempts to hide pointer details as much as possible, but there's a limit.
+. Types in a struct/union must always be wire types.
