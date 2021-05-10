@@ -55,6 +55,7 @@ private:
     std::unique_ptr<member> parse(const ast::member& mem, base& s);
     bool parse(const ast::structure& str, structure& res);
     bool parse(const ast::generic_structure& str, generic_structure& res);
+    bool parse(const ast::generic_union& str, generic_union& res);
     bool parse(const ast::union_& str, union_type& s);
     bool parse(const ast::enumeration& str, enumeration& s);
     generic_parameters parse(const std::vector<ast::generic_parameter>& params);
@@ -75,6 +76,11 @@ private:
     void add(std::string_view name, std::unique_ptr<union_type>&& str) {
         m_mod->unions.emplace_back(std::move(str));
         define(m_mod->symbols(), name, m_mod->unions.back().get());
+    }
+
+    void add(std::string_view name, std::unique_ptr<generic_union>&& str) {
+        m_mod->generic_unions.emplace_back(std::move(str));
+        define(m_mod->symbols(), name, m_mod->generic_unions.back().get());
     }
 
     void add(std::string_view name, std::unique_ptr<enumeration>&& str) {
@@ -111,12 +117,14 @@ template<>
 struct tmap<ast::structure> {
     using type = structure;
 };
-
 template<>
 struct tmap<ast::generic_structure> {
     using type = generic_structure;
 };
-
+template<>
+struct tmap<ast::generic_union> {
+    using type = generic_union;
+};
 template<>
 struct tmap<ast::union_> {
     using type = union_type;
@@ -195,7 +203,7 @@ bool lidl::frontend::loader::parse(const ast::structure& str, structure& res) {
 }
 
 bool lidl::frontend::loader::parse(const ast::union_& str, union_type& res) {
-    for (auto& mem : str.members) {
+    for (auto& mem : str.body.members) {
         res.add_member(mem.name, *parse(mem, res));
     }
     return true;
@@ -254,6 +262,21 @@ bool lidl::frontend::loader::parse(const ast::generic_structure& str,
 
     for (auto& mem : str.body.members) {
         res.struct_->add_member(mem.name, *parse(mem, *res.struct_));
+    }
+
+    return true;
+}
+
+bool lidl::frontend::loader::parse(const ast::generic_union& str, generic_union& res) {
+    res.union_      = std::make_unique<union_type>(&res);
+    res.declaration = parse(str.params);
+
+    for (auto& [name, param] : res.declaration) {
+        res.get_scope().declare(name);
+    }
+
+    for (auto& mem : str.body.members) {
+        res.union_->add_member(mem.name, *parse(mem, *res.union_));
     }
 
     return true;

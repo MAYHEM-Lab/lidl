@@ -105,14 +105,30 @@ struct generic_structure {
     static constexpr auto value = lexy::as_aggregate<ast::generic_structure>;
 };
 
-struct union_ {
+struct union_body {
     static constexpr auto rule =
-        LEXY_LIT("union") + dsl::ascii::blank +
-        (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
         dsl::if_(dsl::colon >> (LEXY_MEM(extends) = dsl::p<name>)) + ws +
         (LEXY_MEM(members) = dsl::p<member_list>);
 
+    static constexpr auto value = lexy::as_aggregate<ast::union_body>;
+};
+
+struct union_ {
+    static constexpr auto rule = LEXY_LIT("union") + dsl::ascii::blank +
+                                 (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
+                                 (LEXY_MEM(body) = dsl::p<union_body>);
+
     static constexpr auto value = lexy::as_aggregate<ast::union_>;
+};
+
+struct generic_union {
+    static constexpr auto rule =
+        LEXY_LIT("union") +
+        (LEXY_MEM(params) = dsl::p<generic_parameters>)+dsl::ascii::blank +
+        (LEXY_MEM(name) = dsl::p<identifier>)+dsl::ascii::blank +
+        (LEXY_MEM(body) = dsl::p<union_body>);
+
+    static constexpr auto value = lexy::as_aggregate<ast::generic_union>;
 };
 
 struct enumeration {
@@ -216,6 +232,7 @@ struct element {
         (dsl::peek(LEXY_LIT("struct<")) >> dsl::p<generic_structure>) |
         (dsl::peek(LEXY_LIT("struct")) >> dsl::p<structure>) |
         (dsl::peek(LEXY_LIT("enum")) >> dsl::p<enumeration>) |
+        (dsl::peek(LEXY_LIT("union<")) >> dsl::p<generic_union>) |
         (dsl::peek(LEXY_LIT("union")) >> dsl::p<union_>) |
         (dsl::peek(LEXY_LIT("service")) >> dsl::p<service>);
 

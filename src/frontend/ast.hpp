@@ -8,7 +8,7 @@
 
 namespace lidl::ast {
 struct node {};
-using identifier = std::string;
+using identifier           = std::string;
 using qualified_identifier = std::string;
 
 struct name : node {
@@ -22,6 +22,11 @@ struct member : node {
 };
 
 struct structure_body : node {
+    std::vector<member> members;
+    std::optional<ast::name> extends;
+};
+
+struct union_body : node {
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
@@ -43,8 +48,13 @@ struct generic_structure : node {
 
 struct union_ : node {
     identifier name;
-    std::vector<member> members;
-    std::optional<ast::name> extends;
+    union_body body;
+};
+
+struct generic_union : node {
+    std::vector<generic_parameter> params;
+    identifier name;
+    union_body body;
 };
 
 struct enumeration : node {
@@ -74,7 +84,8 @@ struct metadata {
     std::vector<std::string> imports;
 };
 
-using element = std::variant<structure, union_, enumeration, service, generic_structure>;
+using element = std::
+    variant<structure, union_, enumeration, service, generic_structure, generic_union>;
 
 struct module {
     std::optional<metadata> meta;
