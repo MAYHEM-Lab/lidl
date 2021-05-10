@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <deque>
 #include <lidl/basic.hpp>
+#include <lidl/error.hpp>
 #include <lidl/member.hpp>
 #include <lidl/types.hpp>
 
@@ -22,10 +23,7 @@ struct structure : public wire_type {
         return members;
     }
 
-    void add_member(std::string name, member mem) {
-        members.emplace_back(std::move(name), std::move(mem));
-        define(get_scope(), members.back().first, &members.back().second);
-    }
+    void add_member(std::string name, member mem);
 
     /**
      * If this member has a value, this structure is generated to transport the parameters
@@ -43,12 +41,11 @@ struct structure : public wire_type {
 
     raw_layout wire_layout(const module& mod) const override;
 
-    YAML::Node bin2yaml(const module& mod,
-                                           ibinary_reader& span) const override;
+    YAML::Node bin2yaml(const module& mod, ibinary_reader& span) const override;
 
     int yaml2bin(const module& mod,
-                  const YAML::Node& node,
-                  ibinary_writer& writer) const override;
+                 const YAML::Node& node,
+                 ibinary_writer& writer) const override;
 
     compound_layout layout(const module& mod) const;
 

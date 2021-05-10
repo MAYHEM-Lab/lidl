@@ -6,8 +6,7 @@ sections raw_struct_gen::generate() {
     std::cerr << fmt::format("Generating raw struct {}\n", absolute_name());
     std::vector<std::string> members;
     for (auto& [name, member] : get().all_members()) {
-        auto member_type_name =
-            get_type(mod(), member.type_)->get_wire_type_name(mod(), member.type_);
+        auto member_type_name = get_wire_type_name(mod(), member.type_);
         members.push_back(generate_field(name, get_identifier(mod(), member_type_name)));
     }
 
@@ -52,8 +51,7 @@ std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
     std::vector<std::string> initializer_list;
 
     for (auto& [member_name, member] : get().all_members()) {
-        auto member_type_name =
-            get_type(mod(), member.type_)->get_wire_type_name(mod(), member.type_);
+        auto member_type_name = get_wire_type_name(mod(), member.type_);
 
         auto identifier = get_user_identifier(mod(), member_type_name);
 
@@ -110,8 +108,7 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
     std::vector<std::string> initializer_list;
 
     for (auto& [member_name, member] : str().all_members()) {
-        auto member_type_name =
-            get_type(mod(), member.type_)->get_wire_type_name(mod(), member.type_);
+        auto member_type_name = get_wire_type_name(mod(), member.type_);
 
         auto identifier = get_user_identifier(mod(), member_type_name);
 
@@ -140,8 +137,7 @@ std::string struct_body_gen::generate_getter(std::string_view member_name,
     constexpr auto format       = R"__({}& {}() {{ return raw.{}; }})__";
     constexpr auto const_format = R"__(const {}& {}() const {{ return raw.{}; }})__";
 
-    auto member_type_name =
-        get_type(mod(), mem.type_)->get_wire_type_name(mod(), mem.type_);
+    auto member_type_name = get_wire_type_name(mod(), mem.type_);
 
     auto identifier = get_identifier(mod(), deref_ptr(mod(), member_type_name));
     return (is_constexpr() ? "constexpr " : "") +

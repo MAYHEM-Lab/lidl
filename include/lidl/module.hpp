@@ -19,7 +19,9 @@ struct module : public cbase<base::categories::module> {
     const module* parent = nullptr;
 
     std::deque<std::unique_ptr<type>> basic_types;
+    std::deque<std::unique_ptr<view_type>> basic_views;
     std::deque<std::unique_ptr<generic_type>> basic_generics;
+    std::deque<std::unique_ptr<generic_view_type>> basic_generic_views;
 
     std::vector<std::unique_ptr<structure>> structs;
     std::vector<std::unique_ptr<union_type>> unions;

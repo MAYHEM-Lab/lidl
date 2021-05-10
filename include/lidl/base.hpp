@@ -16,6 +16,8 @@ public:
         procedure,
         generic_type,
         member,
+        view,
+        generic_view,
         queue,
         other,
     };
@@ -52,8 +54,21 @@ public:
         return m_category;
     }
 
-    bool is_generic() const{
-        return category() == categories::generic_type;
+    bool is_generic() const {
+        return category() == categories::generic_type ||
+               category() == categories::generic_view;
+    }
+
+    bool is_view() const {
+        return category() == categories::view || category() == categories::generic_view;
+    }
+
+    friend name get_wire_type_name(const module& mod, const name& n);
+
+    virtual name get_wire_type_name_impl(const module& mod, const name& your_name) const {
+        assert(false && "Not implemented");
+        while (true)
+            ;
     }
 
 private:
@@ -69,4 +84,6 @@ public:
         : base(Category, parent, std::move(p_src_info)) {
     }
 };
+
+const module* find_parent_module(const base* obj);
 } // namespace lidl

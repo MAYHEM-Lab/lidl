@@ -1,7 +1,10 @@
 namespace lidl_example;
 
+import "./std";
+
 service i2c {
     receive(addr: u8, data: span<u8>) -> i32;
+    gimme_service() -> echo;
 }
 
 service echo {

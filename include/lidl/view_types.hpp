@@ -15,8 +15,8 @@ public:
 };
 
 struct generic_span_type : instance_based_view_type {
-    generic_span_type()
-        : instance_based_view_type(make_generic_declaration({{"T", "type"}})) {
+    generic_span_type(module& mod)
+        : instance_based_view_type(&mod, {},make_generic_declaration({{"T", "type"}})) {
     }
 
     std::unique_ptr<view_type> instantiate(const module& mod,

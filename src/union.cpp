@@ -37,7 +37,7 @@ type_categories union_type::category(const module& mod) const {
                        members.end(),
                        [&](auto& mem) {
                            auto& [name, member] = mem;
-                           return get_type(mod, member.type_)->is_reference_type(mod);
+                           return get_wire_type(mod, member.type_)->is_reference_type(mod);
                        })
                ? type_categories::reference
                : type_categories::value;
@@ -94,11 +94,7 @@ int union_type::yaml2bin(const module& mod,
 compound_layout union_type::layout(const module& mod) const {
     union_layout_computer computer;
     for (auto& [name, member] : members) {
-        if (get_type(mod, member.type_)->is_reference_type(mod)) {
-            computer.add({2, 2});
-        } else {
-            computer.add(lidl::get_wire_type(mod, member.type_)->wire_layout(mod));
-        }
+        computer.add(lidl::get_wire_type(mod, member.type_)->wire_layout(mod));
     }
 
     compound_layout overall_computer;

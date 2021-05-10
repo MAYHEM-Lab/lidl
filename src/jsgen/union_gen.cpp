@@ -68,7 +68,7 @@ export class {name} extends {struct_base} {{
 }
 
 std::string union_gen::generate_member(std::string_view mem_name, const member& mem) {
-    auto mem_type = get_type(mod(), mem.type_);
+    auto mem_type = get_wire_type(mod(), mem.type_);
     if (mem_type->is_value(mod())) {
         // This is a basic type
         constexpr auto format = R"__(get {mem_name}() {{

@@ -45,7 +45,6 @@ private:
 
 struct generic_argument;
 
-struct name;
 struct module;
 /**
  * A name object refers to a concrete type in a lidl module.
@@ -67,7 +66,9 @@ struct name {
 };
 
 bool is_type(const name&);
+bool is_generic(const name&);
 bool is_service(const name&);
+bool is_view(const name&);
 
 struct generic_argument : std::variant<name, int64_t> {
     using variant::variant;
@@ -87,6 +88,9 @@ bool operator==(const symbol_handle& left, const symbol_handle& right);
 bool operator==(const name&, const name&);
 const base* resolve(const module& mod, const name&);
 const type* get_type(const module& mod, const name&);
+name get_wire_type_name(const module& mod, const name& n);
+const name& deref_ptr(const module& mod, const name& nm);
+bool is_ptr(const module& mod, const name& nm);
 
 template<class Type>
 const Type* get_type(const module& mod, const name& n) {

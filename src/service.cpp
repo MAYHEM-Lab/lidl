@@ -14,19 +14,17 @@ std::unique_ptr<structure> procedure_params_struct(const module& mod,
     auto s = std::make_unique<structure>(&servic, proc.src_info);
     for (auto& [name, param] : proc.parameters) {
         member m(s.get(), param.src_info);
-        auto param_t = get_type(mod, param.type);
 
-        static auto string = dynamic_cast<const type*>(
-            get_symbol(*lidl::recursive_name_lookup(mod.symbols(), "string")));
+        static auto string =
+            get_symbol(*lidl::recursive_name_lookup(mod.symbols(), "string"));
 
-        if (param_t->is_reference_type(mod) &&
-            get_type(mod, param.type) == string) {
+        if (resolve(mod, param.type) == string) {
             std::cerr << fmt::format("Warning at {}: Prefer using string_view rather "
                                      "than string in procedure parameters.\n",
                                      to_string(*proc.src_info));
         }
 
-        m.type_ = param_t->get_wire_type_name(mod, param.type);
+        m.type_ = get_wire_type_name(mod, param.type);
 
         s->add_member(name, std::move(m));
     }
@@ -41,11 +39,9 @@ std::unique_ptr<structure> procedure_results_struct(const module& mod,
                                                     std::string_view name,
                                                     const procedure& proc) {
     auto s = std::make_unique<structure>(&servic, proc.src_info);
-    for (auto& param : proc.return_types) {
+    for (auto& ret_name : proc.return_types) {
         member m(s.get(), proc.src_info);
-        auto param_t = get_type(mod, param);
-
-        m.type_ = param_t->get_wire_type_name(mod, param);
+        m.type_ = get_wire_type_name(mod, ret_name);
 
         s->add_member(fmt::format("ret{}", s->all_members().size()), std::move(m));
 
@@ -132,5 +128,10 @@ void service::generate_unions_if_dirty(const module& mod) const {
     define(get_scope(), "return_union", &procedure_results);
 
     unions_dirty = false;
+}
+name service::get_wire_type_name_impl(const module& mod, const name& your_name) const {
+    auto wire_serv_sym =
+        recursive_full_name_lookup(mod.symbols(), "lidl::wire_service").value();
+    return get_wire_type_name(mod, name{wire_serv_sym, {your_name}});
 }
 } // namespace lidl

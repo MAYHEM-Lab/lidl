@@ -20,7 +20,6 @@ enum class type_categories
 {
     value,
     reference,
-    view
 };
 
 struct module;
@@ -30,6 +29,15 @@ public:
 
     virtual type_categories category(const module& mod) const = 0;
 
+    virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const                 = 0;
+    virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
+
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override = 0;
+};
+
+struct wire_type : type {
+    using type::type;
+
     bool is_value(const module& mod) const {
         return category(mod) == type_categories::value;
     }
@@ -38,20 +46,32 @@ public:
         return category(mod) == type_categories::reference;
     }
 
-    bool is_view(const module& mod) const {
-        return category(mod) == type_categories::view;
-    }
+    virtual raw_layout wire_layout(const module& mod) const = 0;
 
-    virtual name get_wire_type_name(const module& mod, const name& your_name) const;
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override;
 };
 
-struct view_type : type {
-    explicit view_type(base* parent = nullptr, std::optional<source_info> loc = {})
-        : type(parent, loc) {
+struct value_type : wire_type {
+    using wire_type::wire_type;
+
+    type_categories category(const module& mod) const override {
+        return type_categories::value;
+    }
+};
+
+struct reference_type : type {
+    using type::type;
+
+    type_categories category(const module& mod) const override {
+        return type_categories::reference;
     }
 
-    type_categories category(const module& mod) const final {
-        return type_categories::view;
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override;
+};
+
+struct view_type : cbase<base::categories::view> {
+    explicit view_type(base* parent = nullptr, std::optional<source_info> loc = {})
+        : cbase(parent, loc) {
     }
 };
 
@@ -63,40 +83,11 @@ struct known_view_type : view_type {
         , m_wire_type{std::move(wire_type)} {
     }
 
-    name get_wire_type_name(const module& mod, const name& your_name) const override {
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override {
         return m_wire_type;
     }
 
 private:
     name m_wire_type;
-};
-
-struct serializeable_type : type {
-    using type::type;
-
-    virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const                 = 0;
-    virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
-};
-
-struct wire_type : serializeable_type {
-    using serializeable_type::serializeable_type;
-
-    virtual raw_layout wire_layout(const module& mod) const = 0;
-};
-
-struct value_type : wire_type {
-    using wire_type::wire_type;
-
-    type_categories category(const module& mod) const override {
-        return type_categories::value;
-    }
-};
-
-struct reference_type : serializeable_type {
-    using serializeable_type::serializeable_type;
-
-    type_categories category(const module& mod) const override {
-        return type_categories::reference;
-    }
 };
 } // namespace lidl

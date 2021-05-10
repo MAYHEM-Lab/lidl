@@ -1,4 +1,5 @@
 #include <lidl/base.hpp>
+#include <lidl/module.hpp>
 
 namespace lidl {
 base::base(categories category, base* parent, std::optional<source_info> p_src_info)
@@ -13,5 +14,13 @@ base::base(const base& rhs)
     , m_parent_elem(rhs.m_parent_elem)
     , m_scope(std::make_unique<scope>(*rhs.m_scope)) {
     m_scope->set_object(*this);
+}
+
+const module* find_parent_module(const base* obj) {
+    assert(obj);
+    if (obj->category() == base::categories::module) {
+        return static_cast<const module*>(obj);
+    }
+    return find_parent_module(obj->parent());
 }
 } // namespace lidl

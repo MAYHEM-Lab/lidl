@@ -132,6 +132,8 @@ struct service
         }
     }
 
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override;
+
 private:
     void generate_unions_if_dirty(const module& mod) const;
 

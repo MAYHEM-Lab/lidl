@@ -120,6 +120,10 @@ std::string get_local_identifier(const module& mod, const name& n) {
 }
 
 std::string get_user_identifier(const module& mod, const name& n) {
+    if (is_service(n)) {
+        auto id = get_identifier(mod, n);
+        return fmt::format("lidl::service_ptr<{}>", id);
+    }
     auto& nn = deref_ptr(mod, n);
     return get_identifier(mod, nn);
 }

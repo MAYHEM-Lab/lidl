@@ -248,6 +248,10 @@ bool lidl::frontend::loader::parse(const ast::generic_structure& str,
     res.struct_     = std::make_unique<structure>(&res);
     res.declaration = parse(str.params);
 
+    for (auto& [name, param] : res.declaration) {
+        res.get_scope().declare(name);
+    }
+
     for (auto& mem : str.body.members) {
         res.struct_->add_member(mem.name, *parse(mem, *res.struct_));
     }

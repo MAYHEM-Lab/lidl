@@ -189,7 +189,7 @@ class yaml_loader final : public module_loader {
         auto params = parse_parameters(node["parameters"]);
 
         auto genstr = std::make_unique<generic_structure>(
-            std::move(params), &gen_scope, make_source_info(node));
+            &gen_scope, make_source_info(node), std::move(params));
 
         for (auto& [name, param] : genstr->declaration) {
             genstr->get_scope().declare(name);
@@ -204,7 +204,7 @@ class yaml_loader final : public module_loader {
         auto params = parse_parameters(node["parameters"]);
 
         auto genstr = std::make_unique<generic_union>(
-            std::move(params), &scop, make_source_info(node));
+            &scop, make_source_info(node), std::move(params));
 
         for (auto& [name, param] : genstr->declaration) {
             genstr->get_scope().declare(name);

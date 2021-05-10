@@ -16,8 +16,7 @@ std::string union_gen::generate_getter(std::string_view member_name,
                                        bool is_const) {
     assert(!mem.is_nullable());
 
-    auto member_type_name =
-        get_type(mod(), mem.type_)->get_wire_type_name(mod(), mem.type_);
+    auto member_type_name = get_wire_type_name(mod(), mem.type_);
 
     constexpr auto format =
         R"__({0}& {1}() {{
@@ -39,9 +38,7 @@ sections union_gen::generate() {
     for (auto& [name, member] : get().all_members()) {
         members.push_back(raw_struct_gen::generate_field(
             "m_" + std::string(name),
-            get_identifier(mod(),
-                           get_type(mod(), member->type_)
-                               ->get_wire_type_name(mod(), member->type_))));
+            get_identifier(mod(), get_wire_type_name(mod(), member->type_))));
     }
 
     auto enum_name = "alternatives";
@@ -231,9 +228,9 @@ sections union_gen::generate_traits() {
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto member_type = get_type(mod(), member->type_);
-        auto identifier  = get_user_identifier(mod(), member->type_);
-        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
+        auto identifier =
+            get_user_identifier(mod(), get_wire_type_name(mod(), member->type_));
+        if (!member->is_nullable()) {
             arg_names = fmt::format("const {}& p_{}", identifier, member_name);
         } else {
             arg_names = fmt::format("const {}* p_{}", identifier, member_name);

@@ -15,32 +15,21 @@ using codegen::sections;
 std::string raw_union_gen::generate_getter(std::string_view member_name,
                                            const member& mem,
                                            bool is_const) {
-    auto member_type = get_type(mod(), mem.type_);
-    if (!member_type->is_reference_type(mod())) {
-        auto type_name              = get_identifier(mod(), mem.type_);
-        constexpr auto format       = R"__({0}& {1}() {{
-                return m_{1};
-            }})__";
-        constexpr auto const_format = R"__(const {0}& {1}() const {{
-                return m_{1};
-            }})__";
-        return fmt::format(is_const ? const_format : format, type_name, member_name);
-    } else {
-        // need to dereference before return
-        auto& base      = std::get<lidl::name>(mem.type_.args[0]);
-        auto identifier = get_identifier(mod(), base);
-        if (!mem.is_nullable()) {
-            constexpr auto format = R"__({0}& {1}() {{
-                return m_{1}.unsafe().get();
-            }})__";
-            constexpr auto const_format =
-                R"__(const {0}& {1}() const {{
-                return m_{1}.unsafe().get();
-            }})__";
-            return fmt::format(is_const ? const_format : format, identifier, member_name);
-        }
-    }
-    return "";
+    assert(!mem.is_nullable());
+
+    auto member_type_name = get_wire_type_name(mod(), mem.type_);
+
+    constexpr auto format =
+        R"__({0}& {1}() {{
+            return m_{1};
+        }})__";
+    constexpr auto const_format =
+        R"__(const {0}& {1}() const {{
+            return m_{1};
+        }})__";
+
+    auto type_name = get_identifier(mod(), deref_ptr(mod(), member_type_name));
+    return fmt::format(is_const ? const_format : format, type_name, member_name);
 }
 
 sections raw_union_gen::do_generate() {
@@ -56,9 +45,8 @@ sections raw_union_gen::do_generate() {
         std::string arg_names;
         std::string initializer_list;
 
-        auto member_type = get_type(mod(), member->type_);
         auto identifier  = get_user_identifier(mod(), member->type_);
-        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
+        if (!member->is_nullable()) {
             arg_names        = fmt::format("const {}& p_{}", identifier, member_name);
             initializer_list = fmt::format("m_{0}(p_{0})", member_name);
         } else {
@@ -132,9 +120,8 @@ sections raw_union_gen::generate_traits() {
         std::string initializer_list;
         const auto enum_val = get().get_enum(mod()).find_by_value(member_index++)->first;
 
-        auto member_type = get_type(mod(), member->type_);
         auto identifier  = get_user_identifier(mod(), member->type_);
-        if (!member_type->is_reference_type(mod()) || !member->is_nullable()) {
+        if (!member->is_nullable()) {
             arg_names = fmt::format("const {}& p_{}", identifier, member_name);
         } else {
             arg_names = fmt::format("const {}* p_{}", identifier, member_name);

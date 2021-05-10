@@ -7,7 +7,7 @@ type_categories structure::category(const module& mod) const {
                        members.end(),
                        [&](auto& mem) {
                            auto& [name, member] = mem;
-                           return get_type(mod, member.type_)->is_value(mod);
+                           return get_wire_type(mod, member.type_)->is_value(mod);
                        })
                ? type_categories::value
                : type_categories::reference;
@@ -21,8 +21,7 @@ compound_layout structure::layout(const module& mod) const {
     compound_layout computer;
     for (auto& [name, member] : members) {
         auto wire_type = get_wire_type(mod, member.type_);
-        computer.add_member(name,
-                            wire_type->wire_layout(mod));
+        computer.add_member(name, wire_type->wire_layout(mod));
     }
     return computer;
 }
@@ -57,13 +56,14 @@ int structure::yaml2bin(const module& mod,
                         ibinary_writer& writer) const {
     std::unordered_map<std::string, int> references;
     for (auto& [mem_name, mem] : members) {
-        auto t = get_type(mod, mem.type_);
+        auto t = lidl::get_wire_type(mod, mem.type_);
+
         if (t->is_value(mod)) {
             // Continue, we'll place it inline
             continue;
         }
-        auto pointee =
-            lidl::get_wire_type(mod, std::get<name>(mem.type_.args[0].get_variant()));
+
+        auto pointee = lidl::get_wire_type(mod, deref_ptr(mod, mem.type_));
         references.emplace(mem_name, pointee->yaml2bin(mod, node[mem_name], writer));
     }
 
@@ -96,5 +96,16 @@ int structure::yaml2bin(const module& mod,
     // Must add the trailing padding bytes!
     writer.align(wire_layout(mod).alignment());
     return struct_pos;
+}
+
+void structure::add_member(std::string name, member mem) {
+//    if (mem.type_ != lidl::get_wire_type_name(*find_parent_module(this), mem.type_)) {
+//        report_user_error(error_type::warning,
+//                          mem.src_info,
+//                          "Member type for {} is not a wire type!",
+//                          name);
+//    }
+    members.emplace_back(std::move(name), std::move(mem));
+    define(get_scope(), members.back().first, &members.back().second);
 }
 } // namespace lidl

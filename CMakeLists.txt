@@ -34,7 +34,6 @@ add_library(
   include/lidl/union.hpp
   include/lidl/enumeration.hpp
   src/instantiation_pass.cpp
-  src/service_pass.cpp
   include/lidl/basic_types.hpp
   src/layout.cpp
   include/lidl/binary_writer.hpp
@@ -49,6 +48,7 @@ add_library(
   src/base.cpp
   include/lidl/algorithm.hpp
   include/lidl/queue.hpp
+  include/lidl/error.hpp
 )
 target_compile_features(lidl_core PUBLIC cxx_std_20)
 target_include_directories(lidl_core PUBLIC include)

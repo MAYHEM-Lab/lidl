@@ -11,23 +11,26 @@ namespace lidl::cpp {
 using codegen::section_key_t;
 namespace {
 std::string decide_param_type_decoration(const module& mod, const parameter& param) {
-    auto param_type = get_wire_type(mod, param.type);
-    if (param_type->is_reference_type(mod)) {
-        return "const {}& {}";
-    } else if (param_type->is_view(mod)) {
+    if (is_view(param.type)) {
         return "{} {}";
-    } else {
-        if (param.flags == param_flags::in) {
-            // Small types are passed by value.
-            if (param_type->wire_layout(mod).size() <= 2) {
-                return "{} {}";
-            }
-            return "const {}& {}";
-        }
+    } else if (is_type(param.type)) {
+        auto param_type = get_wire_type(mod, param.type);
 
-        // This is either an out or an in_out parameter, either way, it has to be an
-        // l-value ref.
-        return "{}& {}";
+        if (param_type->is_reference_type(mod)) {
+            return "const {}& {}";
+        } else {
+            if (param.flags == param_flags::in) {
+                // Small types are passed by value.
+                if (param_type->wire_layout(mod).size() <= 2) {
+                    return "{} {}";
+                }
+                return "const {}& {}";
+            }
+
+            // This is either an out or an in_out parameter, either way, it has to be an
+            // l-value ref.
+            return "{}& {}";
+        }
     }
 }
 
@@ -66,16 +69,16 @@ make_proc_signature(const module& mod,
         ret_type_name = "void";
     } else {
         ret_type_name = get_user_identifier(mod, proc.return_types.at(0));
+
         if (is_type(proc.return_types.front())) {
-            auto ret_type = get_type(mod, proc.return_types.at(0));
+            auto ret_type = get_wire_type(mod, proc.return_types.at(0));
             if (ret_type->is_reference_type(mod)) {
                 ret_type_name = fmt::format("const {}&", ret_type_name);
                 params.emplace_back(
                     fmt::format("::lidl::message_builder& response_builder"));
-            } else if (ret_type->is_view(mod)) {
-                params.emplace_back(
-                    fmt::format("::lidl::message_builder& response_builder"));
             }
+        } else if (is_view(proc.return_types.front())) {
+            params.emplace_back(fmt::format("::lidl::message_builder& response_builder"));
         }
     }
 
@@ -443,11 +446,12 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
     } else {
         ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
         if (is_type(proc.return_types.front())) {
-            auto ret_type = get_type(mod(), proc.return_types.at(0));
+            auto ret_type = get_wire_type(mod(), proc.return_types.at(0));
             if (ret_type->is_reference_type(mod())) {
                 // Notice the return type is a pointer here!
                 ret_type_name = fmt::format("{}*", ret_type_name);
             }
+        } else if (is_view(proc.return_types.front())) {
         }
     }
 
@@ -512,7 +516,7 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
         get().proc_index(proc).value(),
         ret_type_name,
         is_type(proc.return_types.front()) &&
-                get_type(mod(), proc.return_types.front())->is_reference_type(mod())
+                get_wire_type(mod(), proc.return_types.front())->is_reference_type(mod())
             ? "*"
             : "");
 }
@@ -585,9 +589,9 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
     if (proc.return_types.empty()) {
         ret_type_name = "void";
     } else {
-        ret_type_name = get_user_identifier(mod(), proc.return_types.at(0));
+        ret_type_name = get_user_identifier(mod(), proc.return_types.front());
         if (is_type(proc.return_types.front())) {
-            auto ret_type = get_type(mod(), proc.return_types.at(0));
+            auto ret_type = get_wire_type(mod(), proc.return_types.front());
             if (ret_type->is_reference_type(mod())) {
                 ret_type_name = fmt::format("const {}&", ret_type_name);
             }
@@ -665,30 +669,31 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
                                                       std::string_view param_name,
                                                       const parameter& param) {
     if (is_type(param.type)) {
-        auto param_type = get_type(mod(), param.type);
+        auto param_type = get_wire_type(mod(), param.type);
         if (param_type->is_reference_type(mod())) {
             throw std::runtime_error("Reference types are not supported in stubs yet!");
-        } else if (param_type->is_view(mod())) {
-            if (param.type.base ==
-                recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
-                return fmt::format("lidl::create_string(mb, {})", param_name);
-            }
-
-            throw unknown_type_error(get_identifier(mod(), param.type), proc.src_info);
         }
+        return fmt::format("{}", param_name);
+    } else if (is_view(param.type)) {
+        if (param.type.base ==
+            recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
+            return fmt::format("lidl::create_string(mb, {})", param_name);
+        }
+
+        throw unknown_type_error(get_identifier(mod(), param.type), proc.src_info);
     }
 
-    return fmt::format("{}", param_name);
+    assert(false);
 }
 std::string better_service_generator::copy_and_return(const procedure& proc, bool async) {
     if (proc.return_types.empty()) {
         return async ? "co_return;" : "return;";
     }
 
-    auto ident = get_user_identifier(mod(), proc.return_types[0]);
+    auto ident = get_user_identifier(mod(), proc.return_types.front());
 
-    if (is_type(proc.return_types[0])) {
-        auto ret_type = get_type(mod(), proc.return_types[0]);
+    if (is_type(proc.return_types.front())) {
+        auto ret_type = get_wire_type(mod(), proc.return_types.front());
 
         if (ret_type->is_reference_type(mod())) {
             constexpr auto format =
@@ -703,26 +708,26 @@ memcpy(__res_ptr, __extent.data(), __extent.size());
 co_return *(reinterpret_cast<const {0}*>(response_builder.get_buffer().data() + __pos));)__";
 
             return fmt::format(async ? async_format : format, ident);
-        } else if (ret_type->is_view(mod())) {
-            if (proc.return_types[0].base !=
-                recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
-                throw std::runtime_error("Stubgen only supports string_views");
-            }
-
-            // This is a view type. We need to copy the result from the client response
-            // and return a view into our own buffer.
-            return fmt::format(
-                R"__(auto& copied = lidl::create_string(response_builder, res.ret0().string_view());
-    {} static_cast<{}>(copied);)__",
-                async ? "co_return" : "return",
-                ident);
-        } else {
-            // Must be a regular type, just return
-            return fmt::format("{} res.ret0();", async ? "co_return" : "return");
         }
-    } else if (is_service(proc.return_types[0])) {
+
+        // Must be a value type, just return
+        return fmt::format("{} res.ret0();", async ? "co_return" : "return");
+    } else if (is_service(proc.return_types.front())) {
+        return fmt::format("{} ServBase::unpack_service(res.ret0());",
+                           async ? "co_return" : "return");
+    } else if (is_view(proc.return_types.front())) {
+        if (proc.return_types.front().base !=
+            recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
+            throw std::runtime_error("Stubgen only supports string_views");
+        }
+
+        // This is a view type. We need to copy the result from the client response
+        // and return a view into our own buffer.
         return fmt::format(
-            "{} ServBase::unpack_service(res.ret0());", async ? "co_return" : "return");
+            R"__(auto& copied = lidl::create_string(response_builder, res.ret0().string_view());
+    {} static_cast<{}>(copied);)__",
+            async ? "co_return" : "return",
+            ident);
     }
 
     assert(false && "Don't know what to do");

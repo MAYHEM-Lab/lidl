@@ -12,6 +12,14 @@ bool is_type(const name& n) {
            get_symbol(n.base)->category() == base::categories::generic_type;
 }
 
+bool is_generic(const name& n) {
+    return get_symbol(n.base)->is_generic();
+}
+
+bool is_view(const name& n) {
+    return get_symbol(n.base)->is_view();
+}
+
 bool is_service(const name& n) {
     return get_symbol(n.base)->category() == base::categories::service;
 }
@@ -42,19 +50,27 @@ const base* resolve(const module& mod, const name& n) {
     return dynamic_cast<const lidl::base*>(&mod.create_or_get_instantiation(n));
 }
 
+name get_wire_type_name(const module& mod, const name& n) {
+    auto t = resolve(mod, n);
+    assert(t);
+
+    auto wire_name = t->get_wire_type_name_impl(mod, n);
+    if (wire_name == n) {
+        // n's wire type name is the same as n, it itself must be a wire type!
+        return n;
+    }
+    return get_wire_type_name(mod, wire_name);
+}
+
 const wire_type* get_wire_type(const module& mod, const name& n) {
-    auto t = get_type(mod, n);
+    auto wire_name = get_wire_type_name(mod, n);
+    auto t = resolve(mod, wire_name);
+
     if (!t) {
         return nullptr;
     }
 
-    if (auto wt = dynamic_cast<const wire_type*>(t)) {
-        return wt;
-    }
-
-    auto wire_name = t->get_wire_type_name(mod, n);
-    assert(wire_name != n);
-    return get_wire_type(mod, wire_name);
+    return static_cast<const wire_type*>(t);
 }
 
 const type* get_type(const module& mod, const name& n) {
@@ -64,5 +80,13 @@ const type* get_type(const module& mod, const name& n) {
 
 bool operator==(const name& left, const name& right) {
     return left.base == right.base && left.args == right.args;
+}
+
+const name& deref_ptr(const module& mod, const name& nm) {
+    auto ptr_sym = recursive_name_lookup(mod.symbols(), "ptr").value();
+    if (nm.base == ptr_sym) {
+        return nm.args[0].as_name();
+    }
+    return nm;
 }
 } // namespace lidl
