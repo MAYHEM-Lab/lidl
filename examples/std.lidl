@@ -1,0 +1,10 @@
+namespace lidl;
+
+struct<T> wire_service {
+    transport_data: vector<u8>;
+}
+
+struct<T, U> pair {
+    first: T;
+    second: U;
+}
