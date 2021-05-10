@@ -620,7 +620,7 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
                        return copy_proc_param(proc, param.first, param.second);
                    });
 
-    if (procedure_needs_message_builder(mod(), proc)) {
+    if (proc.params_struct(mod()).is_reference_type(mod())) {
         param_names.emplace(param_names.begin(), "mb");
     }
 
@@ -637,7 +637,6 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
 
     constexpr auto def_format = R"__({0} override {{
         using lidl::as_span;
-        using ret_t = {6};
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb{{as_span(req_buf)}};
         lidl::create<lidl::service_call_union<{4}>>(mb, {2}({3}));
@@ -650,7 +649,6 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
 
     constexpr auto async_def_format = R"__({0} override {{
         using lidl::as_span;
-        using ret_t = {6};
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb{{as_span(req_buf)}};
         lidl::create<lidl::service_call_union<{4}>>(mb, {2}({3}));
