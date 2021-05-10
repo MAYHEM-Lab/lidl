@@ -29,6 +29,13 @@ struct string_literal_expression final : expression {
     }
 };
 
+struct boolean_literal_expression final : expression {
+    bool value;
+    evaluate_result evaluate(const module& mod) const noexcept override {
+        return lidl::eval::value(this->value);
+    }
+};
+
 struct name_literal_expression final : expression {
     name value_name;
 
