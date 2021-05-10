@@ -145,10 +145,13 @@ void lidl::frontend::loader::declare_pass() {
     for (const auto& e : m_ast_mod.elements) {
         std::visit(
             [this](auto& x) {
-                std::cerr << "Declare " << x.name << '\n';
-                using lidl_type =
-                    tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
-                add_default_top_level<lidl_type>(x.name);
+                if constexpr (!std::is_same_v<const ast::static_assertion&,
+                                              decltype(x)>) {
+                    std::cerr << "Declare " << x.name << '\n';
+                    using lidl_type =
+                        tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                    add_default_top_level<lidl_type>(x.name);
+                }
             },
             e);
     }
@@ -158,13 +161,17 @@ void lidl::frontend::loader::define_pass() {
     for (const auto& e : m_ast_mod.elements) {
         std::visit(
             [this](auto& x) {
-                std::cerr << "Define " << x.name << '\n';
-                auto sym =
-                    m_mod->symbols().lookup(m_mod->symbols().name_lookup(x.name).value());
-                using lidl_type =
-                    tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
-                auto elem = const_cast<lidl_type*>(dynamic_cast<const lidl_type*>(sym));
-                parse(x, *elem);
+                if constexpr (!std::is_same_v<const ast::static_assertion&,
+                                              decltype(x)>) {
+                    std::cerr << "Define " << x.name << '\n';
+                    auto sym = m_mod->symbols().lookup(
+                        m_mod->symbols().name_lookup(x.name).value());
+                    using lidl_type =
+                        tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                    auto elem =
+                        const_cast<lidl_type*>(dynamic_cast<const lidl_type*>(sym));
+                    parse(x, *elem);
+                }
             },
             e);
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <variant>
@@ -21,12 +22,12 @@ struct member : node {
     ast::name type_name;
 };
 
-struct structure_body : node {
+struct structure_body {
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
 
-struct union_body : node {
+struct union_body {
     std::vector<member> members;
     std::optional<ast::name> extends;
 };
@@ -84,8 +85,36 @@ struct metadata {
     std::vector<std::string> imports;
 };
 
-using element = std::
-    variant<structure, union_, enumeration, service, generic_structure, generic_union>;
+struct expression : node {};
+
+struct string_literal_expression : expression {
+    explicit string_literal_expression(std::string val)
+        : literal(std::move(val)) {
+    }
+    std::string literal;
+};
+
+struct id_expression : expression {
+    ast::name name;
+};
+
+struct function_call_expression : expression {
+    std::unique_ptr<expression> function_name;
+    std::vector<std::unique_ptr<expression>> arguments;
+};
+
+struct static_assertion : node {
+    // std::unique_ptr<expression> body;
+    std::shared_ptr<expression> error_message;
+};
+
+using element = std::variant<structure,
+                             union_,
+                             enumeration,
+                             service,
+                             generic_structure,
+                             generic_union,
+                             static_assertion>;
 
 struct module {
     std::optional<metadata> meta;

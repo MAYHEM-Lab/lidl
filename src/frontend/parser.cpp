@@ -227,8 +227,39 @@ struct metadata {
     static constexpr auto value = lexy::as_aggregate<ast::metadata>;
 };
 
+struct argument_list {
+    struct parameter {
+        static constexpr auto rule = (LEXY_MEM(name) = dsl::p<identifier>)+ws +
+                                     dsl::colon + ws + (LEXY_MEM(type) = dsl::p<name>);
+        static constexpr auto value =
+            lexy::as_aggregate<ast::service::procedure::parameter>;
+    };
+
+    static constexpr auto rule =
+        dsl::parenthesized.opt_list(dsl::p<parameter>, dsl::sep(dsl::comma >> ws));
+    static constexpr auto value =
+        lexy::as_list<std::vector<ast::service::procedure::parameter>>;
+};
+
+struct string_literal_expression {
+    static constexpr auto rule = dsl::quoted(dsl::code_point);
+
+    static constexpr auto value =
+        lexy::as_string<std::string, lexy::utf8_encoding> >>
+        lexy::new_<ast::string_literal_expression,
+                   std::shared_ptr<ast::string_literal_expression>>;
+};
+
+struct static_assertion {
+    static constexpr auto rule =
+        LEXY_LIT("static_assert(") +
+        (LEXY_MEM(error_message) = dsl::p<string_literal_expression>)+dsl::lit<')'>;
+    static constexpr auto value = lexy::as_aggregate<ast::static_assertion>;
+};
+
 struct element {
     static constexpr auto rule =
+        (dsl::peek(LEXY_LIT("static_assert")) >> dsl::p<static_assertion>) |
         (dsl::peek(LEXY_LIT("struct<")) >> dsl::p<generic_structure>) |
         (dsl::peek(LEXY_LIT("struct")) >> dsl::p<structure>) |
         (dsl::peek(LEXY_LIT("enum")) >> dsl::p<enumeration>) |
@@ -259,12 +290,14 @@ struct module {
 namespace lidl::frontend {
 std::optional<ast::module> parse_module(std::string_view input_text) {
     lexy::string_input<lexy::utf8_encoding> input(input_text.data(), input_text.size());
-    auto result = lexy::parse<lidl::grammar::module>(input, lexy_ext::report_error);
-    if (!result)
-        return {};
-    if (result.value().meta && result.value().meta->name_space) {
-        result.value().meta->name_space->pop_back();
-    }
-    return result.value();
+
+    auto result = lexy::parse<lidl::grammar::element>(input, lexy_ext::report_error);
+    //    if (!result)
+    //        return {};
+    //    if (result.value().meta && result.value().meta->name_space) {
+    //        //        result.value().meta->name_space->pop_back();
+    //    }
+    //    return result.value();
+    return {};
 }
 } // namespace lidl::frontend
