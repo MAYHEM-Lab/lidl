@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
         std::cerr << "Module parsing failed!\n";
         exit(1);
     }
-    auto root = dynamic_cast<const type*>(
-        get_symbol(recursive_name_lookup(mod->symbols(), argv[2]).value()));
+    auto root =
+        get_wire_type(*mod, name{recursive_name_lookup(mod->symbols(), argv[2]).value()});
 
     std::ifstream datafile(argv[3], std::ios::binary);
     std::vector<uint8_t> data(std::istreambuf_iterator<char>(datafile),
