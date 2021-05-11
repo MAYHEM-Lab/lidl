@@ -9,5 +9,7 @@ evaluate_result binary_expression::evaluate(const module& mod) const noexcept {
     case binary_operators::eqeq:
         return value(left_val == right_val);
     }
+
+    return value(false);
 }
 } // namespace lidl::eval

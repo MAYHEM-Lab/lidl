@@ -11,7 +11,7 @@
 namespace lidl::eval {
 struct value {
     using vec_t = std::vector<value>;
-    using map_t = std::unordered_map<std::string, value>;
+    using map_t = std::unordered_map<std::string, std::shared_ptr<value>>;
     using fun_t = std::function<value(map_t)>;
 
     struct enum_val_t {
