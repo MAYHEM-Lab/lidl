@@ -8,3 +8,8 @@ struct<T, U> pair {
     first: T;
     second: U;
 }
+
+union<ValueT, ErrorT> expected {
+    value: ValueT;
+    error: ErrorT;
+}
