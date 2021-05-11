@@ -17,7 +17,9 @@ base::base(const base& rhs)
 }
 
 const module* find_parent_module(const base* obj) {
-    assert(obj);
+    if (!obj) {
+        return nullptr;
+    }
     if (obj->category() == base::categories::module) {
         return static_cast<const module*>(obj);
     }
