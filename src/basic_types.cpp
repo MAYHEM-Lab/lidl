@@ -56,6 +56,8 @@ type_categories pointer_type::category(const module& mod,
 std::unique_ptr<module> basic_module() {
     auto basic_mod = std::make_unique<module>();
 
+    basic_mod->set_imported();
+
     auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
         t->set_intrinsic();
         basic_mod->basic_types.emplace_back(std::move(t));

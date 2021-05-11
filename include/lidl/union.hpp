@@ -18,7 +18,12 @@ namespace lidl {
 struct union_type
     : public wire_type
     , public extendable<union_type> {
-    using wire_type::wire_type;
+
+    explicit union_type(base* parent                          = nullptr,
+                        std::optional<source_info> p_src_info = {})
+        : wire_type(parent, std::move(p_src_info)) {
+        get_scope().declare("alternatives");
+    }
 
     void add_member(std::string name, member mem) {
         if (mem.parent() != this) {
@@ -45,6 +50,8 @@ struct union_type
     const std::deque<std::pair<std::string, member>>& own_members() const {
         return members;
     }
+
+    name get_wire_type_name_impl(const module& mod, const name& your_name) const override;
 
     /**
      * If a union is raw, the alternatives type and members are not generated and the

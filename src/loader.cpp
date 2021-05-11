@@ -108,10 +108,13 @@ void load_context::perform_load(module_loader& loader, std::string_view work_dir
     auto meta = loader.get_metadata();
     for (auto& import : meta.imports) {
         std::cerr << "Processing import " << import << '\n';
-        if (!do_import(import, work_dir)) {
+        auto import_mod = do_import(import, work_dir);
+        if (!import_mod) {
             std::cerr << "Importing " << import << " failed!\n";
             exit(1);
         }
+
+        import_mod->set_imported();
         std::cerr << "Done\n";
     }
 

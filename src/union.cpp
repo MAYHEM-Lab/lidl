@@ -104,6 +104,10 @@ compound_layout union_type::layout(const module& mod) const {
     overall_computer.add_member("val", computer.get());
     return overall_computer;
 }
+name union_type::get_wire_type_name_impl(const module& mod, const name& your_name) const {
+    get_enum(mod);
+    return wire_type::get_wire_type_name_impl(mod, your_name);
+}
 
 std::unique_ptr<enumeration> enum_for_union(const module& m, const union_type& u) {
     auto e = std::make_unique<enumeration>(const_cast<union_type*>(&u), u.src_info);

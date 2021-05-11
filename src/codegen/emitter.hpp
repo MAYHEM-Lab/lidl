@@ -30,12 +30,7 @@ private:
         });
     }
 
-    bool is_satisfied(const section& sect) {
-        return std::all_of(sect.depends_on.begin(), sect.depends_on.end(), [&](auto& n) {
-            return std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
-                   m_satisfied.end();
-        });
-    }
+    bool is_satisfied(const section& sect);
 
     const module* m_module;
     std::stringstream m_stream;

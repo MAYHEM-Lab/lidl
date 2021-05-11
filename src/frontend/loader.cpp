@@ -179,7 +179,15 @@ void lidl::frontend::loader::define_pass() {
 
 name lidl::frontend::loader::parse(const ast::name& nm, base& s) {
     auto res = name();
-    res.base = recursive_full_name_lookup(s.get_scope(), nm.base).value();
+
+    auto lookup = recursive_full_name_lookup(s.get_scope(), nm.base);
+
+    if (!lookup) {
+        report_user_error(
+            error_type::fatal, nm.src_info, "Unknown type name: {}", nm.base);
+    }
+
+    res.base = *lookup;
 
     if (nm.args) {
         for (auto& arg : *nm.args) {

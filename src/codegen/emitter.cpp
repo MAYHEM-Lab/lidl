@@ -101,4 +101,13 @@ emitter::emitter(const module& root_mod, const module& mod, sections all)
     , m_not_generated(std::move(all.get_sections())) {
     mark_module(root_mod);
 }
+
+bool emitter::is_satisfied(const section& sect) {
+    return std::all_of(
+        sect.depends_on.begin(), sect.depends_on.end(), [&](const section_key_t& n) {
+            return std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
+                       m_satisfied.end() ||
+                   find_parent_module(n.symbol())->imported();
+        });
+}
 } // namespace lidl::codegen

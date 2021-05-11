@@ -124,7 +124,8 @@ struct parser {
         if (!params) {
             report_user_error(error_type::fatal,
                               m_tokens.front().src_info,
-                              "Expected procedure parameter list");
+                              "Expected procedure parameter list while parsing {}",
+                              *id);
         }
 
         if (!match(token_type::arrow)) {

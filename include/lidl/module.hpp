@@ -53,8 +53,16 @@ struct module : public cbase<base::categories::module> {
         return const_cast<scope&>(get_scope());
     }
 
+    bool imported() const {
+        return m_imported;
+    }
+
+    void set_imported() {
+        m_imported = true;
+    }
+
 private:
-    friend const module& get_root_module();
+    bool m_imported = false;
 };
 
 std::unique_ptr<module> basic_module();
