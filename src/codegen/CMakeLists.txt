@@ -13,7 +13,4 @@ target_sources(lidl_codegen PRIVATE
 
 if(BUILD_TESTS)
     enable_testing()
-    add_executable(lidl_codegen_emitter_test emitter_test.cpp)
-    target_link_libraries(lidl_codegen_emitter_test PUBLIC test_main lidl_core lidl_codegen)
-    add_test(lidl_codegen_emitter_test lidl_cppgen_emitter_test)
 endif()

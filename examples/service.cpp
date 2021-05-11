@@ -8,7 +8,7 @@
 #include <lidlrt/find_extent.hpp>
 #include <unordered_map>
 
-class calculator_impl : public lidl_example::scientific_calculator {
+class calculator_impl : public lidl_example::scientific_calculator::sync_server {
 public:
     double add(const double& left, const double& right) override {
         return left + right;
@@ -23,7 +23,7 @@ public:
     }
 };
 
-class repeat_impl : public lidl_example::repeat {
+class repeat_impl : public lidl_example::repeat::sync_server {
 public:
     std::string_view echo(std::string_view str,
                           lidl::message_builder& response) override {
@@ -45,8 +45,8 @@ public:
 std::vector<uint8_t> get_request() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<lidl_example::scientific_calculator::call_union>(
-        builder, lidl_example::calculator::multiply_params(3, 5));
+    lidl::create<lidl_example::scientific_calculator::wire_types::call_union>(
+        builder, lidl_example::calculator::wire_types::multiply_params(3, 5));
     buf.resize(builder.size());
     return buf;
 }
@@ -54,9 +54,9 @@ std::vector<uint8_t> get_request() {
 std::vector<uint8_t> get_echo_req() {
     std::vector<uint8_t> buf(64);
     lidl::message_builder builder(buf);
-    lidl::create<lidl_example::repeat::call_union>(
+    lidl::create<lidl_example::repeat::wire_types::call_union>(
         builder,
-        lidl::create<lidl_example::repeat::echo_params>(
+        lidl::create<lidl_example::repeat::wire_types::echo_params>(
             builder, lidl::create_string(builder, "foobar")));
     buf.resize(builder.size());
     return buf;
@@ -85,24 +85,27 @@ int main(int argc, char** argv) {
     auto req = get_request();
     //    std::cout.write((const char*)req.data(), req.size());
     std::cout << lidl::nameof(
-                     lidl::get_root<lidl_example::scientific_calculator::call_union>(req)
+                     lidl::get_root<
+                         lidl_example::scientific_calculator::wire_types::call_union>(req)
                          .alternative())
               << '\n';
 
     calculator_impl c;
-    auto handler = lidl::make_procedure_runner<lidl_example::scientific_calculator>();
+    auto handler =
+        lidl::make_procedure_runner<lidl_example::scientific_calculator::sync_server>();
 
     repeat_impl r;
-    auto rep_handler = lidl::make_procedure_runner<lidl_example::repeat>();
+    auto rep_handler = lidl::make_procedure_runner<lidl_example::repeat::sync_server>();
 
     std::array<uint8_t, 256> resp;
     auto resp_builder = lidl::message_builder(resp);
     handler(c, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& res = lidl::get_root<lidl_example::scientific_calculator::return_union>(
-                    resp_builder.get_buffer())
-                    .multiply();
+    auto& res =
+        lidl::get_root<lidl_example::scientific_calculator::wire_types::return_union>(
+            resp_builder.get_buffer())
+            .multiply();
     std::cout << res.ret0() << '\n';
 
     resp_builder = lidl::message_builder(resp);
@@ -110,8 +113,8 @@ int main(int argc, char** argv) {
     rep_handler(r, req, resp_builder);
     std::cout << resp_builder.size() << '\n';
 
-    auto& rep_res =
-        lidl::get_root<lidl_example::repeat::return_union>(resp_builder.get_buffer())
-            .echo();
+    auto& rep_res = lidl::get_root<lidl_example::repeat::wire_types::return_union>(
+                        resp_builder.get_buffer())
+                        .echo();
     std::cout << rep_res.ret0().string_view() << '\n';
 }

@@ -39,17 +39,13 @@ if(BUILD_TESTS)
   target_link_libraries(layout_test PUBLIC lidl_core test_main)
   add_test(layout_test layout_test)
 
-  add_executable(scope_test scope_test.cpp)
-  target_link_libraries(scope_test PUBLIC lidl_core test_main)
-  add_test(scope_test scope_test)
-
-  add_executable(bin2yaml_test bin2yaml_test.cpp)
-  target_link_libraries(bin2yaml_test PUBLIC lidl_core test_main)
-  add_test(bin2yaml_test bin2yaml_test)
-
-  add_executable(yaml2bin_test yaml2bin_test.cpp)
-  target_link_libraries(yaml2bin_test PUBLIC lidl_core test_main)
-  add_test(yaml2bin_test yaml2bin_test)
+#  add_executable(bin2yaml_test bin2yaml_test.cpp)
+#  target_link_libraries(bin2yaml_test PUBLIC lidl_core test_main)
+#  add_test(bin2yaml_test bin2yaml_test)
+#
+#  add_executable(yaml2bin_test yaml2bin_test.cpp)
+#  target_link_libraries(yaml2bin_test PUBLIC lidl_core test_main)
+#  add_test(yaml2bin_test yaml2bin_test)
 
   add_custom_target(
     check

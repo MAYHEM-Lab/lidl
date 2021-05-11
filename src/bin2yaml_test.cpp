@@ -71,21 +71,21 @@ TEST_CASE("bin2yaml") {
     auto vec_handle  = recursive_full_name_lookup(module.symbols(), "vector").value();
 
     module.enums.emplace_back();
-    auto& enumeration           = module.enums.back();
-    enumeration.underlying_type = name{i8_handle};
-    enumeration.members.emplace_back("foo", enum_member{0});
-    enumeration.members.emplace_back("bar", enum_member{1});
-    enumeration.members.emplace_back("baz", enum_member{2});
-    auto enum_handle = define(module.symbols(), "enum", &enumeration);
+    auto& enumeration            = module.enums.back();
+    enumeration->underlying_type = name{i8_handle};
+    enumeration->add_member("foo");
+    enumeration->add_member("bar");
+    enumeration->add_member("baz");
+    auto enum_handle = define(module.symbols(), "enum", enumeration.get());
 
     module.unions.emplace_back();
     auto& un = module.unions.back();
-    un.add_member("foo", member{name{ptr_handle, {name{str_handle}}}});
+    un->add_member("foo", member{name{ptr_handle, {name{str_handle}}}, un.get()});
 
     uint8_t buff[64];
 
     SUBCASE("bools") {
-        auto b = std::get<const type*>(get_symbol(bool_handle));
+        auto b = get_wire_type(module, name{bool_handle});
 
         memory_writer writer(buff);
         writer.write(true);
@@ -98,7 +98,7 @@ TEST_CASE("bin2yaml") {
     }
 
     SUBCASE("ints") {
-        auto i32 = std::get<const type*>(get_symbol(i32_handle));
+        auto i32 = get_wire_type(module, name{i32_handle)};
 
         int32_t i = 0xDEADBEEF;
         uint8_t buf[4];
@@ -124,7 +124,7 @@ TEST_CASE("bin2yaml") {
          *
          * Same thing for vectors!
          */
-        auto str = std::get<const type*>(get_symbol(str_handle));
+        auto str = get_wire_type(module, name{str_handle});
 
         memory_writer writer(buff);
 

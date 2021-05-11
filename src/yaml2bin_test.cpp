@@ -49,12 +49,12 @@ TEST_CASE("yaml2bin") {
 
     module.unions.emplace_back();
     auto& un = module.unions.back();
-    un.members.emplace_back("foo", member{name{ptr_handle, {name{str_handle}}}});
+    un->add_member("foo", member{name{ptr_handle, {name{str_handle}}}});
 
     uint8_t buff[64];
 
     SUBCASE("ints") {
-        auto i32 = std::get<const type*>(get_symbol(i32_handle));
+        auto i32 = get_wire_type(module, name{i32_handle});
         memory_writer writer(buff);
 
         i32->yaml2bin(module, YAML::Node(42), writer);
@@ -65,7 +65,7 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("ints alignment") {
-        auto i32 = std::get<const type*>(get_symbol(i32_handle));
+        auto i32 = get_wire_type(module, name{i32_handle});
         memory_writer writer(buff);
 
         writer.write<uint8_t>(0);
@@ -77,7 +77,7 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("strings") {
-        auto str = std::get<const type*>(get_symbol(str_handle));
+        auto str = get_wire_type(module, name{str_handle});
         memory_writer writer(buff);
 
         str->yaml2bin(module, YAML::Node("hello world"), writer);
@@ -90,10 +90,11 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("vector of ints") {
-        basic_generic_instantiation vec_of_int(name{vec_handle, {name{i32_handle}}});
+        auto vec_of_int = dynamic_cast<const wire_type*>(
+            resolve(module, name{vec_handle, {name{i32_handle}}}));
         memory_writer writer(buff);
 
-        vec_of_int.yaml2bin(module, YAML::Node(std::vector<int64_t>{1, 2, 3}), writer);
+        vec_of_int->yaml2bin(module, YAML::Node(std::vector<int64_t>{1, 2, 3}), writer);
         auto res = writer.get_data();
 
         REQUIRE_EQ(std::vector<uint8_t>{3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0},
@@ -101,11 +102,11 @@ TEST_CASE("yaml2bin") {
     }
 
     SUBCASE("vector of pointers to strings") {
-        basic_generic_instantiation vec_of_int(
-            name{vec_handle, {name{ptr_handle, {{name{str_handle}}}}}});
+        auto vec_of_int = dynamic_cast<const wire_type*>(
+            resolve(module, name{vec_handle, {name{ptr_handle, {{name{str_handle}}}}}}));
         memory_writer writer(buff);
 
-        vec_of_int.yaml2bin(
+        vec_of_int->yaml2bin(
             module, YAML::Node(std::vector<std::string>{"hello", "world"}), writer);
         auto res = writer.get_data();
         auto vec = std::vector<uint8_t>(res.begin(), res.end());
