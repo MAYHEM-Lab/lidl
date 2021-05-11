@@ -82,6 +82,8 @@ sections generic_gen::generate() {
     auto generic_decl_key =
         section_key_t{get().get_generic(), section_type::generic_declaration};
 
+    auto sym = resolve(mod(), get().args);
+
     section decl;
     decl.add_key(generic_decl_key);
     decl.definition = declare_template(mod(), name(), *get().get_generic());
@@ -95,6 +97,7 @@ sections generic_gen::generate() {
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
                 sec.add_dependency(generic_decl_key);
+                sec.add_key({sym, section_type::definition});
             }
         }
         common.merge_before(res);
@@ -106,6 +109,7 @@ sections generic_gen::generate() {
                 })) {
                 sec.definition = "template <>\n" + sec.definition;
                 sec.add_dependency(generic_decl_key);
+                sec.add_key({sym, section_type::definition});
             }
         }
         common.merge_before(res);

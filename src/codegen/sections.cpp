@@ -18,6 +18,24 @@ std::string compute_namespace_for_section(const section_key_t& key) {
     }
 }
 
+std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm) {
+    std::vector<section_key_t> all;
+    all.emplace_back(nm.base,
+                     nm.args.empty() ? section_type::definition
+                                     : section_type::generic_declaration);
+    if (!nm.args.empty() && !get_symbol(nm.base)->is_intrinsic()) {
+        auto ins = resolve(mod, nm);
+        all.emplace_back(ins, section_type::definition);
+    }
+    for (auto& arg : nm.args) {
+        if (auto n = std::get_if<name>(&arg.get_variant()); n) {
+            auto sub = def_keys_from_name(mod, *n);
+            all.insert(all.end(), sub.begin(), sub.end());
+        }
+    }
+    return all;
+}
+
 std::string section_key_t::to_string(const module& mod) const {
     std::string sym;
     auto sh = recursive_definition_lookup(mod.symbols(), symbol());

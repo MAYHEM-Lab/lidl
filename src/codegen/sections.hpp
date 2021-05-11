@@ -58,20 +58,7 @@ private:
 };
 
 // Computes the list of section keys that are depended on by the given name.
-inline std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm) {
-    std::vector<section_key_t> all;
-    all.emplace_back(nm.base,
-                     nm.args.empty() ? section_type::definition
-                                     : section_type::generic_declaration);
-    for (auto& arg : nm.args) {
-        if (auto n = std::get_if<name>(&arg.get_variant()); n) {
-            auto sub = def_keys_from_name(mod, *n);
-            all.insert(all.end(), sub.begin(), sub.end());
-        }
-    }
-    return all;
-}
-
+std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm);
 
 std::string compute_namespace_for_section(const section_key_t& key);
 struct section {
@@ -80,7 +67,7 @@ struct section {
      */
 
     void add_key(section_key_t key) {
-//        assert(m_keys.empty());
+        //        assert(m_keys.empty());
         if (m_keys.empty()) {
             m_name_space = compute_namespace_for_section(key);
         }
