@@ -9,7 +9,6 @@
 #include "union.hpp"
 #include "vector.hpp"
 #include <lidlrt/find_extent.hpp>
-#include <lidlrt/service_ptr.hpp>
 
 #ifndef LIDL_ASSERT
 #ifdef TOS

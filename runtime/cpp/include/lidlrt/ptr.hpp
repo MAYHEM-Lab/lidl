@@ -68,9 +68,10 @@ public:
         return unsafe().get();
     }
 
-    operator T&() const {
+    operator const T&() const {
         return unsafe().get();
     }
+
 private:
     struct unsafe_ {
         // Stores the offset in number of bytes, not Ts!
@@ -98,6 +99,48 @@ private:
 };
 
 template<class T>
+class const_ptr_iterator {
+public:
+    using value_type = T;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = T;
+    using pointer = T*;
+    using reference = T&;
+
+    const_ptr_iterator(const ptr<T>* cur)
+        : m_cur{cur} {
+    }
+
+    const T& operator*() const {
+        return m_cur->unsafe().get();
+    }
+
+    const_ptr_iterator& operator++() {
+        ++m_cur;
+        return *this;
+    }
+
+    const_ptr_iterator operator++(int) {
+        auto copy = *this;
+        ++(*this);
+        return copy;
+    }
+
+private:
+    friend bool operator==(const const_ptr_iterator<T>& it,
+                           const const_ptr_iterator<T>& other_it) {
+        return it.m_cur == other_it.m_cur;
+    }
+
+    friend bool operator!=(const const_ptr_iterator<T>& it,
+                           const const_ptr_iterator<T>& other_it) {
+        return it.m_cur != other_it.m_cur;
+    }
+
+    const ptr<T>* m_cur;
+};
+
+template<class T>
 class ptr_iterator {
 public:
     using value_type = T;
@@ -106,11 +149,11 @@ public:
     using pointer = T*;
     using reference = T&;
 
-    ptr_iterator(const ptr<T>* cur)
+    ptr_iterator(ptr<T>* cur)
         : m_cur{cur} {
     }
 
-    const T& operator*() {
+    T& operator*() {
         return m_cur->unsafe().get();
     }
 
@@ -136,7 +179,7 @@ private:
         return it.m_cur != other_it.m_cur;
     }
 
-    const ptr<T>* m_cur;
+    ptr<T>* m_cur;
 };
 
 static_assert(sizeof(ptr<int>) == 2);
