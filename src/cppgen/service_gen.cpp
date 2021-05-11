@@ -69,6 +69,7 @@ std::string decide_param_type_decoration(const module& mod, const parameter& par
     }
 
     assert(false);
+    std::terminate();
 }
 
 std::pair<std::string, std::vector<section_key_t>>
@@ -697,6 +698,7 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
     }
 
     assert(false);
+    std::terminate();
 }
 std::string better_service_generator::copy_and_return(const procedure& proc, bool async) {
     if (proc.return_types.empty()) {
@@ -739,5 +741,6 @@ memcpy(__res_ptr, __extent.data(), __extent.size());
     }
 
     assert(false && "Don't know what to do");
+    std::terminate();
 }
 } // namespace lidl::cpp
