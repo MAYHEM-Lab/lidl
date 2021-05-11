@@ -72,10 +72,19 @@ public:
             ;
     }
 
+    void set_intrinsic() {
+        m_intrinsic = true;
+    }
+
+    bool is_intrinsic() const {
+        return m_intrinsic;
+    }
+
 private:
     categories m_category;
     std::unique_ptr<scope> m_scope;
     mutable base* m_parent_elem = nullptr;
+    bool m_intrinsic            = false;
 };
 
 template<base::categories Category>

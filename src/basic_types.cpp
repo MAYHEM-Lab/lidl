@@ -57,23 +57,28 @@ std::unique_ptr<module> basic_module() {
     auto basic_mod = std::make_unique<module>();
 
     auto add_type = [&](std::string_view name, std::unique_ptr<type> t) {
+        t->set_intrinsic();
         basic_mod->basic_types.emplace_back(std::move(t));
         return define(basic_mod->symbols(), name, basic_mod->basic_types.back().get());
     };
 
     auto add_generic = [&](std::string_view name, std::unique_ptr<generic_type> t) {
+        t->set_intrinsic();
         basic_mod->basic_generics.emplace_back(std::move(t));
         define(basic_mod->symbols(), name, basic_mod->basic_generics.back().get());
     };
 
     auto add_view = [&](std::string_view name, std::unique_ptr<view_type> t) {
-      basic_mod->basic_views.emplace_back(std::move(t));
-      define(basic_mod->symbols(), name, basic_mod->basic_views.back().get());
+        t->set_intrinsic();
+        basic_mod->basic_views.emplace_back(std::move(t));
+        define(basic_mod->symbols(), name, basic_mod->basic_views.back().get());
     };
 
-    auto add_generic_view = [&](std::string_view name, std::unique_ptr<generic_view_type> t) {
-      basic_mod->basic_generic_views.emplace_back(std::move(t));
-      define(basic_mod->symbols(), name, basic_mod->basic_generic_views.back().get());
+    auto add_generic_view = [&](std::string_view name,
+                                std::unique_ptr<generic_view_type> t) {
+        t->set_intrinsic();
+        basic_mod->basic_generic_views.emplace_back(std::move(t));
+        define(basic_mod->symbols(), name, basic_mod->basic_generic_views.back().get());
     };
 
     add_type("bool", std::make_unique<bool_type>());
@@ -102,8 +107,18 @@ std::unique_ptr<module> basic_module() {
     return basic_mod;
 }
 
+array_type::array_type(module& mod)
+    : generic_wire_type(
+    &mod, {}, make_generic_declaration({{"T", "type"}, {"Size", "i32"}})) {
+}
+
+name array_type::get_wire_type_name_impl(const module& mod, const name& your_name) const {
+    auto wire_name_of_arg = get_wire_type_name(mod, your_name.args.front().as_name());
+    return name{your_name.base, {wire_name_of_arg, your_name.args.at(1)}};
+}
+
 type_categories array_type::category(const module& mod, const name& instantiation) const {
-    auto& arg = instantiation.args.front().as_name();
+    auto& arg    = instantiation.args.front().as_name();
     auto regular = get_wire_type(mod, arg);
     assert(regular);
     return regular->category(mod);
@@ -177,23 +192,15 @@ YAML::Node vector_type::bin2yaml(const module& mod,
     throw std::runtime_error("pointee must be a regular type");
 }
 
-name array_type::get_wire_type_name_impl(const module& mod, const name& your_name) const {
-    auto wire_name_of_arg = get_wire_type_name(mod, your_name.args.front().as_name());
-    return name{your_name.base, {wire_name_of_arg}};
-}
-
-array_type::array_type(module& mod)
-    : generic_wire_type(
-          &mod, {}, make_generic_declaration({{"T", "type"}, {"Size", "i32"}})) {
-}
-
-name vector_type::get_wire_type_name_impl(const module& mod, const name& your_name) const {
+name vector_type::get_wire_type_name_impl(const module& mod,
+                                          const name& your_name) const {
     auto ptr_sym = recursive_name_lookup(mod.symbols(), "ptr").value();
 
     auto wire_name_of_arg = get_wire_type_name(mod, your_name.args.front().as_name());
 
     return name{ptr_sym, {name{your_name.base, {wire_name_of_arg}}}};
 }
+
 vector_type::vector_type(module& mod)
     : generic_reference_type(&mod, {}, make_generic_declaration({{"T", "type"}})) {
 }
