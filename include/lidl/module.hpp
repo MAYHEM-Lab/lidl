@@ -43,6 +43,9 @@ struct module : public cbase<base::categories::module> {
 
     mutable std::deque<std::pair<std::string, std::unique_ptr<module>>> children;
     mutable std::vector<std::pair<name, basic_generic_instantiation*>> name_ins;
+
+    mutable std::vector<std::unique_ptr<base>> throwaway;
+
     module() = default;
 
     scope& symbols() {

@@ -21,38 +21,27 @@ std::string generic_gen::full_name() {
 }
 
 sections generic_gen::do_generate(const generic_structure& str) {
-    lidl::module tmpmod(const_cast<module*>(&mod()), str.src_info);
-    tmpmod.name_space = find_parent_module(&str)->name_space;
-    define(mod().symbols(), "#", &tmpmod);
-    auto instantiated = str.instantiate(tmpmod, get().args);
-    tmpmod.structs.emplace_back(
-        std::unique_ptr<structure>(static_cast<structure*>(instantiated.release())));
-    auto& un = *tmpmod.structs.back();
-    define(tmpmod.symbols(), local_full_name(), &un);
+    auto par_mod = find_parent_module(&str);
+    par_mod->throwaway.emplace_back(str.instantiate(*par_mod, get().args));
 
-    struct_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
-    auto res = gen.generate();
-    mod().symbols().undefine("#");
+    auto& un = static_cast<structure&>(*mod().throwaway.back());
+    define(par_mod->symbols(), local_full_name(), &un);
 
-    return res;
+    struct_gen gen(*par_mod, local_full_name(), name(), full_name(), un);
+
+    return gen.generate();
 }
 
 sections generic_gen::do_generate(const generic_union& u) {
-    lidl::module tmpmod(const_cast<module*>(&mod()), u.src_info);
-    tmpmod.name_space = find_parent_module(&u)->name_space;
-    define(mod().symbols(), "#", &tmpmod);
-    auto instantiated = u.instantiate(tmpmod, get().args);
-    tmpmod.unions.emplace_back(
-        std::unique_ptr<union_type>(static_cast<union_type*>(instantiated.release())));
-    auto& un = *tmpmod.unions.back();
-    define(tmpmod.symbols(), local_full_name(), &un);
+    auto par_mod = find_parent_module(&u);
+    par_mod->throwaway.emplace_back(u.instantiate(*par_mod, get().args));
 
-    union_gen gen(tmpmod, local_full_name(), name(), full_name(), un);
+    auto& un = static_cast<union_type&>(*mod().throwaway.back());
+    define(par_mod->symbols(), local_full_name(), &un);
 
-    auto res = gen.generate();
-    mod().symbols().undefine("#");
+    union_gen gen(*par_mod, local_full_name(), name(), full_name(), un);
 
-    return res;
+    return gen.generate();
 }
 
 namespace {
