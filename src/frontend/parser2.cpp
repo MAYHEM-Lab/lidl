@@ -652,13 +652,14 @@ struct parser {
 } // namespace
 
 std::optional<ast::module> parse_module(std::string_view input) {
-    auto lexer = tokenize(input);
     std::vector<token> toks;
-    std::copy_if(
-        lexer.begin(), lexer.end(), std::back_inserter(toks), [](const token& tok) {
-            return tok.type != token_type::block_comment &&
-                   tok.type != token_type::line_comment;
-        });
+    for (auto lexer = lidl::frontend::lexer(input); !lexer.done(); lexer.next()) {
+        auto tok = lexer.get();
+        if (tok.type != token_type::block_comment &&
+            tok.type != token_type::line_comment) {
+            toks.emplace_back(std::move(tok));
+        }
+    }
     parser p{.m_tokens = toks};
     return p.parse_module();
 }

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <lidl/source_info.hpp>
-#include "generator.hpp"
 
 namespace lidl::frontend {
-enum class token_type {
+enum class token_type
+{
     kw_struct,
     kw_union,
     kw_service,
@@ -45,5 +45,22 @@ struct token {
     std::string_view content;
 };
 
-tinycoro::Generator<token> tokenize(std::string_view input);
-}
+struct lexer {
+    explicit lexer(std::string_view input);
+
+    bool done() const {
+        return m_finished;
+    }
+
+    token get() const;
+
+    void next();
+
+private:
+    bool m_finished = false;
+    source_info src_info{0, 0, 0, 0};
+    token m_last;
+    std::string_view m_input;
+    std::string_view m_current;
+};
+} // namespace lidl::frontend

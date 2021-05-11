@@ -1,8 +1,8 @@
 #include "lexer.hpp"
 
+#include <lidl/error.hpp>
 #include <string_view>
 #include <unordered_map>
-#include <lidl/error.hpp>
 
 namespace lidl::frontend {
 namespace {
@@ -177,37 +177,52 @@ std::optional<std::pair<token_type, int>> try_next(std::string_view input) {
 }
 } // namespace
 
-tinycoro::Generator<token> tokenize(std::string_view input) {
-    source_info src_info{0, 0, 0, 0};
-    input.remove_prefix(consume_whitespace(input));
-
-    while (!input.empty()) {
-        auto type = try_next(input);
-        if (!type) {
-            co_return;
-        }
-
-        src_info.len = type->second;
-
-        auto content = input.substr(0, src_info.len);
-
-        co_yield token{.src_info = src_info, .type = type->first, .content = content};
-
-        if (type->first == token_type::newline ||
-            type->first == token_type::line_comment) {
-            src_info.line++;
-            src_info.column = 0;
-        } else if (type->first == token_type::block_comment) {
-            auto line_count = std::count(content.begin(), content.end(), '\n');
-            src_info.line += line_count;
-            src_info.column = 0;
-        }
-
-        src_info.pos += src_info.len;
-        input.remove_prefix(src_info.len);
-        input.remove_prefix(consume_whitespace(input));
+void lexer::next() {
+    if (get().type == token_type::eof) {
+        m_finished = true;
+        return;
     }
 
-    co_yield token{.src_info = src_info, .type = token_type::eof, .content = {}};
+    if (m_current.empty()) {
+        m_last = token{.src_info = src_info, .type = token_type::eof, .content = {}};
+        return;
+    }
+
+    auto type = try_next(m_current);
+    if (!type) {
+        report_user_error(error_type::fatal, src_info, "Failed to tokenize");
+        m_current = {};
+        return;
+    }
+
+    src_info.len = type->second;
+
+    auto content = m_current.substr(0, src_info.len);
+
+    m_last = token{.src_info = src_info, .type = type->first, .content = content};
+
+    if (type->first == token_type::newline || type->first == token_type::line_comment) {
+        src_info.line++;
+        src_info.column = 0;
+    } else if (type->first == token_type::block_comment) {
+        auto line_count = std::count(content.begin(), content.end(), '\n');
+        src_info.line += line_count;
+        src_info.column = 0;
+    }
+
+    src_info.pos += src_info.len;
+    m_current.remove_prefix(src_info.len);
+    m_current.remove_prefix(consume_whitespace(m_current));
+}
+
+lexer::lexer(std::string_view input)
+    : m_input(input)
+    , m_current(input) {
+    m_current.remove_prefix(consume_whitespace(input));
+    next();
+}
+
+token lexer::get() const {
+    return m_last;
 }
 } // namespace lidl::frontend
