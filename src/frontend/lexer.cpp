@@ -54,16 +54,8 @@ std::optional<std::pair<token_type, int>> try_two_char(std::string_view input) {
     return {};
 }
 
-std::optional<std::pair<token_type, int>> try_keyword(std::string_view input) {
-    for (auto& [str, tt] : keywords) {
-        if (input.starts_with(str)) {
-            return std::pair{tt, str.size()};
-        }
-    }
-    return {};
-}
-
 std::optional<std::pair<token_type, int>> try_identifier(std::string_view input) {
+    auto orig = input;
     if (!isalpha(input.front())) {
         return {};
     }
@@ -72,6 +64,10 @@ std::optional<std::pair<token_type, int>> try_identifier(std::string_view input)
     while (isalnum(input.front()) || input.front() == '_') {
         ++len;
         input.remove_prefix(1);
+    }
+
+    if (auto it = keywords.find(orig.substr(0, len)); it != keywords.end()) {
+        return std::pair{it->second, len};
     }
 
     return std::pair{token_type::identifier, len};
@@ -153,10 +149,6 @@ int consume_whitespace(std::string_view input) {
 }
 
 std::optional<std::pair<token_type, int>> try_next(std::string_view input) {
-    if (auto res = try_keyword(input)) {
-        return res;
-    }
-
     if (auto res = try_two_char(input)) {
         return res;
     }

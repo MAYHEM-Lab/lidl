@@ -1,4 +1,3 @@
-#include "lexer.hpp"
 #include "parser2.hpp"
 
 #include <iostream>
@@ -31,10 +30,6 @@ struct vec3f : base {
     y: f32;
     z: f32;
 })__";
-
-    for (auto tok : lidl::frontend::tokenize(in)) {
-        std::cerr << tok.content << '\n';
-    }
 
     auto mod = lidl::frontend::parse_module(in);
     std::cerr << mod->elements.size() << '\n';
