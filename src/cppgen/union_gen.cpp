@@ -34,13 +34,6 @@ std::string union_gen::generate_getter(std::string_view member_name,
 }
 
 sections union_gen::generate() {
-    std::vector<std::string> members;
-    for (auto& [name, member] : get().all_members()) {
-        members.push_back(raw_struct_gen::generate_field(
-            "m_" + std::string(name),
-            get_identifier(mod(), get_wire_type_name(mod(), member->type_))));
-    }
-
     auto enum_name = "alternatives";
     auto abs_name  = fmt::format("{}::{}", absolute_name(), enum_name);
 
@@ -153,6 +146,13 @@ template <class FunT>
         for (auto& key : sec.keys()) {
             s.add_key(key);
         }
+    }
+    
+    std::vector<std::string> members;
+    for (auto& [name, member] : get().all_members()) {
+        members.push_back(raw_struct_gen::generate_field(
+            "m_" + std::string(name),
+            get_identifier(mod(), get_wire_type_name(mod(), member->type_))));
     }
 
     s.definition = fmt::format(format,

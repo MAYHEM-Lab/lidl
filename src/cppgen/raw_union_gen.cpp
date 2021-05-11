@@ -33,12 +33,6 @@ std::string raw_union_gen::generate_getter(std::string_view member_name,
 }
 
 sections raw_union_gen::do_generate() {
-    std::vector<std::string> members;
-    for (auto& [name, member] : get().all_members()) {
-        members.push_back(raw_struct_gen::generate_field(
-            fmt::format("m_{}", name), get_identifier(mod(), member->type_)));
-    }
-
     std::vector<std::string> ctors;
     int member_index = 0;
     for (auto& [member_name, member] : get().all_members()) {
@@ -76,6 +70,13 @@ sections raw_union_gen::do_generate() {
     for (auto& [mem_name, mem] : get().all_members()) {
         accessors.push_back(generate_getter(mem_name, *mem, true));
         accessors.push_back(generate_getter(mem_name, *mem, false));
+    }
+
+    std::vector<std::string> members;
+    for (auto& [name, member] : get().all_members()) {
+        members.push_back(raw_struct_gen::generate_field(
+            "m_" + std::string(name),
+            get_identifier(mod(), get_wire_type_name(mod(), member->type_))));
     }
 
     section s;
