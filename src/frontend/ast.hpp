@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <lidl/source_info.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -8,7 +9,10 @@
 #include <vector>
 
 namespace lidl::ast {
-struct node {};
+struct node {
+    std::optional<source_info> src_info;
+};
+
 using identifier           = std::string;
 using qualified_identifier = std::string;
 

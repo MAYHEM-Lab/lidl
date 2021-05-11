@@ -1,6 +1,6 @@
-add_library(lidl_frontend ast.hpp loader.cpp parser.cpp parser.hpp)
+add_library(lidl_frontend ast.hpp loader.cpp parser.hpp lexer.cpp lexer.hpp generator.hpp parser2.hpp parser2.cpp)
 target_link_libraries(lidl_frontend PUBLIC lidl_core)
-target_link_libraries(lidl_frontend PRIVATE foonathan::lexy)
+target_compile_features(lidl_frontend PUBLIC cxx_std_20)
 
 add_executable(frontend frontend.cpp)
 target_link_libraries(frontend PUBLIC lidl_frontend)

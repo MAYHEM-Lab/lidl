@@ -32,7 +32,7 @@ class yaml_loader final : public module_loader {
         if (mark.is_null()) {
             return {};
         }
-        return source_info{mark.line, mark.column, mark.pos, m_origin};
+        return source_info{mark.line, mark.column, mark.pos, -1, m_origin};
     }
 
     generic_parameters parse_parameters(const YAML::Node& node) {

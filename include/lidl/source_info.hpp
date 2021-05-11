@@ -6,7 +6,7 @@
 
 namespace lidl {
 struct source_info {
-    int line = -1, column = -1, pos = -1;
+    int line = -1, column = -1, pos = -1, len = -1;
     std::optional<std::string> origin;
 };
 
