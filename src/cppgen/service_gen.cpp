@@ -15,14 +15,7 @@ bool return_of_name_requires_message_builder(const module& mod, const name& nm) 
 }
 
 bool procedure_needs_message_builder(const module& mod, const procedure& proc) {
-    if (std::any_of(
-            proc.return_types.begin(),
-            proc.return_types.end(),
-            std::bind_front(return_of_name_requires_message_builder, std::ref(mod)))) {
-        return true;
-    }
-
-    return false;
+    return return_of_name_requires_message_builder(mod, proc.return_types.front());
 }
 
 std::string compute_return_type_name(const module& mod, const procedure& proc) {
