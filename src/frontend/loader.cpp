@@ -312,7 +312,7 @@ lidl::frontend::loader::parse(const std::vector<ast::generic_parameter>& params)
 } // namespace lidl::frontend
 
 namespace lidl {
-std::unique_ptr<module_loader> make_frontend_loader(load_context& root,
+std::shared_ptr<module_loader> make_frontend_loader(load_context& root,
                                                     std::istream& file,
                                                     std::optional<std::string> origin) {
     std::string data(std::istreambuf_iterator<char>(file),
@@ -324,6 +324,6 @@ std::unique_ptr<module_loader> make_frontend_loader(load_context& root,
         return nullptr;
     }
 
-    return std::make_unique<frontend::loader>(root, std::move(*mod), origin);
+    return std::make_shared<frontend::loader>(root, std::move(*mod), origin);
 }
 } // namespace lidl

@@ -29,6 +29,10 @@ if(ENABLE_PYBINDGEN)
   add_subdirectory(pybindgen)
 endif()
 
+if(ENABLE_LIDLPY)
+  add_subdirectory(lidlpy)
+endif()
+
 if(BUILD_TESTS)
   enable_testing()
   add_library(test_main test_main.cpp)

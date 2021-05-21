@@ -3,18 +3,25 @@
 #include "codegen.hpp"
 
 namespace lidl::codegen {
+std::string abs_name_for_mod(module& mod) {
+    auto& root_mod = root_module(mod);
+    auto symopt = recursive_definition_lookup(root_mod.get_scope(), &mod);
+    if (!symopt) {
+        report_user_error(error_type::fatal, {}, "Cannot determine namespace");
+        exit(1);
+    }
+    return current_backend()->get_identifier(mod, name{*symopt});
+}
 std::string compute_namespace_for_section(const section_key_t& key) {
     switch (key.type) {
     case section_type::lidl_traits:
-    case section_type::service_params_union:
-    case section_type::service_return_union:
     case section_type::service_descriptor:
     case section_type::validator:
         return "lidl";
     case section_type::std_traits:
         return "std";
     default:
-        return find_parent_module(key.symbol())->name_space;
+        return abs_name_for_mod(const_cast<module&>(*find_parent_module(key.symbol())));
     }
 }
 
@@ -61,12 +68,6 @@ std::string section_key_t::to_string(const module& mod) const {
         break;
     case section_type::wire_types:
         typestr = "wire_types";
-        break;
-    case section_type::service_params_union:
-        typestr = "service_params_union";
-        break;
-    case section_type::service_return_union:
-        typestr = "service_return_union";
         break;
     case section_type::service_descriptor:
         typestr = "service_descriptor";

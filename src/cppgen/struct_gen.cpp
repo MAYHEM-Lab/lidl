@@ -95,6 +95,12 @@ sections struct_gen::generate_traits() {
     trait_sect.add_dependency(def_key());
     trait_sect.add_key({symbol(), section_type::lidl_traits});
 
+    if (get().is_reference_type(mod())) {
+        trait_sect.definition += fmt::format(
+            "\ntemplate <> struct is_reference_type<{}> : std::true_type {{}};\n",
+            absolute_name());
+    }
+
     constexpr auto std_format = R"__(template <>
             struct tuple_size<{}> : std::integral_constant<std::size_t, {}> {{
             }};)__";

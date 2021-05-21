@@ -14,7 +14,9 @@
 namespace lidl {
 struct module : public cbase<base::categories::module> {
     using cbase::cbase;
-    std::string name_space = "lidlmod";
+
+    module(const module&) = delete;
+    module(module&&) = delete;
 
     const module* parent = nullptr;
 

@@ -105,7 +105,8 @@ public:
     void generate(const module& mod, std::ostream& str) override {
         codegen::detail::current_backend = this;
         for (auto& [_, child] : mod.children) {
-            generate(*child, str);
+            std::ostringstream oss;
+            generate(*child, oss);
         }
 
         cppgen gen(mod);

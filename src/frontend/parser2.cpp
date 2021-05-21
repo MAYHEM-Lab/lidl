@@ -50,7 +50,9 @@ struct parser {
             return name;
         }
 
-        // TODO: parse integral expression here!
+        if (auto int_lit = match(token_type::integer)) {
+            return std::stoll(std::string((*int_lit)[0].content));
+        }
 
         return {};
     }

@@ -97,12 +97,6 @@ std::string_view local_name(const symbol_handle& sym);
 
 std::vector<std::string_view> absolute_name(const symbol_handle& sym);
 
-/**
- * Returns a list of names that reach the given symbol from the given scope in the
- * shortest manner.
- */
-std::vector<std::string_view> relative_name(const symbol_handle& sym, const scope& from);
-
 std::optional<symbol_handle> recursive_name_lookup(const scope& s, std::string_view name);
 
 std::optional<symbol_handle> recursive_definition_lookup(const scope& s, symbol name);

@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(lidl VERSION 0.2.0)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(ENABLE_PYBINDGEN "Enable the experimental pybindgen backend" OFF)
+option(ENABLE_LIDLPY "Enable the experimental lidl compiler python bindings" ON)
 option(BUILD_TOOLS "Enable the build of accompanying tools. Disable to only get lidl as a library" ON)
 option(DISABLE_FRONTEND "Disable the lidl frontend" OFF)
 option(DISABLE_YAML "Disable the yaml frontend" OFF)
 
 set(ENABLE_BACKENDS "cpp;js")
 
-set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined")
+#set(CMAKE_CXX_FLAGS "-fsanitize=address,undefined")
 
 add_library(
   lidl_core

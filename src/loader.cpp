@@ -7,10 +7,10 @@
 #include <optional>
 
 namespace lidl {
-std::unique_ptr<module_loader> make_yaml_loader(load_context& root,
+std::shared_ptr<module_loader> make_yaml_loader(load_context& root,
                                                 std::istream& file,
                                                 std::optional<std::string> origin);
-std::unique_ptr<module_loader> make_frontend_loader(load_context& root,
+std::shared_ptr<module_loader> make_frontend_loader(load_context& root,
                                                     std::istream& file,
                                                     std::optional<std::string> origin);
 
@@ -41,7 +41,7 @@ std::optional<fs::path> search_in_path(const fs::path& in, const fs::path& impor
     return fs::canonical(*iter);
 }
 
-std::pair<std::unique_ptr<module_loader>, std::string> path_resolver::resolve_import(
+std::pair<std::shared_ptr<module_loader>, std::string> path_resolver::resolve_import(
     load_context& ctx, std::string_view import_name, std::string_view wd) {
     auto import_path = fs::path(import_name);
     std::optional<fs::path> found;

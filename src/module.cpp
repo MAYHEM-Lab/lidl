@@ -27,7 +27,6 @@ module& module::get_child(qualified_name child_name) {
 
 module& module::get_child(std::string_view child_name) {
     auto& res = get_child(split(child_name, scope_separator));
-    res.name_space = std::string(child_name);
     return res;
 }
 
@@ -38,7 +37,6 @@ module& module::add_child(qualified_name child_name, std::unique_ptr<module> chi
     auto& mod = *children.back().second;
     define(get_scope(), child_name.empty() ? "" : child_name.front(), &mod);
     mod.parent     = this;
-    mod.name_space = child_name.empty() ? "" : child_name.front();
     return mod;
 }
 

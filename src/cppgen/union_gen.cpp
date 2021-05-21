@@ -266,41 +266,13 @@ sections union_gen::generate_traits() {
     trait_sect.add_key({symbol(), section_type::lidl_traits});
     trait_sect.add_dependency(def_key());
 
+    if (get().is_reference_type(mod())) {
+        trait_sect.definition += fmt::format(
+            "\ntemplate <> struct is_reference_type<{}> : std::true_type {{}};\n",
+            absolute_name());
+    }
+
     auto res = sections{{std::move(trait_sect)}};
-
-    if (auto serv = get().call_for) {
-        constexpr auto rpc_trait_format =
-            R"__(template <> struct service_call_union<{}> : {} {{
-        }};)__";
-
-        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
-
-        section rpc_traits_sect;
-        rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
-        rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.add_key({serv_handle, section_type::service_params_union});
-        res.add(std::move(rpc_traits_sect));
-    }
-
-    if (auto serv = get().return_for) {
-        constexpr auto rpc_trait_format =
-            R"__(template <> struct service_return_union<{}> : {} {{
-        }};)__";
-
-        auto serv_handle    = *recursive_definition_lookup(mod().symbols(), serv);
-        auto serv_full_name = get_identifier(mod(), lidl::name{serv_handle});
-
-        section rpc_traits_sect;
-        rpc_traits_sect.definition =
-            fmt::format(rpc_trait_format, serv_full_name, absolute_name());
-        rpc_traits_sect.add_dependency(def_key());
-        rpc_traits_sect.add_dependency({serv_handle, section_type::definition});
-        rpc_traits_sect.add_key({serv_handle, section_type::service_return_union});
-        res.add(std::move(rpc_traits_sect));
-    }
 
     return res;
 }

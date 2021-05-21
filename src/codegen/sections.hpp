@@ -10,8 +10,6 @@ enum class section_type
     definition,
 
     wire_types,
-    service_params_union,
-    service_return_union,
     service_descriptor,
     sync_server,
     async_server,

@@ -447,7 +447,7 @@ codegen::sections better_service_generator::generate_async_zerocopy_stub() {
         R"__(template <class NextLayer> class {0}::async_zerocopy_client final : public {0}::async_server, private NextLayer {{
     public:
         template <class... BaseParams>
-        explicit async_zerocopy_client(BaseParams&&... params) : NextLayer(std::forward<BaseParams>(params)...) {{}}
+        explicit constexpr async_zerocopy_client(BaseParams&&... params) : NextLayer(std::forward<BaseParams>(params)...) {{}}
         {1}
     }};)__";
 
@@ -546,8 +546,9 @@ codegen::sections better_service_generator::generate_stub() {
     // We depend on the definition for the service.
     sect.add_dependency({symbol(), section_type::sync_server});
     sect.add_dependency({symbol(), section_type::wire_types});
-    sect.add_dependency({symbol(), section_type::service_params_union});
-    sect.add_dependency({symbol(), section_type::service_return_union});
+    sect.add_dependency(
+        {&get().procedure_results_union(mod()), section_type::definition});
+    sect.add_dependency({&get().procedure_params_union(mod()), section_type::definition});
 
     sect.add_key({symbol(), section_type::stub});
 
@@ -576,8 +577,9 @@ codegen::sections better_service_generator::generate_async_stub() {
     // We depend on the definition for the service.
     sect.add_dependency({symbol(), section_type::async_server});
     sect.add_dependency({symbol(), section_type::wire_types});
-    sect.add_dependency({symbol(), section_type::service_params_union});
-    sect.add_dependency({symbol(), section_type::service_return_union});
+    sect.add_dependency(
+        {&get().procedure_results_union(mod()), section_type::definition});
+    sect.add_dependency({&get().procedure_params_union(mod()), section_type::definition});
 
     sect.add_key({symbol(), section_type::async_stub});
 
@@ -633,11 +635,15 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
         using lidl::as_span;
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb{{as_span(req_buf)}};
-        lidl::create<lidl::service_call_union<{4}>>(mb, {2}({3}));
+        ServBase::transform_call(mb,
+            [&]() -> auto& {{
+                return lidl::create<{4}::wire_types::call_union>(mb, {2}({3}));
+            }}
+        );
         auto buf = mb.get_buffer();
         auto resp = ServBase::send_receive(buf);
         auto& res =
-            lidl::get_root<lidl::service_return_union<{4}>>(tos::span<const uint8_t>(as_span(resp))).{1}();
+            ServBase::template transform_return<{4}::wire_types::return_union>(tos::span<const uint8_t>(as_span(resp))).{1}();
         {5}
     }})__";
 
@@ -645,11 +651,15 @@ std::string better_service_generator::make_procedure_stub(std::string_view proc_
         using lidl::as_span;
         auto req_buf = ServBase::get_buffer();
         lidl::message_builder mb{{as_span(req_buf)}};
-        lidl::create<lidl::service_call_union<{4}>>(mb, {2}({3}));
+        ServBase::transform_call(mb,
+            [&]() -> auto& {{
+                return lidl::create<{4}::wire_types::call_union>(mb, {2}({3}));
+            }}
+        );
         auto buf = mb.get_buffer();
         auto resp = co_await ServBase::send_receive(buf);
         auto& res =
-            lidl::get_root<lidl::service_return_union<{4}>>(tos::span<const uint8_t>(as_span(resp))).{1}();
+            lidl::get_root<{4}::wire_types::return_union>(tos::span<const uint8_t>(as_span(resp))).{1}();
         {5}
     }})__";
 
@@ -687,6 +697,11 @@ std::string better_service_generator::copy_proc_param(const procedure& proc,
             return fmt::format("lidl::create_string(mb, {})", param_name);
         }
 
+        if (param.type.base ==
+            recursive_full_name_lookup(mod().symbols(), "span").value()) {
+            return fmt::format("lidl::create_vector(mb, {})", param_name);
+        }
+
         throw unknown_type_error(get_identifier(mod(), param.type), proc.src_info);
     }
 
@@ -719,18 +734,25 @@ memcpy(__res_ptr, __extent.data(), __extent.size());
         return fmt::format("{} ServBase::unpack_service(res.ret0());",
                            async ? "co_return" : "return");
     } else if (is_view(proc.return_types.front())) {
-        if (proc.return_types.front().base !=
+        if (proc.return_types.front().base ==
             recursive_full_name_lookup(mod().symbols(), "string_view").value()) {
-            throw std::runtime_error("Stubgen only supports string_views");
+            // This is a view type. We need to copy the result from the client response
+            // and return a view into our own buffer.
+            return fmt::format(
+                R"__(auto& copied = lidl::create_string(response_builder, res.ret0().string_view());
+    {} static_cast<{}>(copied);)__",
+                async ? "co_return" : "return",
+                ident);
+        } else if (proc.return_types.front().base ==
+                   recursive_full_name_lookup(mod().symbols(), "span").value()) {
+            return fmt::format(
+                R"__(auto& copied = lidl::create_vector(response_builder, res.ret0().span());
+    {} static_cast<{}>(copied);)__",
+                async ? "co_return" : "return",
+                ident);
         }
 
-        // This is a view type. We need to copy the result from the client response
-        // and return a view into our own buffer.
-        return fmt::format(
-            R"__(auto& copied = lidl::create_string(response_builder, res.ret0().string_view());
-    {} static_cast<{}>(copied);)__",
-            async ? "co_return" : "return",
-            ident);
+        throw std::runtime_error("Stubgen does not know this view type");
     }
 
     assert(false && "Don't know what to do");
