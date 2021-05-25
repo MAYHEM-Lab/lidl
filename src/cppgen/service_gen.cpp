@@ -327,7 +327,7 @@ codegen::sections better_service_generator::generate_sync_server() {
         inheritance.emplace_back(
             fmt::format("{}::sync_server", get_identifier(mod(), {*base})));
     } else {
-        inheritance.emplace_back(fmt::format("::lidl::service_base", name()));
+        inheritance.emplace_back(fmt::format("::lidl::sync_service_base", name()));
     }
 
     std::stringstream str;
@@ -366,7 +366,7 @@ codegen::sections better_service_generator::generate_async_server() {
         inheritance.emplace_back(
             fmt::format("{}::async_server", get_identifier(mod(), {*base})));
     } else {
-        inheritance.emplace_back(fmt::format("::lidl::service_base", name()));
+        inheritance.emplace_back(fmt::format("::lidl::async_service_base", name()));
     }
 
     std::stringstream str;
