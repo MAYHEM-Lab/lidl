@@ -372,10 +372,10 @@ private:
 } // namespace lidl::yaml
 
 namespace lidl {
-std::unique_ptr<module_loader> make_yaml_loader(load_context& root,
+std::shared_ptr<module_loader> make_yaml_loader(load_context& root,
                                                 std::istream& file,
                                                 std::optional<std::string> origin) {
     auto node = YAML::Load(file);
-    return std::make_unique<yaml::yaml_loader>(root, node, origin);
+    return std::make_shared<yaml::yaml_loader>(root, node, origin);
 }
 } // namespace lidl
