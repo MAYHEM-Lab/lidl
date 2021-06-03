@@ -1,11 +1,11 @@
-#include "parser.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
 #include <array>
 #include <iostream>
 #include <lidl/error.hpp>
 #include <numeric>
-#include <span>
+#include <tos/span.hpp>
 
 namespace lidl::frontend {
 namespace {
@@ -589,7 +589,7 @@ struct parser {
     std::optional<std::array<const token, sizeof...(X)>> match(X... xs) {
         auto peek_res = peek(xs...);
         if (peek_res) {
-            m_tokens = m_tokens.subspan<sizeof...(X)>();
+            m_tokens = m_tokens.slice(sizeof...(X));
         }
         return peek_res;
     }
@@ -599,11 +599,11 @@ struct parser {
         return match(xs...);
     }
 
-    std::optional<const token> oneof_impl(std::span<const token_type> tags) {
+    std::optional<const token> oneof_impl(tos::span<const token_type> tags) {
         for (auto tag : tags) {
             if (m_tokens.front().type == tag) {
                 auto res = m_tokens.front();
-                m_tokens = m_tokens.subspan<1>();
+                m_tokens = m_tokens.slice(1);
                 return res;
             }
         }
@@ -648,7 +648,7 @@ struct parser {
         return {};
     }
 
-    std::span<const token> m_tokens;
+    tos::span<const token> m_tokens;
 };
 } // namespace
 
