@@ -23,13 +23,21 @@ namespace js {
 std::unique_ptr<codegen::backend> make_backend();
 }
 #endif
+#if defined(ENABLE_PY)
+namespace py {
+std::unique_ptr<codegen::backend> make_backend();
+}
+#endif
 std::unordered_map<std::string_view, std::function<std::unique_ptr<codegen::backend>()>>
     backends {
 #if defined(ENABLE_CPP)
     {"cpp", cpp::make_backend},
 #endif
 #if defined(ENABLE_JS)
-        {"js", js::make_backend}, {"ts", js::make_backend},
+    {"js", js::make_backend}, {"ts", js::make_backend},
+#endif
+#if defined(ENABLE_PY)
+    {"py", py::make_backend},
 #endif
 };
 

@@ -16,6 +16,12 @@ if (CPP_BACKEND_ENABLED GREATER_EQUAL 0)
   add_subdirectory(jsgen)
 endif()
 
+list (FIND ENABLE_BACKENDS "py" PY_BACKEND_ENABLED)
+if (PY_BACKEND_ENABLED GREATER_EQUAL 0)
+  message(STATUS "Enabling Python backend")
+  add_subdirectory(pygen)
+endif()
+
 if (NOT DISABLE_YAML)
   add_library(lidl_yaml yaml.cpp yaml.hpp)
   target_link_libraries(lidl_yaml PUBLIC lidl_core yaml-cpp)

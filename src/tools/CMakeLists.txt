@@ -41,3 +41,9 @@ if (TARGET lidl_jsgen)
   target_link_libraries(lidlc PRIVATE lidl_jsgen)
   target_compile_definitions(lidlc PRIVATE ENABLE_JS)
 endif()
+
+if (TARGET lidl_pygen)
+  target_link_libraries(lidlc PRIVATE lidl_pygen)
+  target_compile_definitions(lidlc PRIVATE ENABLE_PY)
+endif()
+
