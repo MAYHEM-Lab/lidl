@@ -20,7 +20,6 @@ auto make_overload(Ts&&... ts) {
     return overload<std::remove_reference_t<Ts>...>(std::forward<Ts>(ts)...);
 }
 
-
 struct loader final : module_loader {
     loader(load_context& ctx, ast::module&& mod, std::optional<std::string> origin = {})
         : m_ast_mod(std::move(mod))
@@ -111,35 +110,35 @@ private:
 };
 
 template<class T>
-struct tmap;
+struct ast_to_lidl_map;
 
 template<>
-struct tmap<ast::structure> {
+struct ast_to_lidl_map<ast::structure> {
     using type = structure;
 };
 template<>
-struct tmap<ast::generic_structure> {
+struct ast_to_lidl_map<ast::generic_structure> {
     using type = generic_structure;
 };
 template<>
-struct tmap<ast::generic_union> {
+struct ast_to_lidl_map<ast::generic_union> {
     using type = generic_union;
 };
 template<>
-struct tmap<ast::union_> {
+struct ast_to_lidl_map<ast::union_> {
     using type = union_type;
 };
 template<>
-struct tmap<ast::enumeration> {
+struct ast_to_lidl_map<ast::enumeration> {
     using type = enumeration;
 };
 template<>
-struct tmap<ast::service> {
+struct ast_to_lidl_map<ast::service> {
     using type = service;
 };
 
 template<class T>
-using tmap_t = typename tmap<T>::type;
+using ast_to_lidl_map_t = typename ast_to_lidl_map<T>::type;
 
 void lidl::frontend::loader::declare_pass() {
     for (const auto& e : m_ast_mod.elements) {
@@ -148,8 +147,8 @@ void lidl::frontend::loader::declare_pass() {
                 if constexpr (!std::is_same_v<const ast::static_assertion&,
                                               decltype(x)>) {
                     std::cerr << "Declare " << x.name << '\n';
-                    using lidl_type =
-                        tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                    using lidl_type = ast_to_lidl_map_t<
+                        std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
                     add_default_top_level<lidl_type>(x.name);
                 }
             },
@@ -166,8 +165,8 @@ void lidl::frontend::loader::define_pass() {
                     std::cerr << "Define " << x.name << '\n';
                     auto sym = m_mod->symbols().lookup(
                         m_mod->symbols().name_lookup(x.name).value());
-                    using lidl_type =
-                        tmap_t<std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
+                    using lidl_type = ast_to_lidl_map_t<
+                        std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
                     auto elem =
                         const_cast<lidl_type*>(dynamic_cast<const lidl_type*>(sym));
                     parse(x, *elem);
