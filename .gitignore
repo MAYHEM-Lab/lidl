@@ -6,3 +6,4 @@ compile_commands.json
 out/
 CMakeSettings.json
 .cache
+venv/
