@@ -8,7 +8,7 @@ namespace lidl::py {
 
 std::string generate_member(const module& mod,
                             std::string_view name,
-                            const compound_layout& layout,
+                            int offset,
                             const member& mem) {
     constexpr auto member_format = R"__({{
     "type": {0},
@@ -19,7 +19,6 @@ std::string generate_member(const module& mod,
 
     auto type_name =
         codegen::detail::current_backend->get_identifier(mod, member_type_name);
-    auto offset = layout.offset_of(name).value();
 
     return fmt::format("\"{}\": {}", name, fmt::format(member_format, type_name, offset));
 }
@@ -33,6 +32,43 @@ std::string reindent(std::string val, int indent) {
     res.pop_back();
     return res;
 }
+
+struct enum_gen : codegen::generator_base<enumeration> {
+
+};
+
+struct union_gen : codegen::generator_base<union_type> {
+public:
+    using generator_base::generator_base;
+    codegen::sections generate() override {
+        constexpr auto format = R"__(@lidlrt.make_compound
+class {0}:
+    members = {{
+{1}
+    }}
+
+    size = {2}
+)__";
+
+        std::vector<std::string> members;
+        {
+            auto offset = get().layout(mod()).offset_of("discriminator").value();
+//            auto member_str = generate_member(mod(), "discriminator", offset, )
+        }
+
+        auto offset = get().layout(mod()).offset_of("val").value();
+        for (auto& [name, mem] : get().all_members()) {
+            auto member_str = generate_member(mod(), name, offset, *mem);
+            members.push_back(reindent(member_str, 8));
+        }
+
+        codegen::section sect;
+        sect.definition = fmt::format(
+            format, name(), fmt::join(members, ",\n"), get().wire_layout(mod()).size());
+
+        return {{sect}};
+    }
+};
 
 struct struct_gen : codegen::generator_base<structure> {
 public:
@@ -49,17 +85,17 @@ class {0}:
 
         std::vector<std::string> members;
         for (auto& [name, mem] : get().all_members()) {
-            auto member_str = generate_member(mod(), name, get().layout(mod()), mem);
+            auto offset = get().layout(mod()).offset_of(name).value();
+            auto member_str = generate_member(mod(), name, offset, mem);
             members.push_back(reindent(member_str, 8));
         }
 
-        std::cerr << fmt::format(
+        codegen::section sect;
+        sect.definition = fmt::format(
             format, name(), fmt::join(members, ",\n"), get().wire_layout(mod()).size());
 
-        return {};
+        return {{sect}};
     }
-
-private:
 };
 
 class backend : public codegen::backend {
@@ -68,7 +104,15 @@ public:
         codegen::detail::current_backend = this;
 
         for (auto& str : mod.structs) {
-            codegen::do_generate<struct_gen>(mod, str.get());
+            auto sects = codegen::do_generate<struct_gen>(mod, str.get());
+            assert(sects.get_sections().size() == 1);
+            std::cout << sects.get_sections()[0].definition << '\n';
+        }
+
+        for (auto& str : mod.unions) {
+            auto sects = codegen::do_generate<union_gen>(mod, str.get());
+            assert(sects.get_sections().size() == 1);
+            std::cout << sects.get_sections()[0].definition << '\n';
         }
     }
 
