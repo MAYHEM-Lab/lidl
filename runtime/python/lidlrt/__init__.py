@@ -5,3 +5,4 @@ from .builder import Builder
 from .string import String
 from .compound_type import make_compound
 from .pointer import Pointer
+from .enum import make_enum
