@@ -37,10 +37,10 @@ class CommonBasicType(StoredObject):
 def anon_init(instance, val=None, mem=None, from_memory_ = None):
     if mem is not None and from_memory_ is not None:
         assert val is None
-        super(type(instance), instance).__init__(mem=mem)
+        StoredObject.__init__(instance, mem=mem, from_memory_=True)
         return
 
-    super(type(instance), instance).__init__(Memory(bytearray(instance.size)))
+    StoredObject.__init__(instance, Memory(bytearray(instance.size)), from_memory_=True)
     if val is not None:
         instance.assign(val)
 

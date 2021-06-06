@@ -8,7 +8,16 @@ def make_compound(description):
             return repr({name: getattr(self, name) for name in description.members.keys()})
 
         def assign(self, val):
-            raise NotImplementedError("cannot assign to compound types!")
+            if hasattr(self, "is_ref"):
+                raise NotImplementedError("cannot assign to reference types!")
+
+            if isinstance(val, dict):
+                for name, mem in description.members.items():
+                    setattr(self, name, val[name])
+                return
+
+            for name, mem in description.members.items():
+                setattr(self, name, getattr(val, name))
 
     for name, mem in description.members.items():
         def getter(instance, off=mem["offset"], typ=mem["type"]):
@@ -21,7 +30,7 @@ def make_compound(description):
 
         setattr(CompoundType, name, property(getter, setter))
 
-    def ctor(instance, mem = None, from_memory_ = None, **kwargs):
+    def ctor(instance, mem=None, from_memory_=None, **kwargs):
         if mem is not None:
             super(CompoundType, instance).__init__(mem)
         else:
@@ -37,6 +46,7 @@ def make_compound(description):
                 continue
             setattr(instance, key, val)
 
+    CompoundType.__name__ = description.__name__
     CompoundType.__init__ = ctor
 
     return CompoundType
