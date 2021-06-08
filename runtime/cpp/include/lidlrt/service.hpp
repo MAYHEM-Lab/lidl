@@ -34,7 +34,7 @@ struct procedure_traits<RetType (Type::*const)(ArgTypes...)> {
 
     static constexpr bool takes_response_builder() {
         return (... ||
-                std::is_same_v<std::remove_reference_t<ArgTypes>, message_builder>);
+            std::is_same_v<std::remove_reference_t<ArgTypes>, message_builder>);
     }
 };
 
@@ -55,6 +55,10 @@ class service_base {
 public:
     virtual ~service_base() = default;
 };
+
+class sync_service_base : public service_base {};
+
+class async_service_base : public service_base {};
 
 template<class T>
 tos::span<uint8_t> as_span(T&);
@@ -86,15 +90,15 @@ using erased_procedure_runner_t = typed_procedure_runner_t<service_base>;
 
 template<class ServiceT>
 using typed_union_procedure_runner_t =
-    void (*)(ServiceT&,
-             typename ServiceT::service_type::wire_types::call_union&,
-             lidl::message_builder&);
+bool (*)(ServiceT&,
+         typename ServiceT::service_type::wire_types::call_union&,
+         lidl::message_builder&);
 
 template<class ServiceT>
 using typed_async_union_procedure_runner_t =
-    tos::Task<void> (*)(ServiceT&,
-                        typename ServiceT::service_type::wire_types::call_union&,
-                        lidl::message_builder&);
+tos::Task<bool> (*)(ServiceT&,
+                    typename ServiceT::service_type::wire_types::call_union&,
+                    lidl::message_builder&);
 
 template<class>
 class print;
@@ -115,85 +119,87 @@ async_union_caller(BaseServT& base_service,
     // this information to decode lidl messages into actual calls to services.
     using descriptor = service_descriptor<typename ServiceT::service_type>;
 
-    using params_union = typename descriptor::params_union;
     using results_union = typename descriptor::results_union;
 
     using all_params =
-        typename meta::get_result_type_impl<decltype(descriptor::procedures)>::params;
+    typename meta::get_result_type_impl<decltype(descriptor::procedures)>::params;
     using all_results =
-        typename meta::get_result_type_impl<decltype(descriptor::procedures)>::results;
+    typename meta::get_result_type_impl<decltype(descriptor::procedures)>::results;
 
     co_return co_await visit(
         [&service = static_cast<ServiceT&>(base_service),
-         &response](auto& call_params) -> tos::Task<bool> {
-            constexpr auto idx = meta::tuple_index_of<
-                std::remove_const_t<std::remove_reference_t<decltype(call_params)>>,
-                all_params>::value;
-            using result_type =
-                std::remove_const_t<std::remove_reference_t<decltype(std::get<idx>(
-                    std::declval<all_results>()))>>;
+            &response](auto& call_params) -> tos::Task<bool> {
+          constexpr auto idx = meta::tuple_index_of<
+              std::remove_const_t<std::remove_reference_t<decltype(call_params)>>,
+              all_params>::value;
+          using result_type =
+          std::remove_const_t<std::remove_reference_t<decltype(std::get<idx>(
+              std::declval<all_results>()))>>;
 
-            /**
-             * This ugly thing is where the final magic happens.
-             *
-             * The apply call will pass each member of the parameters of the call to
-             * this function.
-             *
-             * Inside, we have a bunch of cases:
-             *
-             * 1. Does the procedure take a message builder or not?
-             *
-             *    Procedures that do not return a _reference type_ (types that contain
-             *    pointers) do not need a message builder since their result will be
-             *    self contained.
-             *
-             * 2. Is the return value a view type?
-             *
-             *    Procedures that return a view type need special care. The special
-             *    care is basically that we copy whatever it returns to the response
-             *    buffer.
-             *
-             *    If not, we return whatever the procedure returned directly.
-             *
-             */
-            auto make_service_call = [&service,
-                                      &response](auto&&... args) -> tos::Task<bool> {
-                constexpr auto proc = rpc_param_traits<std::remove_const_t<
-                    std::remove_reference_t<decltype(call_params)>>>::async_params_for;
+          /**
+           * This ugly thing is where the final magic happens.
+           *
+           * The apply call will pass each member of the parameters of the call to
+           * this function.
+           *
+           * Inside, we have a bunch of cases:
+           *
+           * 1. Does the procedure take a message builder or not?
+           *
+           *    Procedures that do not return a _reference type_ (types that contain
+           *    pointers) do not need a message builder since their result will be
+           *    self contained.
+           *
+           * 2. Is the return value a view type?
+           *
+           *    Procedures that return a view type need special care. The special
+           *    care is basically that we copy whatever it returns to the response
+           *    buffer.
+           *
+           *    If not, we return whatever the procedure returned directly.
+           *
+           */
+          auto make_service_call = [&service,
+              &response](auto&&... args) -> tos::Task<bool> {
+            constexpr auto proc = rpc_param_traits<std::remove_const_t<
+                std::remove_reference_t<decltype(call_params)>>>::async_params_for;
 
-                using proc_traits = procedure_traits<decltype(proc)>;
-                if constexpr (!proc_traits::takes_response_builder()) {
-                    auto res = co_await std::invoke(proc, service, args...);
-                    create<results_union>(response, result_type(res));
+            using proc_traits = procedure_traits<decltype(proc)>;
+            if constexpr (!proc_traits::takes_response_builder()) {
+                auto res = co_await std::invoke(proc, service, args...);
+                create<results_union>(response, result_type(res));
+            } else {
+                const auto& res =
+                    co_await std::invoke(proc, service, args..., response);
+                if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
+                    std::string_view>) {
+                    /**
+                     * The procedure returned a view.
+                     *
+                     * We need to see if the returned view is already in the
+                     * response buffer. If it is not, we will copy it.
+                     *
+                     * Issue #6.
+                     */
+
+                    auto& str = create_string(response, res);
+                    const auto& r = create<result_type>(response, str);
+                    create<results_union>(response, r);
+                } else if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
+                    tos::span<uint8_t>>) {
+                    auto& str = create_vector(response, res);
+                    const auto& r = create<result_type>(response, str);
+                    create<results_union>(response, r);
                 } else {
-                    const auto& res =
-                        co_await std::invoke(proc, service, args..., response);
-                    if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
-                                                 std::string_view>) {
-                        /**
-                         * The procedure returned a view.
-                         *
-                         * We need to see if the returned view is already in the
-                         * response buffer. If it is not, we will copy it.
-                         *
-                         * Issue #6.
-                         */
-
-                        auto& str = create_string(response, res);
-                        const auto& r = create<result_type>(response, str);
-                        create<results_union>(response, r);
-                    } else if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
-                                                        tos::span<uint8_t>>) {
-                    } else {
-                        const auto& r = lidl::create<result_type>(response, res);
-                        create<results_union>(response, r);
-                    }
+                    const auto& r = lidl::create<result_type>(response, res);
+                    create<results_union>(response, r);
                 }
+            }
 
-                co_return true;
-            };
+            co_return true;
+          };
 
-            co_return co_await apply(make_service_call, call_params);
+          co_return co_await apply(make_service_call, call_params);
         },
         call_union);
 }
@@ -212,83 +218,85 @@ bool union_caller(BaseServT& base_service,
     // this information to decode lidl messages into actual calls to services.
     using descriptor = service_descriptor<typename ServiceT::service_type>;
 
-    using params_union = typename descriptor::params_union;
     using results_union = typename descriptor::results_union;
 
     using all_params =
-        typename meta::get_result_type_impl<decltype(descriptor::procedures)>::params;
+    typename meta::get_result_type_impl<decltype(descriptor::procedures)>::params;
     using all_results =
-        typename meta::get_result_type_impl<decltype(descriptor::procedures)>::results;
+    typename meta::get_result_type_impl<decltype(descriptor::procedures)>::results;
 
     return visit(
         [&service = static_cast<ServiceT&>(base_service),
-         &response](auto& call_params) -> decltype(auto) {
-            constexpr auto idx = meta::tuple_index_of<
-                std::remove_const_t<std::remove_reference_t<decltype(call_params)>>,
-                all_params>::value;
-            using result_type =
-                std::remove_const_t<std::remove_reference_t<decltype(std::get<idx>(
-                    std::declval<all_results>()))>>;
+            &response](auto& call_params) -> decltype(auto) {
+          constexpr auto idx = meta::tuple_index_of<
+              std::remove_const_t<std::remove_reference_t<decltype(call_params)>>,
+              all_params>::value;
+          using result_type =
+          std::remove_const_t<std::remove_reference_t<decltype(std::get<idx>(
+              std::declval<all_results>()))>>;
 
-            /**
-             * This ugly thing is where the final magic happens.
-             *
-             * The apply call will pass each member of the parameters of the call to
-             * this function.
-             *
-             * Inside, we have a bunch of cases:
-             *
-             * 1. Does the procedure take a message builder or not?
-             *
-             *    Procedures that do not return a _reference type_ (types that contain
-             *    pointers) do not need a message builder since their result will be
-             *    self contained.
-             *
-             * 2. Is the return value a view type?
-             *
-             *    Procedures that return a view type need special care. The special
-             *    care is basically that we copy whatever it returns to the response
-             *    buffer.
-             *
-             *    If not, we return whatever the procedure returned directly.
-             *
-             */
-            auto make_service_call = [&service, &response](auto&&... args) -> bool {
-                constexpr auto proc = rpc_param_traits<std::remove_const_t<
-                    std::remove_reference_t<decltype(call_params)>>>::params_for;
+          /**
+           * This ugly thing is where the final magic happens.
+           *
+           * The apply call will pass each member of the parameters of the call to
+           * this function.
+           *
+           * Inside, we have a bunch of cases:
+           *
+           * 1. Does the procedure take a message builder or not?
+           *
+           *    Procedures that do not return a _reference type_ (types that contain
+           *    pointers) do not need a message builder since their result will be
+           *    self contained.
+           *
+           * 2. Is the return value a view type?
+           *
+           *    Procedures that return a view type need special care. The special
+           *    care is basically that we copy whatever it returns to the response
+           *    buffer.
+           *
+           *    If not, we return whatever the procedure returned directly.
+           *
+           */
+          auto make_service_call = [&service, &response](auto&&... args) -> bool {
+            constexpr auto proc = rpc_param_traits<std::remove_const_t<
+                std::remove_reference_t<decltype(call_params)>>>::params_for;
 
-                using proc_traits = procedure_traits<decltype(proc)>;
-                if constexpr (!proc_traits::takes_response_builder()) {
-                    auto res = std::invoke(proc, service, args...);
-                    create<results_union>(response, result_type(res));
+            using proc_traits = procedure_traits<decltype(proc)>;
+            if constexpr (!proc_traits::takes_response_builder()) {
+                auto res = std::invoke(proc, service, args...);
+                create<results_union>(response, result_type(res));
+            } else {
+                const auto& res = std::invoke(proc, service, args..., response);
+                if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
+                    std::string_view>) {
+                    /**
+                     * The procedure returned a view.
+                     *
+                     * We need to see if the returned view is already in the
+                     * response buffer. If it is not, we will copy it.
+                     *
+                     * Issue #6.
+                     */
+
+                    auto& str = create_string(response, res);
+                    const auto& r = create<result_type>(response, str);
+                    create<results_union>(response, r);
+                } else if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
+                    tos::span<uint8_t>>) {
+                    auto& str = create_vector(response, res);
+                    const auto& r = create<result_type>(response, str);
+                    create<results_union>(response, r);
                 } else {
-                    const auto& res = std::invoke(proc, service, args..., response);
-                    if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
-                                                 std::string_view>) {
-                        /**
-                         * The procedure returned a view.
-                         *
-                         * We need to see if the returned view is already in the
-                         * response buffer. If it is not, we will copy it.
-                         *
-                         * Issue #6.
-                         */
-
-                        auto& str = create_string(response, res);
-                        const auto& r = create<result_type>(response, str);
-                        create<results_union>(response, r);
-                    } else if constexpr (std::is_same_v<meta::remove_cref<decltype(res)>,
-                                                        tos::span<uint8_t>>) {
-                    } else {
-                        const auto& r = lidl::create<result_type>(response, res);
-                        create<results_union>(response, r);
-                    }
+                    const auto& r = lidl::create<result_type>(response, res);
+                    create<results_union>(response, r);
                 }
+            }
 
-                return true;
-            };
+            return true;
+          };
 
-            return apply(make_service_call, call_params);
+          return apply(make_service_call, call_params);
         },
         call_union);
 }
