@@ -55,5 +55,6 @@ def Pointer(point_to):
             return res
 
     TypedPointer.__name__ = f"Pointer({point_to.__name__})"
+    TypedPointer.pointee = point_to
 
     return TypedPointer

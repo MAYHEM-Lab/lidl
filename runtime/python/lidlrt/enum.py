@@ -1,4 +1,4 @@
-def make_enum(description):
+def Enum(description):
     ActualEnum = type(description.__name__, (description.base_type,), {})
 
     for name, val in description.elems.items():

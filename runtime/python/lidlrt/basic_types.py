@@ -1,17 +1,18 @@
 from .buffer import Memory
 import struct
 import abc
+from .detail import self_or_val
 
 
 class StoredObject:
     _mem: Memory
 
-    def __init__(self, mem, from_memory_ = None):
+    def __init__(self, mem, from_memory_=None):
         self._mem = mem
 
     @classmethod
     def from_memory(cls, mem: Memory):
-        return cls(mem=mem, from_memory_ = True)
+        return cls(mem=mem, from_memory_=True)
 
 
 class CommonBasicType(StoredObject):
@@ -31,10 +32,10 @@ class CommonBasicType(StoredObject):
         pass
 
     def assign(self, val):
-        self.value = val
+        self.value = self_or_val(val)
 
 
-def anon_init(instance, val=None, mem=None, from_memory_ = None):
+def anon_init(instance, val=None, mem=None, from_memory_=None):
     if mem is not None and from_memory_ is not None:
         assert val is None
         StoredObject.__init__(instance, mem=mem, from_memory_=True)
@@ -54,6 +55,9 @@ def make_basic(t):
         @value.setter
         def value(self, val):
             t.write(self._mem, val)
+
+        def __eq__(self, other):
+            return self_or_val(self) == self_or_val(other)
 
     BoundT.__init__ = anon_init
     BoundT.__name__ = t.__name__
