@@ -234,7 +234,7 @@ struct service_gen : codegen::generator_base<service> {
                 fmt::format("\n{0}.{1} = {1}\n", this->name(), name);
         }
         constexpr auto format = R"__(class {0}:
-    pass
+    procedures = [{2}]
 
 
 {1}
@@ -250,7 +250,13 @@ struct service_gen : codegen::generator_base<service> {
 
         codegen::section sect;
 
-        sect.definition = fmt::format(format, name(), fmt::join(defs, "\n\n"));
+        std::vector<std::string> proc_names;
+        for (auto& [name, proc] : get().all_procedures()) {
+            proc_names.push_back(fmt::format("\"{}\"", name));
+        }
+
+        sect.definition = fmt::format(
+            format, name(), fmt::join(defs, "\n\n"), fmt::join(proc_names, ", "));
 
         return {{sect}};
     }

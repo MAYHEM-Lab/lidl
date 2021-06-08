@@ -17,10 +17,10 @@ class RawPointer(CommonBasicType):
         assert self._mem.is_same_memory(obj._mem)
         my_base = self._mem.get_base()
         obj_base = obj._mem.get_base()
-        self.offset = obj_base - my_base
+        self.offset = my_base - obj_base
 
     def deref_mem(self):
-        buf = self._mem.get_slice(self.offset)
+        buf = self._mem.get_slice(-self.offset)
         return buf
 
     @property

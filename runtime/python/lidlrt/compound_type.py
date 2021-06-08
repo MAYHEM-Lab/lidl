@@ -37,12 +37,12 @@ def make_union_ctor(type, description):
 
         for key, val in kwargs.items():
             memtype = description.members[key]["type"]
+            alternative = getattr(type.alternatives, key)
+            setattr(instance, "alternative", alternative)
             if (hasattr(memtype, "is_ptr")):
                 memtype.from_memory(instance._mem.get_slice(description.members[key]["offset"])).point_to(val)
                 continue
             setattr(instance, key, val)
-            alternative = getattr(type.alternatives, key)
-            setattr(instance, "alternative", alternative)
 
     return union_ctor
 
