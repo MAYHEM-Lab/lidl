@@ -80,6 +80,13 @@ struct section {
         depends_on.push_back(std::move(key));
     }
 
+    template <class Range>
+    void add_dependencies(const Range& range) {
+        for (auto& dep : range) {
+            add_dependency(dep);
+        }
+    }
+
     const std::string& name_space() {
         return m_name_space;
     }

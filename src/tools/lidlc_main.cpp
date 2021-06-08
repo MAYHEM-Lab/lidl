@@ -34,16 +34,16 @@ std::unordered_map<std::string_view, std::function<std::unique_ptr<codegen::back
     {"cpp", cpp::make_backend},
 #endif
 #if defined(ENABLE_JS)
-    {"js", js::make_backend}, {"ts", js::make_backend},
+        {"js", js::make_backend}, {"ts", js::make_backend},
 #endif
 #if defined(ENABLE_PY)
-    {"py", py::make_backend},
+        {"py", py::make_backend},
 #endif
 };
 
 struct lidlc_args {
     std::istream* input_stream;
-    std::ostream* output_stream;
+    lidl::codegen::output output;
     std::string backend;
     std::optional<std::string> origin;
     std::vector<std::string> import_paths;
@@ -90,9 +90,7 @@ void run(const lidlc_args& args) {
     }
 
     auto backend = backend_maker->second();
-    backend->generate(*mod, *args.output_stream);
-    args.output_stream->flush();
-    exit(0);
+    backend->generate(*mod, args.output);
 }
 } // namespace lidl
 
@@ -143,8 +141,10 @@ int main(int argc, char** argv) {
     }
 
     lidl::lidlc_args args;
-    args.input_stream  = &std::cin;
-    args.output_stream = &std::cout;
+    args.input_stream = &std::cin;
+    if (!out_path.empty()) {
+        args.output.output_path = out_path;
+    }
 
     auto path = std::filesystem::canonical(std::filesystem::current_path() / input_path);
     if (!input_path.empty()) {
@@ -155,13 +155,6 @@ int main(int argc, char** argv) {
         args.origin = path.string();
     }
 
-    if (!out_path.empty()) {
-        args.output_stream = new std::ofstream{out_path};
-        if (!args.output_stream->good()) {
-            throw std::runtime_error("File not found: " + out_path);
-        }
-    }
-
     args.backend = std::move(backend);
 
     args.import_paths = std::move(import_paths);
@@ -169,12 +162,7 @@ int main(int argc, char** argv) {
 
     lidl::run(args);
 
-    args.output_stream->flush();
-
     if (!input_path.empty()) {
         delete args.input_stream;
-    }
-    if (!out_path.empty()) {
-        delete args.output_stream;
     }
 }

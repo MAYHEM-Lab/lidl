@@ -5,9 +5,13 @@
 #include <string>
 
 namespace lidl::codegen {
+struct output {
+    std::optional<std::string> output_path;
+};
+
 class backend {
 public:
-    virtual void generate(const module& mod, std::ostream& str) = 0;
+    virtual void generate(const module& mod, const output& str) = 0;
 
     // How do users refer to this name?
     // For instance, we may store a ptr<string> inside a struct, but the user is only

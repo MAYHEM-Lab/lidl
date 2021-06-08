@@ -24,7 +24,7 @@ sections generic_gen::do_generate(const generic_structure& str) {
     auto par_mod = find_parent_module(&str);
     par_mod->throwaway.emplace_back(str.instantiate(*par_mod, get().args));
 
-    auto& un = static_cast<structure&>(*mod().throwaway.back());
+    auto& un = static_cast<structure&>(*par_mod->throwaway.back());
     define(par_mod->symbols(), local_full_name(), &un);
 
     struct_gen gen(*par_mod, local_full_name(), name(), full_name(), un);
@@ -36,7 +36,7 @@ sections generic_gen::do_generate(const generic_union& u) {
     auto par_mod = find_parent_module(&u);
     par_mod->throwaway.emplace_back(u.instantiate(*par_mod, get().args));
 
-    auto& un = static_cast<union_type&>(*mod().throwaway.back());
+    auto& un = static_cast<union_type&>(*par_mod->throwaway.back());
     define(par_mod->symbols(), local_full_name(), &un);
 
     union_gen gen(*par_mod, local_full_name(), name(), full_name(), un);

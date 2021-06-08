@@ -6,6 +6,7 @@
 
 #include <codegen.hpp>
 #include <emitter.hpp>
+#include <fstream>
 #include <lidl/module.hpp>
 #include <ostream>
 
@@ -27,12 +28,12 @@ public:
         for (auto& serv : mod().services) {
             {
                 auto call_union = &serv->procedure_params_union(mod());
-                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto sym        = *serv->get_scope().definition_lookup(call_union);
                 auto union_name = local_name(sym);
             }
             {
                 auto call_union = &serv->procedure_results_union(mod());
-                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto sym        = *serv->get_scope().definition_lookup(call_union);
                 auto union_name = local_name(sym);
             }
         }
@@ -67,14 +68,24 @@ private:
 };
 class backend : public codegen::backend {
 public:
-    void generate(const module& mod, std::ostream& str) override {
+    void generate(const module& mod, const codegen::output& out) override {
         codegen::detail::current_backend = this;
         for (auto& [_, child] : mod.children) {
-            generate(*child, str);
+            generate(*child, out);
+        }
+
+
+        std::ostream* str = &std::cout;
+
+        if (out.output_path) {
+            str = new std::ofstream{*out.output_path};
+            if (!str->good()) {
+                throw std::runtime_error("File could not be opened: " + *out.output_path);
+            }
         }
 
         jsgen gen(mod);
-        gen.generate(str);
+        gen.generate(*str);
     }
     std::string get_user_identifier(const module& mod,
                                     const lidl::name& name) const override {

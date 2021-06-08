@@ -64,6 +64,10 @@ public:
         return category() == categories::view || category() == categories::generic_view;
     }
 
+    bool is_module() const {
+        return category() == categories::module;
+    }
+
     friend name get_wire_type_name(const module& mod, const name& n);
 
     virtual name get_wire_type_name_impl(const module& mod, const name& your_name) const {

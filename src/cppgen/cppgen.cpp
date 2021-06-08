@@ -16,6 +16,7 @@
 #include <codegen.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <fstream>
 #include <lidl/basic.hpp>
 #include <lidl/module.hpp>
 #include <lidl/view_types.hpp>
@@ -39,14 +40,14 @@ struct cppgen {
         for (auto& serv : m_module->services) {
             {
                 auto call_union = &serv->procedure_params_union(mod());
-                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto sym        = *serv->get_scope().definition_lookup(call_union);
                 auto union_name = local_name(sym);
 
                 rename(mod(), sym, fmt::format("wire_types::{}", union_name));
             }
             {
                 auto call_union = &serv->procedure_results_union(mod());
-                auto sym = *serv->get_scope().definition_lookup(call_union);
+                auto sym        = *serv->get_scope().definition_lookup(call_union);
                 auto union_name = local_name(sym);
 
                 rename(mod(), sym, fmt::format("wire_types::{}", union_name));
@@ -70,7 +71,8 @@ struct cppgen {
         }
 
         for (auto& service : mod().services) {
-            m_sections.merge_before(do_generate<better_service_generator>(mod(), service.get()));
+            m_sections.merge_before(
+                do_generate<better_service_generator>(mod(), service.get()));
         }
 
         for (auto& ins : mod().instantiations) {
@@ -102,15 +104,25 @@ private:
 
 class backend : public codegen::backend {
 public:
-    void generate(const module& mod, std::ostream& str) override {
+    void generate(const module& mod, const codegen::output& out) override {
         codegen::detail::current_backend = this;
         for (auto& [_, child] : mod.children) {
             std::ostringstream oss;
-            generate(*child, oss);
+            cppgen gen(*child);
+            gen.generate(oss);
+        }
+
+        std::ostream* str = &std::cout;
+
+        if (out.output_path) {
+            str = new std::ofstream{*out.output_path};
+            if (!str->good()) {
+                throw std::runtime_error("File could not be opened: " + *out.output_path);
+            }
         }
 
         cppgen gen(mod);
-        gen.generate(str);
+        gen.generate(*str);
     }
     std::string get_user_identifier(const module& mod,
                                     const lidl::name& name) const override {

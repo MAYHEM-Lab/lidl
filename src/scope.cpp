@@ -88,13 +88,17 @@ std::string_view local_name(const symbol_handle& handle) {
     return handle.get_scope()->nameof(handle);
 }
 
-qualified_name absolute_name(const symbol_handle& sym) {
+std::vector<symbol> path_to_root(const symbol_handle& sym) {
     std::vector<const base*> path;
+    path.push_back(get_symbol(sym));
     path.push_back(&sym.get_scope()->object());
     while (path.back()->parent()) {
         path.push_back(path.back()->parent());
     }
+    return path;
+}
 
+qualified_name path_to_name(const std::vector<symbol>& path) {
     qualified_name names;
     for (auto it = path.rbegin(); it + 1 != path.rend(); ++it) {
         auto handle_res = (*it)->get_scope().definition_lookup(*(it + 1));
@@ -107,9 +111,11 @@ qualified_name absolute_name(const symbol_handle& sym) {
         names.push_back(name);
     }
 
-    names.push_back(local_name(sym));
-
     return names;
+}
+
+qualified_name absolute_name(const symbol_handle& sym) {
+    return path_to_name(path_to_root(sym));
 }
 
 std::optional<symbol_handle> recursive_name_lookup(const scope& s,
