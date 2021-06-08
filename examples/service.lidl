@@ -3,7 +3,7 @@ namespace lidl_example;
 import "./std";
 
 service i2c {
-    receive(addr: u8, data: string) -> i32;
+    receive(addr: u8, data: string_view) -> i32;
     gimme_int() -> i32;
 }
 

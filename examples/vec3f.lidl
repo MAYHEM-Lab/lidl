@@ -1,4 +1,4 @@
-namespace gfx::yolo;
+namespace gfx;
 
 enum some_enum {
     a,
