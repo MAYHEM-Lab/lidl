@@ -1,4 +1,10 @@
-namespace gfx;
+namespace gfx::yolo;
+
+enum some_enum {
+    a,
+    b,
+    c
+}
 
 struct vec3f {
     x: f32;
@@ -11,4 +17,8 @@ struct none_t {}
 union maybe_int {
     val: i32;
     none: none_t;
+}
+
+struct have_a_str {
+    name: string;
 }

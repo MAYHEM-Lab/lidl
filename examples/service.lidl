@@ -3,15 +3,11 @@ namespace lidl_example;
 import "./std";
 
 service i2c {
-    receive(addr: u8, data: span<u8>) -> i32;
-    gimme_service() -> echo;
-}
-
-service echo {
-    echo(str: string_view) -> string_view;
+    receive(addr: u8, data: string) -> i32;
+    gimme_int() -> i32;
 }
 
 struct x {
     a: i2c::call_union;
-    v: vector<string>;
+    v: array<string, 1>;
 }

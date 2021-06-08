@@ -4,6 +4,10 @@ struct imported {
     v: gfx::vec3f;
 }
 
+struct have_str {
+    str: string;
+}
+
 struct not_raw {
     arr_of_str: array<string, 1>;
 }
