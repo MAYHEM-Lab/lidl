@@ -123,6 +123,7 @@ public:
 
         cppgen gen(mod);
         gen.generate(*str);
+        str->flush();
     }
     std::string get_user_identifier(const module& mod,
                                     const lidl::name& name) const override {
