@@ -10,4 +10,3 @@ if (ENABLE_PYBINDGEN OR ENABLE_LIDLPY)
   add_subdirectory(pybind11 EXCLUDE_FROM_ALL)
 endif()
 
-add_subdirectory(lexy EXCLUDE_FROM_ALL)
