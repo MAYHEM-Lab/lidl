@@ -1,4 +1,5 @@
 from .array import *
+from .vector import *
 from .basic_types import *
 from .buffer import Memory
 from .builder import Builder

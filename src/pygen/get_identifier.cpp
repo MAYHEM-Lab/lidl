@@ -22,7 +22,8 @@ std::unordered_map<std::string_view, std::string_view> basic_lidl_types{
     {"bool", "lidlrt.Bool"},
     {"ptr", "lidlrt.Pointer"},
     {"string", "lidlrt.String"},
-    {"array", "lidlrt.Array"}};
+    {"array", "lidlrt.Array"},
+    {"vector", "lidlrt.Vector"}};
 
 std::vector<std::pair<symbol_handle, std::string>> rename_lookup;
 
