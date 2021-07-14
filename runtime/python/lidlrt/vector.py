@@ -1,6 +1,7 @@
 from .basic_types import StoredObject, anon_init, I16
 from .pointer import Pointer
 from .detail import self_or_val
+from .builder import Builder
 
 
 def Vector(base_type):
@@ -14,9 +15,20 @@ def Vector(base_type):
         def __len__(self):
             return I16.read(self._mem)
 
+        def items_buffer(self):
+            elem_size = effective_base_type.size
+            elem_align = effective_base_type.size
+            addr_after_len = self._mem.get_base()
+            while addr_after_len % elem_align != 0:
+                addr_after_len += 1
+            elems_offset = addr_after_len - self._mem.get_base()
+            buffer = self._mem.get_slice(I16.size + elems_offset, elem_size * len(self))
+            return buffer
+
         def raw_items(self):
             elem_size = effective_base_type.size
-            buffers = (self._mem.get_slice(2 + i * elem_size, elem_size) for i in range(len(self)))
+            buffer = self.items_buffer()
+            buffers = (buffer.get_slice(i * elem_size, elem_size) for i in range(len(self)))
             return [effective_base_type.from_memory(buffer) for buffer in buffers]
 
         def __getitem__(self, idx: int):
@@ -35,6 +47,18 @@ def Vector(base_type):
         def assign(self, vals):
             for el, val in zip(self.raw_items(), vals):
                 el.assign(val)
+
+        @staticmethod
+        def create(builder: Builder, data):
+            mem = builder.allocate(2, 2)
+            I16.from_memory(mem).value = len(data)
+
+            data_mem = builder.allocate(effective_base_type.size * len(data), effective_base_type.size)
+            mem.merge(data_mem)
+
+            res = VectorType.from_memory(mem)
+            res.assign(data)
+            return res
 
         size = I16.size
 

@@ -1,6 +1,8 @@
 from .string import String
 from .builder import Builder
 from .buffer import Memory
+from .vector import Vector
+from .basic_types import U8
 
 
 def copy_arg_to_build_call(builder, arg):
@@ -9,10 +11,17 @@ def copy_arg_to_build_call(builder, arg):
         return String.create(builder, arg)
 
     if isinstance(arg, bytes):
-        raise NotImplementedError("Passing bytes not supported yet!")
+        # copy as lidl.Vector(U8)
+        return Vector(U8).create(builder, arg)
+
+    if isinstance(arg, list):
+        raise NotImplementedError("Passing lists not supported yet!")
 
     # Must be a regular value
     return arg
+
+def copy_res_to_return(service, procedure, res):
+    return getattr(res, procedure).ret0
 
 
 def copy_args_to_struct(params_struct):
@@ -47,16 +56,19 @@ def make_call_union(params_union):
 
 
 def generate_proc(cls, proc_name: str):
-    par_union = make_call_union(cls.call_union)
+    params_union = make_call_union(cls.call_union)
 
     def fn(instance, **kwargs):
         builder = Builder(Memory(bytearray(1024)))
-        call = par_union(proc_name, builder=builder, **kwargs)
-        print(call)
+        call = params_union(proc_name, builder=builder, **kwargs)
+        #print(call)
         res = instance.send_receive(builder.get())
+        res_size = cls.return_union.size
+        base = res.get_end() - res_size
+        res.set_base(base)
         ret = cls.return_union.from_memory(res)
-        print(ret)
-        return getattr(ret, proc_name).ret0
+        #print(ret)
+        return copy_res_to_return(cls, proc_name, ret)
 
     fn.__name__ = proc_name
 

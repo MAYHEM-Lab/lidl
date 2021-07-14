@@ -25,5 +25,16 @@ class Memory:
     def get_base(self):
         return self._begin
 
+    def set_base(self, base):
+        self._begin = base
+
+    def get_end(self):
+        return self._end
+
     def is_same_memory(self, other_mem):
         return other_mem._data == self._data
+
+    def merge(self, other):
+        assert self.is_same_memory(other)
+        self._end = other._end
+        return self

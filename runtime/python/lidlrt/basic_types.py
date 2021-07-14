@@ -108,10 +108,10 @@ I16 = make_int(2, True)
 I32 = make_int(4, True)
 I64 = make_int(8, True)
 
-U8 = make_int(1, True)
-U16 = make_int(2, True)
-U32 = make_int(4, True)
-U64 = make_int(8, True)
+U8 = make_int(1, False)
+U16 = make_int(2, False)
+U32 = make_int(4, False)
+U64 = make_int(8, False)
 
 F32 = make_float(4)
 F64 = make_float(8)
@@ -122,6 +122,6 @@ class Bool(CommonBasicType):
     @staticmethod
     def read(mem: Memory):
         buf = mem.get_slice(0, 1)
-        return bool.from_bytes(buf.raw_bytes())
+        return bool.from_bytes(buf.raw_bytes(), byteorder='little')
 
     size = 1

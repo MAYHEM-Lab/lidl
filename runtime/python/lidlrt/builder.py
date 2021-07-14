@@ -10,6 +10,9 @@ class Builder:
         self._avail = self._buf
 
     def allocate(self, sz: int, align: int = 1) -> Memory:
+        while self._avail.get_base() % align != 0:
+            self._avail = self._avail.get_slice(0, length=1)
+
         alloc = self._avail.get_slice(0, length=sz)
         self._avail = self._avail.get_slice(sz)
         alloc.raw_bytes()[:] = b'\xcc' * sz
