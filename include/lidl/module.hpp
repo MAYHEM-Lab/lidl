@@ -48,6 +48,9 @@ struct module : public cbase<base::categories::module> {
 
     mutable std::vector<std::unique_ptr<base>> throwaway;
 
+    // Modules that were imported during the loading of this module
+    std::vector<module*> imported_modules;
+
     module() = default;
 
     scope& symbols() {

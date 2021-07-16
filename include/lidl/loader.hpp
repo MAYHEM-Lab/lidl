@@ -62,8 +62,10 @@ struct load_context {
 
     std::map<std::string, module_loader*, std::less<>> import_mapping;
 
+    std::map<std::string, std::vector<std::string>> import_dependencies;
+
 private:
-    void perform_load(module_loader& mod, std::string_view work_dir);
+    std::vector<std::string> perform_load(module_loader& mod, std::string_view work_dir);
 
     std::shared_ptr<import_resolver> importer;
 

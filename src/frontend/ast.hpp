@@ -121,6 +121,7 @@ using element = std::variant<structure,
                              static_assertion>;
 
 struct module {
+    source_info src_info;
     std::optional<metadata> meta;
     std::vector<element> elements;
 };

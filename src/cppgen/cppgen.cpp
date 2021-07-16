@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <codegen.hpp>
+#include <filesystem>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fstream>
@@ -80,12 +81,21 @@ struct cppgen {
                 do_generate<generic_gen>(mod(), ins->get_generic(), *ins));
         }
 
-        codegen::emitter e(root_module(mod()), mod(), m_sections);
+        auto& root_mod = root_module(mod());
+        codegen::emitter e(root_mod, mod(), m_sections);
 
         str << "#pragma once\n\n#include <lidlrt/lidl.hpp>\n";
         if (!mod().services.empty()) {
             str << "#include <lidlrt/service.hpp>\n";
             str << "#include <tos/task.hpp>\n";
+        }
+        for (auto& imported : mod().imported_modules) {
+            if (imported->src_info && imported->src_info->origin) {
+                auto path = *imported->src_info->origin;
+                auto file_name = std::filesystem::path(path).stem().string();
+                str << fmt::format("#include <{}_generated.hpp>\n", file_name);
+
+            }
         }
         str << '\n';
 

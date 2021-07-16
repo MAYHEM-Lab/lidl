@@ -28,6 +28,9 @@ struct loader final : module_loader {
         , m_origin{std::move(origin)} {
         auto meta = get_metadata();
         m_mod     = &m_root->get_child(meta.name ? *meta.name : std::string("module"));
+        m_mod->src_info = source_info{
+            .origin = m_origin
+        };
     }
 
     void load() override {

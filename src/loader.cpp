@@ -100,12 +100,16 @@ module* load_context::do_import(std::string_view import_name, std::string_view w
 
     auto [ins_it, ins] = loaders.emplace(std::move(loader));
     import_mapping.emplace(key, ins_it->get());
-    perform_load(**ins_it, fs::path(key).parent_path().string());
+    auto imports = perform_load(**ins_it, fs::path(key).parent_path().string());
+    import_dependencies.emplace(import_name, std::move(imports));
     return &(*ins_it)->get_module();
 }
 
-void load_context::perform_load(module_loader& loader, std::string_view work_dir) {
+std::vector<std::string> load_context::perform_load(module_loader& loader,
+                                                    std::string_view work_dir) {
     auto meta = loader.get_metadata();
+    std::vector<std::string> import_names;
+    std::vector<module*> imported_mods;
     for (auto& import : meta.imports) {
         std::cerr << "Processing import " << import << '\n';
         auto import_mod = do_import(import, work_dir);
@@ -114,11 +118,16 @@ void load_context::perform_load(module_loader& loader, std::string_view work_dir
             exit(1);
         }
 
+        imported_mods.emplace_back(import_mod);
+
         import_mod->set_imported();
+        import_names.push_back(import);
         std::cerr << "Done\n";
     }
 
     auto& mod = loader.get_module();
+    mod.imported_modules = std::move(imported_mods);
     loader.load();
+    return import_names;
 }
 } // namespace lidl
