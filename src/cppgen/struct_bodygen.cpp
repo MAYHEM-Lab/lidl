@@ -91,7 +91,7 @@ sections struct_body_gen::generate() {
             {}
         private:
             {}
-            [[maybe_unused]] raw_t raw;)__";
+            raw_t raw;)__";
 
     section def;
     def.add_key({&str(), section_type::definition});
