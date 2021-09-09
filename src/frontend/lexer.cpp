@@ -139,15 +139,6 @@ try_t try_string_literal(std::string_view input) {
     return std::pair{token_type::string_literal, len + 1};
 }
 
-int consume_whitespace(std::string_view input) {
-    int i = 0;
-    while (!input.empty() && iswspace(input.front())) {
-        input.remove_prefix(1);
-        ++i;
-    }
-    return i;
-}
-
 std::optional<std::pair<token_type, int>> try_next(std::string_view input) {
     if (auto res = try_two_char(input)) {
         return res;
@@ -201,7 +192,10 @@ void lexer::next() {
 
     m_last = token{.src_info = src_info, .type = type->first, .content = content};
 
-    if (type->first == token_type::newline || type->first == token_type::line_comment) {
+    src_info.pos += src_info.len;
+    src_info.column += src_info.len;
+
+    if (type->first == token_type::newline) {
         src_info.line++;
         src_info.column = 0;
     } else if (type->first == token_type::block_comment) {
@@ -210,15 +204,28 @@ void lexer::next() {
         src_info.column = 0;
     }
 
-    src_info.pos += src_info.len;
     m_current.remove_prefix(src_info.len);
-    m_current.remove_prefix(consume_whitespace(m_current));
+    consume_whitespace();
+}
+
+void lexer::consume_whitespace() {
+    for (int i = 0; !m_current.empty() && iswspace(m_current.front()); ++i) {
+        if (m_current.front() == ' ' || m_current.front() == '\t') {
+            src_info.column += 1;
+        } else if (m_current.front() == '\n') {
+            src_info.line += 1;
+            src_info.column = 0;
+        }
+
+        src_info.pos += 1;
+        m_current.remove_prefix(1);
+    }
 }
 
 lexer::lexer(std::string_view input)
     : m_input(input)
     , m_current(input) {
-    m_current.remove_prefix(consume_whitespace(input));
+    consume_whitespace();
     next();
 }
 

@@ -57,6 +57,8 @@ struct lexer {
     void next();
 
 private:
+    void consume_whitespace();
+
     bool m_finished = false;
     source_info src_info{0, 0, 0, 0};
     token m_last;
