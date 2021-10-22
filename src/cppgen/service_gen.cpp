@@ -478,13 +478,13 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
     std::transform(proc.parameters.begin(),
                    proc.parameters.end(),
                    param_names.begin(),
-                   [](auto& param) { return fmt::format("&{}", param.first); });
+                   [](auto& param) { return fmt::format("{}", param.first); });
 
     if (procedure_needs_message_builder(mod(), proc)) {
-        param_names.emplace_back("&response_builder");
+        param_names.emplace_back("response_builder");
     }
 
-    auto tuple_make = fmt::format("auto params_tuple_ = std::make_tuple({0});",
+    auto tuple_make = fmt::format("auto params_tuple_ = ::lidl::make_params_tuple({0});",
                                   fmt::join(param_names, ", "));
 
     constexpr auto void_def_format = R"__({0} override {{
