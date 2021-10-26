@@ -90,8 +90,7 @@ sections struct_body_gen::generate() {
             {}
             {}
         private:
-            {}
-            raw_t raw;)__";
+            {})__";
 
     section def;
     def.add_key({&str(), section_type::definition});
@@ -99,6 +98,10 @@ sections struct_body_gen::generate() {
                                  fmt::join(ctor, "\n"),
                                  fmt::join(accessors, "\n"),
                                  sects.get_sections().at(0).definition);
+
+    if (!str().all_members().empty()) {
+        def.definition += "\nraw_t raw;";
+    }
     def.depends_on = sects.get_sections().at(0).depends_on;
     return {{std::move(def)}};
 }
