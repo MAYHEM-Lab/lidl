@@ -26,7 +26,9 @@ bool emitter::pass() {
         }
     }
 
+#ifdef LIDL_VERBOSE_LOG
     std::cerr << "Pass\n";
+#endif
     for (auto& [ns, sects] : m_this_pass) {
         if (!ns.empty()) {
 #ifdef LIDL_VERBOSE_LOG

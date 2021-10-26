@@ -3,7 +3,9 @@
 namespace lidl::cpp {
 using codegen::sections;
 sections raw_struct_gen::generate() {
+#ifdef LIDL_VERBOSE_LOG
     std::cerr << fmt::format("Generating raw struct {}\n", absolute_name());
+#endif
     std::vector<std::string> members;
     for (auto& [name, member] : get().all_members()) {
         auto member_type_name = get_wire_type_name(mod(), member.type_);
@@ -74,7 +76,9 @@ std::vector<std::string> raw_struct_gen::generate_raw_constructor() {
 }
 
 sections struct_body_gen::generate() {
+#ifdef LIDL_VERBOSE_LOG
     std::cerr << fmt::format("Generating struct body for {}\n", m_ctor_name);
+#endif
     std::vector<std::string> accessors;
     for (auto& [name, member] : str().all_members()) {
         accessors.push_back(generate_getter(name, member, true));

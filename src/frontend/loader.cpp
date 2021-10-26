@@ -149,7 +149,9 @@ void lidl::frontend::loader::declare_pass() {
             [this](auto& x) {
                 if constexpr (!std::is_same_v<const ast::static_assertion&,
                                               decltype(x)>) {
+#ifdef LIDL_VERBOSE_LOG
                     std::cerr << "Declare " << x.name << '\n';
+#endif
                     using lidl_type = ast_to_lidl_map_t<
                         std::remove_const_t<std::remove_reference_t<decltype(x)>>>;
                     add_default_top_level<lidl_type>(x.name);
@@ -165,7 +167,9 @@ void lidl::frontend::loader::define_pass() {
             [this](auto& x) {
                 if constexpr (!std::is_same_v<const ast::static_assertion&,
                                               decltype(x)>) {
+#ifdef LIDL_VERBOSE_LOG
                     std::cerr << "Define " << x.name << '\n';
+#endif
                     auto sym = m_mod->symbols().lookup(
                         m_mod->symbols().name_lookup(x.name).value());
                     using lidl_type = ast_to_lidl_map_t<
