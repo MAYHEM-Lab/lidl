@@ -139,8 +139,9 @@ std::string struct_body_gen::generate_getter(std::string_view member_name,
                                              const member& mem,
                                              bool is_const) {
     assert(!mem.is_nullable());
-
+#ifdef LIDL_VERBOSE_LOG
     std::cerr << fmt::format("Generating getter for {}::{}\n", m_ctor_name, member_name);
+#endif
     constexpr auto format       = R"__({}& {}() {{ return raw.{}; }})__";
     constexpr auto const_format = R"__(const {}& {}() const {{ return raw.{}; }})__";
 

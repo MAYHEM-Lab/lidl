@@ -29,7 +29,9 @@ bool emitter::pass() {
     std::cerr << "Pass\n";
     for (auto& [ns, sects] : m_this_pass) {
         if (!ns.empty()) {
+#ifdef LIDL_VERBOSE_LOG
             std::cerr << fmt::format("  Namespace {}\n", ns);
+#endif
             m_stream << fmt::format("namespace {} {{\n", ns);
         }
 
@@ -87,7 +89,9 @@ void emitter::mark_module(const module& decl_mod) {
             auto key = section_key_t{sym,
                                      sym->is_generic() ? section_type::generic_declaration
                                                        : section_type::definition};
+#ifdef LIDL_VERBOSE_LOG
             std::cerr << fmt::format("Marking {}\n", key.to_string(decl_mod));
+#endif
             mark_satisfied(key);
         }
     }
