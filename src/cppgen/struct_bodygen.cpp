@@ -88,19 +88,18 @@ sections struct_body_gen::generate() {
 
     constexpr auto format = R"__(public:
             {}
-            {}
-        private:
             {})__";
 
     section def;
     def.add_key({&str(), section_type::definition});
-    def.definition = fmt::format(format,
-                                 fmt::join(ctor, "\n"),
-                                 fmt::join(accessors, "\n"),
-                                 sects.get_sections().at(0).definition);
+    def.definition =
+        fmt::format(format, fmt::join(ctor, "\n"), fmt::join(accessors, "\n"));
 
     if (!str().all_members().empty()) {
-        def.definition += "\nraw_t raw;";
+        def.definition += fmt::format(R"__(
+        private:
+            {}
+            raw_t raw;)__", sects.get_sections().at(0).definition);
     }
     def.depends_on = sects.get_sections().at(0).depends_on;
     return {{std::move(def)}};
@@ -122,6 +121,11 @@ std::vector<std::string> struct_body_gen::generate_constructor() {
             continue;
         }
         arg_names.push_back(fmt::format("const {}* p_{}", identifier, member_name));
+    }
+
+    if (arg_names.empty()) {
+        return {(is_constexpr() ? "constexpr " : "") +
+                fmt::format("{}() {{}}", m_ctor_name)};
     }
 
     return {(is_constexpr() ? "constexpr " : "") +
