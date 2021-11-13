@@ -42,7 +42,7 @@ sections enum_gen::generate_traits() {
             template <>
             struct enum_traits<{0}> {{
                 static constexpr inline std::array<std::string_view, {1}> names {{{2}}};
-                static constexpr inline auto fixed_names = std::tuple({{3}});
+                static constexpr inline auto fixed_names = std::tuple({3});
                 static constexpr std::string_view name = "{0}";
             }};
         )__";
