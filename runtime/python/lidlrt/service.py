@@ -3,19 +3,28 @@ from .builder import Builder
 from .buffer import Memory
 from .vector import Vector
 from .basic_types import U8
+from .pointer import Pointer
 
 
-def copy_arg_to_build_call(builder, arg):
+def copy_arg_to_build_call(builder: Builder, arg):
+    print(arg.__class__)
     if isinstance(arg, str):
         # copy as lidl.String
         return String.create(builder, arg)
 
     if isinstance(arg, bytes):
         # copy as lidl.Vector(U8)
-        return Vector(U8).create(builder, arg)
+        res = Vector(U8).create(builder, arg)
+        print("vector")
+        return res
 
     if isinstance(arg, list):
         raise NotImplementedError("Passing lists not supported yet!")
+
+    if hasattr(arg, "is_ref"):
+        space = builder.allocate(len(arg._mem))
+        space.raw_bytes()[:] = bytes(arg._mem.raw_bytes())
+        return arg.__class__(mem=space, from_memory_=True)
 
     # Must be a regular value
     return arg
@@ -31,6 +40,7 @@ def copy_args_to_struct(params_struct):
     def func(builder=None, **kwargs):
         for key in kwargs.keys():
             kwargs[key] = copy_arg_to_build_call(builder, kwargs[key])
+            print(kwargs[key])
         if hasattr(params_struct, "is_ref"):
             return builder.create(params_struct, **kwargs)
         return params_struct(**kwargs)
@@ -61,7 +71,7 @@ def generate_proc(cls, proc_name: str):
     def fn(instance, **kwargs):
         builder = Builder(Memory(bytearray(1024)))
         call = params_union(proc_name, builder=builder, **kwargs)
-        #print(call)
+        print(call)
         res = instance.send_receive(builder.get())
         res_size = cls.return_union.size
         base = res.get_end() - res_size

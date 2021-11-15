@@ -85,12 +85,11 @@ def make_int(sz: int, signed: bool):
 
 
 def make_float(sz: int):
-    @make_basic
     class FloatType(CommonBasicType):
         @staticmethod
         def read(mem: Memory):
             buf = mem.get_slice(0, sz)
-            [val] = struct.unpack("f", buf.raw_bytes())
+            [val] = struct.unpack("f" if sz == 4 else "d", buf.raw_bytes())
             return val
 
         @staticmethod
@@ -100,7 +99,9 @@ def make_float(sz: int):
 
         size = sz
 
-    return FloatType
+    FloatType.__name__ = f"f{sz * 8}"
+
+    return make_basic(FloatType)
 
 
 I8 = make_int(1, True)

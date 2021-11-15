@@ -19,6 +19,9 @@ class Memory:
     def __len__(self):
         return self._end - self._begin
 
+    def __repr__(self) -> str:
+        return f"Memory({repr(self._data)}, {self._begin}, {self._end})"
+
     def raw_bytes(self) -> memoryview:
         return memoryview(self._data)[slice(self._begin, self._end)]
 

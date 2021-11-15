@@ -50,7 +50,9 @@ def Vector(base_type):
 
         @staticmethod
         def create(builder: Builder, data):
-            mem = builder.allocate(2, 2)
+            mem = builder.allocate(2, 1)
+            print("vector")
+
             I16.from_memory(mem).value = len(data)
 
             data_mem = builder.allocate(effective_base_type.size * len(data), effective_base_type.size)
@@ -58,6 +60,7 @@ def Vector(base_type):
 
             res = VectorType.from_memory(mem)
             res.assign(data)
+            
             return res
 
         size = I16.size
