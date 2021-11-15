@@ -20,17 +20,17 @@ std::string union_gen::generate_getter(std::string_view member_name,
 
     constexpr auto format =
         R"__({0}& {1}() {{
-            LIDL_UNION_ASSERT(alternative() == alternatives::{1});
+            LIDL_UNION_ASSERT({2}::alternative() == alternatives::{1});
             return m_{1};
         }})__";
     constexpr auto const_format =
         R"__(const {0}& {1}() const {{
-            LIDL_UNION_ASSERT(alternative() == alternatives::{1});
+            LIDL_UNION_ASSERT({2}::alternative() == alternatives::{1});
             return m_{1};
         }})__";
 
     auto type_name = get_identifier(mod(), deref_ptr(mod(), member_type_name));
-    return fmt::format(is_const ? const_format : format, type_name, member_name);
+    return fmt::format(is_const ? const_format : format, type_name, member_name, absolute_name());
 }
 
 sections union_gen::generate() {
@@ -63,7 +63,7 @@ sections union_gen::generate() {
                                     initializer_list));
     }
 
-    constexpr auto case_format = R"__(case {0}::{1}: return fn(val.{1}());)__";
+    constexpr auto case_format = R"__(case {0}::{1}: return ::lidl::detail::do_visit<"{1}">(val.{1}(), fn);)__";
 
     std::vector<std::string> cases;
     for (auto& [name, mem] : get().all_members()) {
