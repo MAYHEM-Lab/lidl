@@ -489,12 +489,12 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
 
     constexpr auto void_def_format = R"__({0} override {{
         {1}
-        auto result_ = NextLayer::execute({2}, &params_tuple_, nullptr);
+        auto result_ = NextLayer::execute(std::integral_constant<int, {2}>{}, &params_tuple_, nullptr);
     }})__";
 
     constexpr auto async_void_def_format = R"__({0} override {{
         {1}
-        auto result_ = co_await NextLayer::execute({2}, &params_tuple_, nullptr);
+        auto result_ = co_await NextLayer::execute(std::integral_constant<int, {2}>{}, &params_tuple_, nullptr);
     }})__";
 
     // Since we can't use a natural return path, we instead allocate the memory to hold
@@ -512,7 +512,7 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
         {1}
         using ret_t = {3};
         std::aligned_storage_t<sizeof(ret_t), alignof(ret_t)> return_;
-        [[maybe_unused]] auto result_ = NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
+        [[maybe_unused]] auto result_ = NextLayer::execute(std::integral_constant<int, {2}>{{}}, &params_tuple_, static_cast<void*>(&return_));
         return {4}*reinterpret_cast<ret_t*>(&return_);
     }})__";
 
@@ -520,7 +520,7 @@ std::string better_service_generator::make_zerocopy_procedure_stub(
         {1}
         using ret_t = {3};
         std::aligned_storage_t<sizeof(ret_t), alignof(ret_t)> return_;
-        [[maybe_unused]] auto result_ = co_await NextLayer::execute({2}, &params_tuple_, static_cast<void*>(&return_));
+        [[maybe_unused]] auto result_ = co_await NextLayer::execute(std::integral_constant<int, {2}>{{}}, &params_tuple_, static_cast<void*>(&return_));
         co_return {4}*reinterpret_cast<ret_t*>(&return_);
     }})__";
 
