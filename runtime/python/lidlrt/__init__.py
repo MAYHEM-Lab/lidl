@@ -8,3 +8,4 @@ from .compound_type import Struct, Union
 from .pointer import Pointer
 from .enum import Enum
 from .service import Service
+from .udp_client import udp_client
