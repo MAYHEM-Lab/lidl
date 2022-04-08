@@ -37,8 +37,9 @@ std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm)
     // So we depend on the lidl traits as well.
     // We do not do this always since it creates a lot of namespace clutter.
     if (is_type(nm)) {
-        if (auto t = get_type(mod, nm); t && t->is_reference_type(mod)) {
-            all.emplace_back(ins, section_type::lidl_traits);
+        if (auto t = get_type(mod, nm);
+            t && t->is_reference_type(mod) && !t->is_intrinsic() && !is_generic(nm)) {
+            all.emplace_back(t, section_type::lidl_traits);
         }
     }
 
@@ -58,7 +59,6 @@ std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm)
 std::string section_key_t::to_string(const module& mod) const {
     std::string sym;
     auto sh = recursive_definition_lookup(mod.symbols(), symbol());
-
     if (sh) {
         sym = current_backend()->get_identifier(mod, name{*sh});
 
