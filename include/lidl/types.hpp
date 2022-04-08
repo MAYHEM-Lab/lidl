@@ -29,6 +29,14 @@ public:
 
     virtual type_categories category(const module& mod) const = 0;
 
+    bool is_value(const module& mod) const {
+        return category(mod) == type_categories::value;
+    }
+
+    bool is_reference_type(const module& mod) const {
+        return category(mod) == type_categories::reference;
+    }
+    
     virtual YAML::Node bin2yaml(const module&, ibinary_reader&) const                 = 0;
     virtual int yaml2bin(const module& mod, const YAML::Node&, ibinary_writer&) const = 0;
 
@@ -37,14 +45,6 @@ public:
 
 struct wire_type : type {
     using type::type;
-
-    bool is_value(const module& mod) const {
-        return category(mod) == type_categories::value;
-    }
-
-    bool is_reference_type(const module& mod) const {
-        return category(mod) == type_categories::reference;
-    }
 
     virtual raw_layout wire_layout(const module& mod) const = 0;
 

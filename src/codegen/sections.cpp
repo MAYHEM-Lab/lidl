@@ -1,11 +1,12 @@
 #include "sections.hpp"
 
 #include "codegen.hpp"
+#include "lidl/basic.hpp"
 
 namespace lidl::codegen {
 std::string abs_name_for_mod(module& mod) {
     auto& root_mod = root_module(mod);
-    auto symopt = recursive_definition_lookup(root_mod.get_scope(), &mod);
+    auto symopt    = recursive_definition_lookup(root_mod.get_scope(), &mod);
     if (!symopt) {
         report_user_error(error_type::fatal, {}, "Cannot determine namespace");
         exit(1);
@@ -30,10 +31,19 @@ std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm)
     all.emplace_back(nm.base,
                      nm.args.empty() ? section_type::definition
                                      : section_type::generic_declaration);
+    auto ins = resolve(mod, nm);
+
+    // For reference types, the lidl traits must be specialized before first use.
+    // So we depend on the lidl traits as well.
+    // We do not do this always since it creates a lot of namespace clutter.
+    if (auto t = get_type(mod, nm); t && t->is_reference_type(mod)) {
+        all.emplace_back(ins, section_type::lidl_traits);
+    }
+
     if (!nm.args.empty() && !get_symbol(nm.base)->is_intrinsic()) {
-        auto ins = resolve(mod, nm);
         all.emplace_back(ins, section_type::definition);
     }
+    
     for (auto& arg : nm.args) {
         if (auto n = std::get_if<name>(&arg.get_variant()); n) {
             auto sub = def_keys_from_name(mod, *n);
