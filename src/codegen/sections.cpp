@@ -36,14 +36,16 @@ std::vector<section_key_t> def_keys_from_name(const module& mod, const name& nm)
     // For reference types, the lidl traits must be specialized before first use.
     // So we depend on the lidl traits as well.
     // We do not do this always since it creates a lot of namespace clutter.
-    if (auto t = get_type(mod, nm); t && t->is_reference_type(mod)) {
-        all.emplace_back(ins, section_type::lidl_traits);
+    if (is_type(nm)) {
+        if (auto t = get_type(mod, nm); t && t->is_reference_type(mod)) {
+            all.emplace_back(ins, section_type::lidl_traits);
+        }
     }
 
     if (!nm.args.empty() && !get_symbol(nm.base)->is_intrinsic()) {
         all.emplace_back(ins, section_type::definition);
     }
-    
+
     for (auto& arg : nm.args) {
         if (auto n = std::get_if<name>(&arg.get_variant()); n) {
             auto sub = def_keys_from_name(mod, *n);
