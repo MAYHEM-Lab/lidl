@@ -1,6 +1,7 @@
 #include "emitter.hpp"
 
 #include "lidl/scope.hpp"
+#include "sections.hpp"
 
 #include <fmt/format.h>
 #include <iostream>
@@ -95,6 +96,12 @@ void emitter::mark_module(const module& decl_mod) {
             std::cerr << fmt::format("Marking {}\n", key.to_string(decl_mod));
 #endif
             mark_satisfied(key);
+
+            key = section_key_t{sym, section_type::lidl_traits};
+#ifdef LIDL_VERBOSE_LOG
+            std::cerr << fmt::format("Marking {}\n", key.to_string(decl_mod));
+#endif
+            mark_satisfied(key);
         }
     }
     for (auto& [name, child] : decl_mod.children) {
@@ -112,7 +119,7 @@ bool emitter::is_satisfied(const section& sect) {
     return std::all_of(
         sect.depends_on.begin(), sect.depends_on.end(), [&](const section_key_t& n) {
             if (std::find(m_satisfied.begin(), m_satisfied.end(), n) !=
-                       m_satisfied.end()) {
+                m_satisfied.end()) {
                 return true;
             }
             if (auto mod = find_parent_module(n.symbol()); mod && mod->imported()) {
